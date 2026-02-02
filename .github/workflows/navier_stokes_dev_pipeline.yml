@@ -44,12 +44,12 @@ jobs:
       - name: 💀 Vulture (dead code detection)
         run: |
           pip install vulture
-          vulture core || echo "⚠️ Vulture found unused code — review manually"
+          vulture src
 
       - name: 🧬 JSCPD (duplicate code detection)
         run: |
           npm install -g jscpd
-          jscpd core --min-lines 5 --threshold 5 --reporters console || echo "⚠️ Duplication detected — review manually"
+          jscpd src --min-lines 5 --threshold 5 --reporters console
 
       - name: 🚀 Commit autoflake changes
         env:
@@ -83,7 +83,7 @@ jobs:
       - name: 🧪 Run Unit Tests Only (No Integration Tests)
         run: |
           echo "🔍 Running unit tests only..."
-          pytest tests/ --verbose --cov=core --cov-report=term-missing
+          pytest tests/ --verbose --cov=src --cov-report=term-missing
           echo "✅ Unit tests completed."
 
       # ---------------------------------------------------------
