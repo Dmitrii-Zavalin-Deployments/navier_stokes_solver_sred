@@ -39,7 +39,7 @@ jobs:
       - name: 🧹 Autoflake (remove unused imports)
         run: |
           pip install autoflake
-          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports core
+          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
 
       - name: 💀 Vulture (dead code detection)
         run: |
