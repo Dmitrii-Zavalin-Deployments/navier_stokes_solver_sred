@@ -1,17 +1,28 @@
-jsonschema          # Validating JSON input boundary conditions
-numpy               # Basic numerical computations
-scipy               # Scientific computing (fluid dynamics support)
-pint                # Unit handling for physical quantities
-dropbox             # Dropbox API integration for input/output
-numba               # Performance optimization via JIT
-matplotlib          # Plotting for diagnostics or visualization
-pytest              # Automated testing framework
-pytest-mock         # Test mocking support if needed
-pytest-cov          # Test coverage metrics
-jq                  # JSON CLI tool (used in GitHub Actions shell)
-pytest-cov>=4.1.0  # Used for measuring test coverage
-autoflake>=2.2.1   # Used for automatically removing unused imports and variables
-vulture>=2.9       # Used for finding and reporting dead code
+# Core numerical stack
+numpy
+scipy
+numba
+
+# Units and physical quantities
+pint
+
+# JSON validation
+jsonschema
+
+# Visualization / diagnostics
+matplotlib
+
+# Dropbox integration
+dropbox
+
+# Testing and coverage
+pytest
+pytest-mock
+pytest-cov>=4.1.0
+
+# Code quality tools
+autoflake>=2.2.1
+vulture>=2.9
 
 
 

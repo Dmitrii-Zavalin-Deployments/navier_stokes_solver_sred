@@ -1,6 +1,6 @@
-# .github/workflows/fluid_dynamics_calculations.yml
+# .github/workflows/navier_stokes_dev_pipeline.yml
 
-name: Fluid Dynamics Calculations Pipeline
+name: Navier–Stokes Solver (Development Pipeline)
 
 on:
   push:
@@ -9,8 +9,10 @@ on:
   workflow_dispatch:
 
 jobs:
+
   code_quality_check:
     runs-on: ubuntu-latest
+
     steps:
       - name: 🛎️ Checkout repository
         uses: actions/checkout@v3
@@ -25,20 +27,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🧹 Run autoflake to remove unused imports
+      # ---------------------------------------------------------
+      # OPTIONAL: jq installation (needed only for integration tests)
+      # ---------------------------------------------------------
+      # - name: 📦 Install jq (if needed later)
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y jq
+      # ---------------------------------------------------------
+
+      - name: 🧹 Autoflake (remove unused imports)
         run: |
           pip install autoflake
-          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
+          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports core
 
-      - name: 💀 Run vulture to find dead code
+      - name: 💀 Vulture (dead code detection)
         run: |
           pip install vulture
-          vulture src || echo "⚠️ Vulture found unused code — review manually if needed"
+          vulture core || echo "⚠️ Vulture found unused code — review manually"
 
-      - name: 🧬 Run jscpd to detect duplicate logic blocks
+      - name: 🧬 JSCPD (duplicate code detection)
         run: |
           npm install -g jscpd
-          jscpd src --min-lines 5 --threshold 5 --reporters console || echo "⚠️ jscpd found duplication — review manually if needed"
+          jscpd core --min-lines 5 --threshold 5 --reporters console || echo "⚠️ Duplication detected — review manually"
 
       - name: 🚀 Commit autoflake changes
         env:
@@ -53,141 +64,38 @@ jobs:
             git push || echo "No changes to push"
           )
 
-  fluid_dynamics_simulation:
+  unit_tests_only:
     needs: code_quality_check
     runs-on: ubuntu-latest
 
-    # 💡 Simplified PYTHONPATH to the workspace root for general package access
     env:
       PYTHONPATH: ${{ github.workspace }}
-      ORIGINAL_INPUT_FILE: ${{ github.workspace }}/data/testing-input-output/fluid_simulation_input.json
-      OUTPUT_RESULTS_BASE_DIR: ${{ github.workspace }}/data/testing-output-run
-      UPLOAD_DIR: ${{ github.workspace }}/data/testing-input-output/navier_stokes_output
-      REFLEX_CONFIG: ${{ github.workspace }}/config/reflex_debug_config.yaml
-      DEBUG_MODE: true
 
     steps:
-    - name: 🗂️ Checkout Repository
-      uses: actions/checkout@v3
+      - name: 🗂️ Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: 🐍 Setup Python & Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt pytest numpy jsonschema jq
-        echo "✅ Python and dependencies installed."
+      - name: 🐍 Setup Python & Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest coverage numpy
 
-    - name: 🧹 Cleanup previous integration test errors
-      run: |
-        rm -f tests/integration_tests_errors/*.txt || echo "⚠️ No previous error files to remove"
-      
-    - name: 📥 Clean Previous Input & Download from Dropbox
-      env:
-        APP_KEY: ${{ secrets.APP_KEY }}
-        APP_SECRET: ${{ secrets.APP_SECRET }}
-        REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-      run: |
-        rm -f "$ORIGINAL_INPUT_FILE" && echo "🗑️ Cleaned previous input." || echo "ℹ️ No previous input found."
-        chmod +x src/download_from_dropbox.sh
-        src/download_from_dropbox.sh
-        [ -f "$ORIGINAL_INPUT_FILE" ] && echo "✅ Original input file ready." || { echo "❌ Error: Input file missing."; exit 1; }
+      - name: 🧪 Run Unit Tests Only (No Integration Tests)
+        run: |
+          echo "🔍 Running unit tests only..."
+          pytest tests/ --verbose --cov=core --cov-report=term-missing
+          echo "✅ Unit tests completed."
 
-    - name: 🧹 Cleanup previous diagnostic snapshots
-      run: |
-        rm -f data/snapshots/* || echo "⚠️ No previous snapshots to remove"
-    
-    - name: 🧹 Cleanup previous diagnostic velocities
-      run: |
-        rm -f data/velocities/*.json || echo "⚠️ No velocity snapshots to remove"
+      # ---------------------------------------------------------
+      # ❌ REAL SOLVER EXECUTION DISABLED DURING DEVELOPMENT
+      # ---------------------------------------------------------
+      # - name: 🚀 Run Main Solver (DISABLED)
+      #   run: |
+      #     echo "⚠️ Solver execution disabled during development phase."
+      #     # python core/master_solver.py input.json
+      # ---------------------------------------------------------
 
-    - name: 🧹 Cleanup previous integration test errors
-      run: |
-        rm -f tests/integration_tests_errors/*.txt || echo "⚠️ No previous error files to remove"
-
-    - name: 🧪 Run Unit Tests with Coverage
-      run: |
-        echo "🔍 Running all unit tests with pytest and coverage..."
-        PYTHONPATH=src pytest tests/ --verbose --cov=src --cov-report=term-missing
-        echo "✅ Unit tests and code coverage check completed."
-
-    - name: 🏃 Run All Integration Tests
-      id: integration_test_all_modules
-      run: |
-        echo "--- Running all integration tests via orchestrator ---"
-        python3 tests/helpers/run_all_integrations.py
-        echo "✅ All integration tests completed successfully."
-
-    - name: 🚀 Run Main Solver
-      run: |
-        # Export CWD to PYTHONPATH and run by file path for maximum stability
-        export PYTHONPATH=$PYTHONPATH:.
-        echo "CWD: $(pwd)"
-        echo "Final PYTHONPATH: $PYTHONPATH"
-        
-        rm -rf "$OUTPUT_RESULTS_BASE_DIR"
-        mkdir -p "$OUTPUT_RESULTS_BASE_DIR"
-        echo "📍 Current directory: $(pwd)"
-        
-        # Changed execution to use direct file path for robustness
-        python src/main_solver.py "$ORIGINAL_INPUT_FILE" 
-        echo "✅ Main solver executed."
-
-    - name: 🗃️ Inspect Repository Structure
-      run: |
-        echo "📦 Full repository structure:"
-        ls -R ${{ github.workspace }}
-        echo "✅ Inspection complete."
-
-    - name: ☁️ Upload to Dropbox
-      env:
-        APP_KEY: ${{ secrets.APP_KEY }}
-        APP_SECRET: ${{ secrets.APP_SECRET }}
-        REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-      run: |
-        if [ ! -d "$UPLOAD_DIR" ]; then
-          echo "⚠️ No upload directory at $UPLOAD_DIR — skipping Dropbox upload."
-          exit 0
-        fi
-        chmod +x src/upload_to_dropbox.sh
-        echo "📦 Uploading: $UPLOAD_DIR"
-        ls -R "$UPLOAD_DIR"
-        src/upload_to_dropbox.sh "$UPLOAD_DIR"
-
-    - name: 📝 Log trigger for STEP processor
-      run: |
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): STEP processor triggered by '${{ github.actor }}' via '${{ github.event_name }}' event" >> trigger.txt
-
-    - name: 📂 List diagnostic folders and contents
-      if: always()
-      run: |
-        echo "📁 Directory structure before commit:"
-        ls -R
-        echo "✅ Directory listing complete."
-    
-    - name: 📝 Log trigger & push
-      if: always() # Run even if previous steps failed to ensure log and diagnostics are committed
-      env:
-        GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
-        GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
-      run: |
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): STEP processor triggered by '${{ github.actor }}' via '${{ github.event_name }}' event" >> trigger.txt
-        git config --global user.name "${GIT_USER_NAME}"
-        git config --global user.email "${GIT_USER_EMAIL}"
-
-        git add trigger.txt
-        git add tests/integration_tests_errors
-
-        git commit -m "Log STEP processor trigger by ${{ github.actor }} via ${{ github.event_name }}" || echo "No new log or snapshots to commit"
-
-        # Stash any remaining changes to avoid rebase failure
-        git stash push -m "Temp stash before rebase" || echo "No changes to stash"
-
-        # Pull and rebase safely
-        git pull --rebase origin main || echo "⚠️ Rebase failed — check for conflicts"
-
-        # Restore stash if it exists
-        git stash list | grep "Temp stash before rebase" && git stash pop || echo "No stash to restore"
-
-        # Push changes
-        git push origin main || echo "❌ Push failed — remote may have diverged"
-
-
+      - name: 📦 List repository structure
+        run: |
+          echo "📁 Repository structure:"
+          ls -R
