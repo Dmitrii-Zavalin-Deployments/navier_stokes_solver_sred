@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 from src.step1.construct_simulation_state import construct_simulation_state
 
 
@@ -54,7 +53,7 @@ def valid_json():
 
 
 # ---------------------------------------------------------------------------
-# 1. Mask reshaping (flattening order)
+# 1. Mask reshaping (default flattening order)
 # ---------------------------------------------------------------------------
 
 def test_mask_reshape_default_order(valid_json):
@@ -65,6 +64,10 @@ def test_mask_reshape_default_order(valid_json):
     state = construct_simulation_state(valid_json)
     assert state.mask.shape == (nx, ny, nz)
 
+
+# ---------------------------------------------------------------------------
+# 2. Mask reshaping (custom flattening order)
+# ---------------------------------------------------------------------------
 
 def test_mask_reshape_custom_order(valid_json):
     valid_json["geometry_definition"]["flattening_order"] = "j + ny*(i + nx*k)"
@@ -78,7 +81,7 @@ def test_mask_reshape_custom_order(valid_json):
 
 
 # ---------------------------------------------------------------------------
-# 2. Mask values must be valid
+# 3. Mask values must be valid (no negatives, no mixed binary/pattern)
 # ---------------------------------------------------------------------------
 
 def test_invalid_mask_value_negative(valid_json):
@@ -88,13 +91,14 @@ def test_invalid_mask_value_negative(valid_json):
 
 
 def test_invalid_mask_value_large(valid_json):
+    # Mixed mask: contains 1 and 5 → invalid
     valid_json["geometry_definition"]["geometry_mask_flat"][0] = 5
     with pytest.raises(Exception):
         construct_simulation_state(valid_json)
 
 
 # ---------------------------------------------------------------------------
-# 3. Fully solid or fully fluid masks must be accepted
+# 4. Fully solid or fully fluid masks must be accepted
 # ---------------------------------------------------------------------------
 
 def test_mask_all_fluid(valid_json):
@@ -110,7 +114,7 @@ def test_mask_all_solid(valid_json):
 
 
 # ---------------------------------------------------------------------------
-# 4. Minimal grid mask
+# 5. Minimal grid mask
 # ---------------------------------------------------------------------------
 
 def test_minimal_grid_mask():

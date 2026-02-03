@@ -53,41 +53,41 @@ def valid_json():
 
 
 # ---------------------------------------------------------------------------
-# 1. Initial pressure is stored correctly (stub behavior)
+# 1. Initial pressure is validated but fields remain zero-initialized
 # ---------------------------------------------------------------------------
 
 def test_initial_pressure_value(valid_json):
     valid_json["initial_conditions"]["initial_pressure"] = 5.0
     state = construct_simulation_state(valid_json)
 
-    # Stub: pressure field is zero-initialized
+    # Step 1 does NOT apply initial pressure to the field
     assert state.P.shape == (4, 4, 4)
     assert (state.P == 0).all()
 
 
 # ---------------------------------------------------------------------------
-# 2. Initial velocity is stored correctly (stub behavior)
+# 2. Initial velocity is validated but fields remain zero-initialized
 # ---------------------------------------------------------------------------
 
 def test_initial_velocity_value(valid_json):
     valid_json["initial_conditions"]["initial_velocity"] = [2.0, -1.0, 0.5]
     state = construct_simulation_state(valid_json)
 
-    # Stub: velocity fields are zero-initialized
+    # Step 1 does NOT apply initial velocity to U/V/W
     assert (state.U == 0).all()
     assert (state.V == 0).all()
     assert (state.W == 0).all()
 
 
 # ---------------------------------------------------------------------------
-# 3. Force vector is stored correctly (stub behavior)
+# 3. Force vector is validated but not applied to fields
 # ---------------------------------------------------------------------------
 
 def test_force_vector_value(valid_json):
     valid_json["external_forces"]["force_vector"] = [0.1, 0.2, 0.3]
     state = construct_simulation_state(valid_json)
 
-    # Stub: force is not yet applied, but constants exist
+    # Step 1 only stores constants like mu, dx
     assert "mu" in state.constants
     assert "dx" in state.constants
 

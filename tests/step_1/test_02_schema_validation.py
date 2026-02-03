@@ -1,25 +1,17 @@
 import pytest
-import json
+from jsonschema import ValidationError
 from src.step1.schema_validator import validate_input_schema
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def load_valid_json():
-    """Return a minimal valid JSON input that matches the schema."""
+@pytest.fixture
+def valid_json():
+    """Baseline valid JSON input for Step 1 (schema-compliant)."""
     return {
         "domain_definition": {
-            "x_min": 0.0,
-            "x_max": 1.0,
-            "y_min": 0.0,
-            "y_max": 1.0,
-            "z_min": 0.0,
-            "z_max": 1.0,
-            "nx": 4,
-            "ny": 4,
-            "nz": 4
+            "x_min": 0.0, "x_max": 1.0,
+            "y_min": 0.0, "y_max": 1.0,
+            "z_min": 0.0, "z_max": 1.0,
+            "nx": 4, "ny": 4, "nz": 4
         },
         "fluid_properties": {
             "density": 1.0,
@@ -50,10 +42,7 @@ def load_valid_json():
         "geometry_definition": {
             "geometry_mask_flat": [1] * (4 * 4 * 4),
             "geometry_mask_shape": [4, 4, 4],
-            "mask_encoding": {
-                "fluid": 1,
-                "solid": 0
-            },
+            "mask_encoding": {"fluid": 1, "solid": 0},
             "flattening_order": "i + nx*(j + ny*k)"
         },
         "external_forces": {
@@ -65,16 +54,15 @@ def load_valid_json():
 
 
 # ---------------------------------------------------------------------------
-# 1. Valid input should pass schema validation
+# 1. Valid input must pass schema validation
 # ---------------------------------------------------------------------------
 
-def test_schema_accepts_valid_input():
-    data = load_valid_json()
-    validate_input_schema(data)  # should not raise
+def test_schema_accepts_valid_input(valid_json):
+    validate_input_schema(valid_json)  # should not raise
 
 
 # ---------------------------------------------------------------------------
-# 2. Missing top-level sections should fail
+# 2. Missing required top-level keys must fail
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("missing_key", [
@@ -86,55 +74,50 @@ def test_schema_accepts_valid_input():
     "geometry_definition",
     "external_forces",
 ])
-def test_missing_top_level_key_fails(missing_key):
-    data = load_valid_json()
+def test_missing_top_level_key_fails(valid_json, missing_key):
+    data = valid_json.copy()
     del data[missing_key]
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         validate_input_schema(data)
 
 
 # ---------------------------------------------------------------------------
-# 3. Wrong types should fail
+# 3. Wrong types must fail
 # ---------------------------------------------------------------------------
 
-def test_wrong_type_in_domain_definition():
-    data = load_valid_json()
-    data["domain_definition"]["nx"] = "not_an_int"
-    with pytest.raises(Exception):
-        validate_input_schema(data)
+def test_invalid_nx_type(valid_json):
+    valid_json["domain_definition"]["nx"] = "four"
+    with pytest.raises(ValidationError):
+        validate_input_schema(valid_json)
 
 
-def test_wrong_type_in_initial_velocity():
-    data = load_valid_json()
-    data["initial_conditions"]["initial_velocity"] = ["a", "b", "c"]
-    with pytest.raises(Exception):
-        validate_input_schema(data)
+def test_invalid_velocity_length(valid_json):
+    valid_json["initial_conditions"]["initial_velocity"] = [1.0, 2.0]
+    with pytest.raises(ValidationError):
+        validate_input_schema(valid_json)
 
 
-def test_wrong_type_in_boundary_conditions():
-    data = load_valid_json()
-    data["boundary_conditions"][0]["no_slip"] = "not_bool"
-    with pytest.raises(Exception):
-        validate_input_schema(data)
+def test_invalid_force_vector_length(valid_json):
+    valid_json["external_forces"]["force_vector"] = [0.0, 0.0]
+    with pytest.raises(ValidationError):
+        validate_input_schema(valid_json)
 
 
 # ---------------------------------------------------------------------------
-# 4. Wrong geometry mask shape should fail
+# 4. Missing flattening_order must fail
 # ---------------------------------------------------------------------------
 
-def test_geometry_mask_shape_mismatch():
-    data = load_valid_json()
-    data["geometry_definition"]["geometry_mask_shape"] = [2, 2, 2]  # wrong
-    with pytest.raises(Exception):
-        validate_input_schema(data)
+def test_missing_flattening_order(valid_json):
+    del valid_json["geometry_definition"]["flattening_order"]
+    with pytest.raises(ValidationError):
+        validate_input_schema(valid_json)
 
 
 # ---------------------------------------------------------------------------
-# 5. Wrong flattening order type should fail
+# 5. Geometry mask shape mismatch must fail
 # ---------------------------------------------------------------------------
 
-def test_invalid_flattening_order_type():
-    data = load_valid_json()
-    data["geometry_definition"]["flattening_order"] = 123  # must be string
-    with pytest.raises(Exception):
-        validate_input_schema(data)
+def test_geometry_mask_shape_mismatch(valid_json):
+    valid_json["geometry_definition"]["geometry_mask_shape"] = [2, 2, 2]
+    with pytest.raises(ValidationError):
+        validate_input_schema(valid_json)
