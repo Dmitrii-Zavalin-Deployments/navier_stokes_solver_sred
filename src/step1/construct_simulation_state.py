@@ -29,6 +29,8 @@ def construct_simulation_state(json_input):
     - test_01_happy_path.py
     - test_02_schema_validation.py
     - test_03_physical_constraints.py
+    - test_04_grid_initialization.py
+    - test_05_field_allocation.py
 
     This is NOT the final Step 1 implementation.
     """
