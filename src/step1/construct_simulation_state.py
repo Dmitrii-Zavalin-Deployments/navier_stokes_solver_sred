@@ -23,7 +23,6 @@ class GridConfig:
         self.dx = dx
 
 
-# vulture: ignore
 def construct_simulation_state(json_input):
     """
     Minimal stub implementation that satisfies test_01_happy_path.py.
