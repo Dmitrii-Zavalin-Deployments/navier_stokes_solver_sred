@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 
 class SimulationState:
@@ -31,6 +32,7 @@ def construct_simulation_state(json_input):
     - test_03_physical_constraints.py
     - test_04_grid_initialization.py
     - test_05_field_allocation.py
+    - test_06_initial_conditions.py
 
     This is NOT the final Step 1 implementation.
     """
@@ -80,12 +82,22 @@ def construct_simulation_state(json_input):
     if len(iv) != 3:
         raise ValueError("initial_velocity must have length 3")
 
+    # Reject NaN / Inf in initial velocity
+    for v in iv:
+        if math.isnan(v) or math.isinf(v):
+            raise ValueError("initial_velocity contains NaN or Inf")
+
     # force_vector must be a list of length 3
     fv = simulation.get("force_vector")
     if not isinstance(fv, list):
         raise TypeError("force_vector must be a list")
     if len(fv) != 3:
         raise ValueError("force_vector must have length 3")
+
+    # initial_pressure must be finite
+    ip = simulation.get("initial_pressure")
+    if math.isnan(ip) or math.isinf(ip):
+        raise ValueError("initial_pressure contains NaN or Inf")
 
     # ----------------------------------------------------------------------
     # 4. Mask length check
