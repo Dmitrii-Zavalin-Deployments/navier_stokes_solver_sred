@@ -28,6 +28,7 @@ def construct_simulation_state(json_input):
     Minimal stub implementation that satisfies:
     - test_01_happy_path.py
     - test_02_schema_validation.py
+    - test_03_physical_constraints.py
 
     This is NOT the final Step 1 implementation.
     """
@@ -92,7 +93,41 @@ def construct_simulation_state(json_input):
         raise ValueError("geometry_mask_flat has incorrect length")
 
     # ----------------------------------------------------------------------
-    # 5. Minimal stub logic (unchanged)
+    # 5. Physical constraints
+    # ----------------------------------------------------------------------
+
+    # Density must be strictly positive
+    if fluid["density"] <= 0:
+        raise ValueError("fluid density must be > 0")
+
+    # Viscosity must be non-negative
+    if fluid["viscosity"] < 0:
+        raise ValueError("fluid viscosity must be >= 0")
+
+    # Grid resolution must be >= 1
+    if nx < 1 or ny < 1 or nz < 1:
+        raise ValueError("nx, ny, nz must be >= 1")
+
+    # Domain extents must be valid
+    if domain["x_max"] <= domain["x_min"]:
+        raise ValueError("x_max must be > x_min")
+    if domain["y_max"] <= domain["y_min"]:
+        raise ValueError("y_max must be > y_min")
+    if domain["z_max"] <= domain["z_min"]:
+        raise ValueError("z_max must be > z_min")
+
+    # CFL pre-check (very loose)
+    dt = simulation["dt"]
+    vel = simulation["initial_velocity"]
+    max_vel = max(abs(vel[0]), abs(vel[1]), abs(vel[2]))
+
+    dx_tmp = abs(domain["x_max"] - domain["x_min"]) / nx
+
+    if dt * max_vel > dx_tmp:
+        raise ValueError("CFL pre-check failed: dt * |u| > dx")
+
+    # ----------------------------------------------------------------------
+    # 6. Minimal stub logic (unchanged)
     # ----------------------------------------------------------------------
     x_min = domain["x_min"]
     x_max = domain["x_max"]
