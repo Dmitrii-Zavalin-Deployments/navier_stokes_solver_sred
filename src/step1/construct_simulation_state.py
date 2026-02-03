@@ -112,17 +112,19 @@ def construct_simulation_state(json_input):
         if not isinstance(m, int):
             raise ValueError("geometry_mask_flat must contain integers only")
 
-    # Negative values are always invalid
-    if any(m < 0 for m in mask_flat):
-        raise ValueError("geometry_mask_flat contains invalid values")
-
-    # Binary mask (0/1 only) → valid
     unique_vals = set(mask_flat)
-    if unique_vals.issubset({0, 1}):
-        pass  # valid binary mask
 
-    # Pattern mask (any non-negative integers) → valid
-    # No further restrictions
+    # Case 1: binary mask (only 0/1)
+    if unique_vals.issubset({0, 1}):
+        pass
+
+    # Case 2: pattern mask (contains no 0/1)
+    elif unique_vals.isdisjoint({0, 1}):
+        pass
+
+    # Case 3: mixed mask → invalid
+    else:
+        raise ValueError("geometry_mask_flat contains invalid values")
 
     # ----------------------------------------------------------------------
     # 5. Physical constraints
