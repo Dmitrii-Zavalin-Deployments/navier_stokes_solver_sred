@@ -1,118 +1,140 @@
 import pytest
-from src.step1.construct_simulation_state import construct_simulation_state
+import json
+from src.step1.schema_validator import validate_input_schema
 
 
-@pytest.fixture
-def valid_json():
-    """Baseline valid JSON input for Step 1."""
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def load_valid_json():
+    """Return a minimal valid JSON input that matches the schema."""
     return {
-        "domain": {
-            "x_min": 0.0, "x_max": 1.0,
-            "y_min": 0.0, "y_max": 1.0,
-            "z_min": 0.0, "z_max": 1.0,
-            "nx": 4, "ny": 4, "nz": 4
+        "domain_definition": {
+            "x_min": 0.0,
+            "x_max": 1.0,
+            "y_min": 0.0,
+            "y_max": 1.0,
+            "z_min": 0.0,
+            "z_max": 1.0,
+            "nx": 4,
+            "ny": 4,
+            "nz": 4
         },
-        "fluid": {
+        "fluid_properties": {
             "density": 1.0,
             "viscosity": 0.1
         },
-        "simulation": {
-            "dt": 0.01,
-            "total_time": 1.0,
-            "flattening_order": "i + nx*(j + ny*k)",
-            "initial_pressure": 0.0,
+        "initial_conditions": {
             "initial_velocity": [1.0, 0.0, 0.0],
-            "force_vector": [0.0, 0.0, 0.0]
+            "initial_pressure": 0.0
         },
-        "geometry_mask_flat": [1] * (4 * 4 * 4),
+        "simulation_parameters": {
+            "time_step": 0.01,
+            "total_time": 1.0,
+            "output_interval": 10
+        },
         "boundary_conditions": [
-            {"face": "x_min", "role": "wall"},
-            {"face": "x_max", "role": "outlet"},
-            {"face": "y_min", "role": "wall"},
-            {"face": "y_max", "role": "wall"},
-            {"face": "z_min", "role": "wall"},
-            {"face": "z_max", "role": "wall"}
-        ]
+            {
+                "role": "wall",
+                "type": "dirichlet",
+                "faces": ["x_min"],
+                "apply_to": ["velocity"],
+                "velocity": [0.0, 0.0, 0.0],
+                "pressure": 0.0,
+                "pressure_gradient": 0.0,
+                "no_slip": True,
+                "comment": "test"
+            }
+        ],
+        "geometry_definition": {
+            "geometry_mask_flat": [1] * (4 * 4 * 4),
+            "geometry_mask_shape": [4, 4, 4],
+            "mask_encoding": {
+                "fluid": 1,
+                "solid": 0
+            },
+            "flattening_order": "i + nx*(j + ny*k)"
+        },
+        "external_forces": {
+            "force_vector": [0.0, 0.0, 0.0],
+            "units": "N",
+            "comment": "none"
+        }
     }
 
 
 # ---------------------------------------------------------------------------
-# 1. Missing required keys
+# 1. Valid input should pass schema validation
 # ---------------------------------------------------------------------------
 
-def test_missing_required_key_domain(valid_json):
-    del valid_json["domain"]
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
-
-
-def test_missing_required_key_fluid(valid_json):
-    del valid_json["fluid"]
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
-
-
-def test_missing_required_key_simulation(valid_json):
-    del valid_json["simulation"]
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
-
-
-def test_missing_required_key_mask(valid_json):
-    del valid_json["geometry_mask_flat"]
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+def test_schema_accepts_valid_input():
+    data = load_valid_json()
+    validate_input_schema(data)  # should not raise
 
 
 # ---------------------------------------------------------------------------
-# 2. Wrong types
+# 2. Missing top-level sections should fail
 # ---------------------------------------------------------------------------
 
-def test_invalid_type_nx(valid_json):
-    valid_json["domain"]["nx"] = "four"
+@pytest.mark.parametrize("missing_key", [
+    "domain_definition",
+    "fluid_properties",
+    "initial_conditions",
+    "simulation_parameters",
+    "boundary_conditions",
+    "geometry_definition",
+    "external_forces",
+])
+def test_missing_top_level_key_fails(missing_key):
+    data = load_valid_json()
+    del data[missing_key]
     with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
-
-
-def test_invalid_type_initial_velocity(valid_json):
-    valid_json["simulation"]["initial_velocity"] = "not a list"
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
-
-
-def test_invalid_type_force_vector(valid_json):
-    valid_json["simulation"]["force_vector"] = "abc"
-    with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+        validate_input_schema(data)
 
 
 # ---------------------------------------------------------------------------
-# 3. Invalid lengths
+# 3. Wrong types should fail
 # ---------------------------------------------------------------------------
 
-def test_invalid_velocity_length(valid_json):
-    valid_json["simulation"]["initial_velocity"] = [1.0, 0.0]
+def test_wrong_type_in_domain_definition():
+    data = load_valid_json()
+    data["domain_definition"]["nx"] = "not_an_int"
     with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+        validate_input_schema(data)
 
 
-def test_invalid_force_vector_length(valid_json):
-    valid_json["simulation"]["force_vector"] = [0.0, 0.0]
+def test_wrong_type_in_initial_velocity():
+    data = load_valid_json()
+    data["initial_conditions"]["initial_velocity"] = ["a", "b", "c"]
     with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+        validate_input_schema(data)
 
 
-def test_invalid_mask_length(valid_json):
-    valid_json["geometry_mask_flat"] = valid_json["geometry_mask_flat"][:-1]
+def test_wrong_type_in_boundary_conditions():
+    data = load_valid_json()
+    data["boundary_conditions"][0]["no_slip"] = "not_bool"
     with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+        validate_input_schema(data)
 
 
 # ---------------------------------------------------------------------------
-# 4. Missing flattening_order
+# 4. Wrong geometry mask shape should fail
 # ---------------------------------------------------------------------------
 
-def test_missing_flattening_order(valid_json):
-    del valid_json["simulation"]["flattening_order"]
+def test_geometry_mask_shape_mismatch():
+    data = load_valid_json()
+    data["geometry_definition"]["geometry_mask_shape"] = [2, 2, 2]  # wrong
     with pytest.raises(Exception):
-        construct_simulation_state(valid_json)
+        validate_input_schema(data)
+
+
+# ---------------------------------------------------------------------------
+# 5. Wrong flattening order type should fail
+# ---------------------------------------------------------------------------
+
+def test_invalid_flattening_order_type():
+    data = load_valid_json()
+    data["geometry_definition"]["flattening_order"] = 123  # must be string
+    with pytest.raises(Exception):
+        validate_input_schema(data)

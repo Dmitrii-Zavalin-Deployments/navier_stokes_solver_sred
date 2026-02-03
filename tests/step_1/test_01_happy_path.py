@@ -4,35 +4,51 @@ from src.step1.construct_simulation_state import construct_simulation_state
 
 @pytest.fixture
 def valid_json():
-    """Baseline valid JSON input for Step 1."""
+    """Baseline valid JSON input for Step 1 (schema-compliant)."""
     return {
-        "domain": {
+        "domain_definition": {
             "x_min": 0.0, "x_max": 1.0,
             "y_min": 0.0, "y_max": 1.0,
             "z_min": 0.0, "z_max": 1.0,
             "nx": 4, "ny": 4, "nz": 4
         },
-        "fluid": {
+        "fluid_properties": {
             "density": 1.0,
             "viscosity": 0.1
         },
-        "simulation": {
-            "dt": 0.01,
-            "total_time": 1.0,
-            "flattening_order": "i + nx*(j + ny*k)",
-            "initial_pressure": 0.0,
+        "initial_conditions": {
             "initial_velocity": [1.0, 0.0, 0.0],
-            "force_vector": [0.0, 0.0, 0.0]
+            "initial_pressure": 0.0
         },
-        "geometry_mask_flat": [1] * (4 * 4 * 4),
+        "simulation_parameters": {
+            "time_step": 0.01,
+            "total_time": 1.0,
+            "output_interval": 10
+        },
         "boundary_conditions": [
-            {"face": "x_min", "role": "wall"},
-            {"face": "x_max", "role": "outlet"},
-            {"face": "y_min", "role": "wall"},
-            {"face": "y_max", "role": "wall"},
-            {"face": "z_min", "role": "wall"},
-            {"face": "z_max", "role": "wall"}
-        ]
+            {
+                "role": "wall",
+                "type": "dirichlet",
+                "faces": ["x_min"],
+                "apply_to": ["velocity"],
+                "velocity": [0.0, 0.0, 0.0],
+                "pressure": 0.0,
+                "pressure_gradient": 0.0,
+                "no_slip": True,
+                "comment": "test"
+            }
+        ],
+        "geometry_definition": {
+            "geometry_mask_flat": [1] * (4 * 4 * 4),
+            "geometry_mask_shape": [4, 4, 4],
+            "mask_encoding": {"fluid": 1, "solid": 0},
+            "flattening_order": "i + nx*(j + ny*k)"
+        },
+        "external_forces": {
+            "force_vector": [0.0, 0.0, 0.0],
+            "units": "N",
+            "comment": "none"
+        }
     }
 
 
@@ -59,10 +75,12 @@ def test_valid_full_input(valid_json):
 
 def test_valid_minimal_grid(valid_json):
     """nx=ny=nz=1 should still produce valid staggered shapes."""
-    valid_json["domain"]["nx"] = 1
-    valid_json["domain"]["ny"] = 1
-    valid_json["domain"]["nz"] = 1
-    valid_json["geometry_mask_flat"] = [1]
+    valid_json["domain_definition"]["nx"] = 1
+    valid_json["domain_definition"]["ny"] = 1
+    valid_json["domain_definition"]["nz"] = 1
+
+    valid_json["geometry_definition"]["geometry_mask_flat"] = [1]
+    valid_json["geometry_definition"]["geometry_mask_shape"] = [1, 1, 1]
 
     state = construct_simulation_state(valid_json)
 
@@ -79,7 +97,7 @@ def test_valid_minimal_grid(valid_json):
 
 def test_valid_zero_viscosity(valid_json):
     """viscosity=0 must not raise."""
-    valid_json["fluid"]["viscosity"] = 0.0
+    valid_json["fluid_properties"]["viscosity"] = 0.0
 
     state = construct_simulation_state(valid_json)
 
@@ -92,8 +110,8 @@ def test_valid_zero_viscosity(valid_json):
 
 def test_valid_negative_bounds(valid_json):
     """Negative coordinates must still produce positive dx."""
-    valid_json["domain"]["x_min"] = -1.0
-    valid_json["domain"]["x_max"] = 1.0
+    valid_json["domain_definition"]["x_min"] = -1.0
+    valid_json["domain_definition"]["x_max"] = 1.0
 
     state = construct_simulation_state(valid_json)
 
@@ -106,9 +124,8 @@ def test_valid_negative_bounds(valid_json):
 
 def test_valid_custom_flattening(valid_json):
     """Custom flattening_order must reshape mask correctly."""
-    valid_json["simulation"]["flattening_order"] = "j + ny*(i + nx*k)"
+    valid_json["geometry_definition"]["flattening_order"] = "j + ny*(i + nx*k)"
 
     state = construct_simulation_state(valid_json)
 
-    # Mask is still placeholder but must have correct shape
     assert state.mask.shape == (4, 4, 4)

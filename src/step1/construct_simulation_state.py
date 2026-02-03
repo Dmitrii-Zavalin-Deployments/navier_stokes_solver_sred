@@ -1,6 +1,9 @@
 import numpy as np
 import math
 
+# NEW: import schema validator
+from src.step1.schema_validator import validate_input_schema
+
 
 class SimulationState:
     """
@@ -39,69 +42,74 @@ def construct_simulation_state(json_input):
     """
 
     # ----------------------------------------------------------------------
-    # 1. Required top-level keys
+    # 0. Schema validation (NEW)
     # ----------------------------------------------------------------------
-    required_keys = ["domain", "fluid", "simulation", "geometry_mask_flat"]
-    for key in required_keys:
-        if key not in json_input:
-            raise KeyError(f"Missing required key: {key}")
+    # If the input JSON does not match the schema, this will raise.
+    validate_input_schema(json_input)
 
-    domain = json_input["domain"]
-    fluid = json_input["fluid"]
-    simulation = json_input["simulation"]
-    mask_flat = json_input["geometry_mask_flat"]
+    # After schema validation, we can safely assume the structure is correct.
+    # Now we extract the fields using the new schema structure.
 
-    # ----------------------------------------------------------------------
-    # 2. Required domain keys
-    # ----------------------------------------------------------------------
-    for key in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]:
-        if key not in domain:
-            raise KeyError(f"Missing domain key: {key}")
+    domain = json_input["domain_definition"]
+    fluid = json_input["fluid_properties"]
+    init = json_input["initial_conditions"]
+    sim = json_input["simulation_parameters"]
+    geom = json_input["geometry_definition"]
+    forces = json_input["external_forces"]
 
-    # Type check for nx, ny, nz
-    if not isinstance(domain["nx"], int):
-        raise TypeError("nx must be an integer")
-    if not isinstance(domain["ny"], int):
-        raise TypeError("ny must be an integer")
-    if not isinstance(domain["nz"], int):
-        raise TypeError("nz must be an integer")
-
-    nx = domain["nx"]
-    ny = domain["ny"]
-    nz = domain["nz"]
+    mask_flat = geom["geometry_mask_flat"]
+    nx, ny, nz = geom["geometry_mask_shape"]
 
     # ----------------------------------------------------------------------
-    # 3. Simulation keys
+    # 1. Extract simulation parameters
     # ----------------------------------------------------------------------
-    if "flattening_order" not in simulation:
-        raise KeyError("Missing flattening_order")
+    dt = sim["time_step"]
+    iv = init["initial_velocity"]
+    ip = init["initial_pressure"]
+    fv = forces["force_vector"]
+    flattening_order = geom["flattening_order"]
 
-    # initial_velocity must be a list of length 3
-    iv = simulation.get("initial_velocity")
-    if not isinstance(iv, list):
-        raise TypeError("initial_velocity must be a list")
-    if len(iv) != 3:
-        raise ValueError("initial_velocity must have length 3")
+    # ----------------------------------------------------------------------
+    # 2. Physical constraints
+    # ----------------------------------------------------------------------
+
+    # Density must be strictly positive
+    if fluid["density"] <= 0:
+        raise ValueError("fluid density must be > 0")
+
+    # Viscosity must be non-negative
+    if fluid["viscosity"] < 0:
+        raise ValueError("fluid viscosity must be >= 0")
+
+    # Grid resolution must be >= 1
+    if nx < 1 or ny < 1 or nz < 1:
+        raise ValueError("nx, ny, nz must be >= 1")
+
+    # Domain extents must be valid
+    if domain["x_max"] <= domain["x_min"]:
+        raise ValueError("x_max must be > x_min")
+    if domain["y_max"] <= domain["y_min"]:
+        raise ValueError("y_max must be > y_min")
+    if domain["z_max"] <= domain["z_min"]:
+        raise ValueError("z_max must be > z_min")
 
     # Reject NaN / Inf in initial velocity
     for v in iv:
         if math.isnan(v) or math.isinf(v):
             raise ValueError("initial_velocity contains NaN or Inf")
 
-    # force_vector must be a list of length 3
-    fv = simulation.get("force_vector")
-    if not isinstance(fv, list):
-        raise TypeError("force_vector must be a list")
-    if len(fv) != 3:
-        raise ValueError("force_vector must have length 3")
-
     # initial_pressure must be finite
-    ip = simulation.get("initial_pressure")
     if math.isnan(ip) or math.isinf(ip):
         raise ValueError("initial_pressure contains NaN or Inf")
 
+    # CFL pre-check (very loose)
+    max_vel = max(abs(iv[0]), abs(iv[1]), abs(iv[2]))
+    dx_tmp = abs(domain["x_max"] - domain["x_min"]) / nx
+    if dt * max_vel > dx_tmp:
+        raise ValueError("CFL pre-check failed: dt * |u| > dx")
+
     # ----------------------------------------------------------------------
-    # 4. Mask length + value checks
+    # 3. Geometry mask validation
     # ----------------------------------------------------------------------
     expected_len = nx * ny * nz
     if len(mask_flat) != expected_len:
@@ -127,39 +135,11 @@ def construct_simulation_state(json_input):
         raise ValueError("geometry_mask_flat contains invalid values")
 
     # ----------------------------------------------------------------------
-    # 5. Physical constraints
-    # ----------------------------------------------------------------------
-
-    if fluid["density"] <= 0:
-        raise ValueError("fluid density must be > 0")
-
-    if fluid["viscosity"] < 0:
-        raise ValueError("fluid viscosity must be >= 0")
-
-    if nx < 1 or ny < 1 or nz < 1:
-        raise ValueError("nx, ny, nz must be >= 1")
-
-    if domain["x_max"] <= domain["x_min"]:
-        raise ValueError("x_max must be > x_min")
-    if domain["y_max"] <= domain["y_min"]:
-        raise ValueError("y_max must be > y_min")
-    if domain["z_max"] <= domain["z_min"]:
-        raise ValueError("z_max must be > z_min")
-
-    dt = simulation["dt"]
-    vel = simulation["initial_velocity"]
-    max_vel = max(abs(vel[0]), abs(vel[1]), abs(vel[2]))
-
-    dx_tmp = abs(domain["x_max"] - domain["x_min"]) / nx
-    if dt * max_vel > dx_tmp:
-        raise ValueError("CFL pre-check failed: dt * |u| > dx")
-
-    # ----------------------------------------------------------------------
-    # 6. Geometry mask reshaping
+    # 4. Geometry mask reshaping
     # ----------------------------------------------------------------------
     flat = np.array(mask_flat)
 
-    order = simulation["flattening_order"].strip()
+    order = flattening_order.strip()
 
     if order == "i + nx*(j + ny*k)":
         mask = flat.reshape((nx, ny, nz), order="C")
@@ -176,7 +156,7 @@ def construct_simulation_state(json_input):
         raise ValueError("Unsupported flattening_order")
 
     # ----------------------------------------------------------------------
-    # 7. Minimal stub logic
+    # 5. Allocate fields
     # ----------------------------------------------------------------------
     x_min = domain["x_min"]
     x_max = domain["x_max"]

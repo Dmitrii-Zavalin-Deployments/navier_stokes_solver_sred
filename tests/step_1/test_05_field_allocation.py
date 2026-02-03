@@ -4,35 +4,51 @@ from src.step1.construct_simulation_state import construct_simulation_state
 
 @pytest.fixture
 def valid_json():
-    """Baseline valid JSON input for Step 1."""
+    """Baseline valid JSON input for Step 1 (schema-compliant)."""
     return {
-        "domain": {
+        "domain_definition": {
             "x_min": 0.0, "x_max": 1.0,
             "y_min": 0.0, "y_max": 1.0,
             "z_min": 0.0, "z_max": 1.0,
             "nx": 4, "ny": 4, "nz": 4
         },
-        "fluid": {
+        "fluid_properties": {
             "density": 1.0,
             "viscosity": 0.1
         },
-        "simulation": {
-            "dt": 0.01,
-            "total_time": 1.0,
-            "flattening_order": "i + nx*(j + ny*k)",
-            "initial_pressure": 0.0,
+        "initial_conditions": {
             "initial_velocity": [1.0, 0.0, 0.0],
-            "force_vector": [0.0, 0.0, 0.0]
+            "initial_pressure": 0.0
         },
-        "geometry_mask_flat": [1] * (4 * 4 * 4),
+        "simulation_parameters": {
+            "time_step": 0.01,
+            "total_time": 1.0,
+            "output_interval": 10
+        },
         "boundary_conditions": [
-            {"face": "x_min", "role": "wall"},
-            {"face": "x_max", "role": "outlet"},
-            {"face": "y_min", "role": "wall"},
-            {"face": "y_max", "role": "wall"},
-            {"face": "z_min", "role": "wall"},
-            {"face": "z_max", "role": "wall"}
-        ]
+            {
+                "role": "wall",
+                "type": "dirichlet",
+                "faces": ["x_min"],
+                "apply_to": ["velocity"],
+                "velocity": [0.0, 0.0, 0.0],
+                "pressure": 0.0,
+                "pressure_gradient": 0.0,
+                "no_slip": True,
+                "comment": "test"
+            }
+        ],
+        "geometry_definition": {
+            "geometry_mask_flat": [1] * (4 * 4 * 4),
+            "geometry_mask_shape": [4, 4, 4],
+            "mask_encoding": {"fluid": 1, "solid": 0},
+            "flattening_order": "i + nx*(j + ny*k)"
+        },
+        "external_forces": {
+            "force_vector": [0.0, 0.0, 0.0],
+            "units": "N",
+            "comment": "none"
+        }
     }
 
 
@@ -82,10 +98,12 @@ def test_fields_zero_initialized(valid_json):
 # ---------------------------------------------------------------------------
 
 def test_minimal_grid_allocation(valid_json):
-    valid_json["domain"]["nx"] = 1
-    valid_json["domain"]["ny"] = 1
-    valid_json["domain"]["nz"] = 1
-    valid_json["geometry_mask_flat"] = [1]
+    valid_json["domain_definition"]["nx"] = 1
+    valid_json["domain_definition"]["ny"] = 1
+    valid_json["domain_definition"]["nz"] = 1
+
+    valid_json["geometry_definition"]["geometry_mask_flat"] = [1]
+    valid_json["geometry_definition"]["geometry_mask_shape"] = [1, 1, 1]
 
     state = construct_simulation_state(valid_json)
 
@@ -100,18 +118,18 @@ def test_minimal_grid_allocation(valid_json):
 # ---------------------------------------------------------------------------
 
 def test_invalid_grid_negative_nx(valid_json):
-    valid_json["domain"]["nx"] = -1
+    valid_json["domain_definition"]["nx"] = -1
     with pytest.raises(Exception):
         construct_simulation_state(valid_json)
 
 
 def test_invalid_grid_negative_ny(valid_json):
-    valid_json["domain"]["ny"] = -1
+    valid_json["domain_definition"]["ny"] = -1
     with pytest.raises(Exception):
         construct_simulation_state(valid_json)
 
 
 def test_invalid_grid_negative_nz(valid_json):
-    valid_json["domain"]["nz"] = -1
+    valid_json["domain_definition"]["nz"] = -1
     with pytest.raises(Exception):
         construct_simulation_state(valid_json)
