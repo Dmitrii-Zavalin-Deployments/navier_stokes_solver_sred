@@ -66,7 +66,7 @@ def construct_simulation_state(json_input):
     dt = sim["time_step"]
     iv = init["initial_velocity"]
     ip = init["initial_pressure"]
-    fv = forces["force_vector"]
+    forces["force_vector"]
     flattening_order = geom["flattening_order"]
 
     # ----------------------------------------------------------------------

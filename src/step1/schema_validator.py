@@ -1,6 +1,6 @@
 import json
 import os
-from jsonschema import validate, Draft7Validator, ValidationError
+from jsonschema import Draft7Validator, ValidationError
 
 
 # Path to the schema file inside the repository
