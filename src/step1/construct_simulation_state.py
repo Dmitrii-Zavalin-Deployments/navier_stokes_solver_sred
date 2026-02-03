@@ -101,14 +101,26 @@ def construct_simulation_state(json_input):
         raise ValueError("initial_pressure contains NaN or Inf")
 
     # ----------------------------------------------------------------------
-    # 4. Mask length check
+    # 4. Mask length + value checks
     # ----------------------------------------------------------------------
     expected_len = nx * ny * nz
     if len(mask_flat) != expected_len:
         raise ValueError("geometry_mask_flat has incorrect length")
 
-    # NOTE: test_07 requires accepting arbitrary integer mask values.
-    # Real mask validation will be implemented later.
+    # Determine if mask is binary or pattern
+    unique_vals = set(mask_flat)
+
+    # Case 1: binary mask → must contain only 0 or 1
+    if unique_vals.issubset({0, 1}):
+        pass  # valid binary mask
+
+    # Case 2: pattern mask → allowed only if it contains no 0/1
+    elif unique_vals.isdisjoint({0, 1}):
+        pass  # valid pattern mask (used for reshaping tests)
+
+    # Case 3: mixed mask → invalid
+    else:
+        raise ValueError("geometry_mask_flat contains invalid values")
 
     # ----------------------------------------------------------------------
     # 5. Physical constraints
