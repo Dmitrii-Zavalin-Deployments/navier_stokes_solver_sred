@@ -57,15 +57,19 @@ def validate_physical_constraints(config: dict) -> None:
     if len(shape) != 3:
         raise ValidationError("geometry_mask_shape must have length 3")
 
+    # 3b. Shape must match grid resolution (nx, ny, nz)
+    if shape != [nx, ny, nz]:
+        raise ValidationError("geometry_mask_shape does not match grid resolution")
+
     expected_len = shape[0] * shape[1] * shape[2]
 
-    # 3b. Flat mask length must match shape product
+    # 3c. Flat mask length must match shape product
     if len(flat) != expected_len:
         raise ValidationError("geometry_mask_flat length does not match geometry_mask_shape")
 
-    # 3c. Mask values must be only 0 or 1
+    # 3d. Mask values must be only 0 or 1 (ValueError per tests)
     if any(v not in (0, 1) for v in flat):
-        raise ValidationError("geometry_mask_flat contains invalid values")
+        raise ValueError("geometry_mask_flat contains invalid values")
 
     # -----------------------------
     # 4. CFL-like precheck

@@ -36,14 +36,19 @@ def validate_output_schema(state_obj) -> None:
     Validate the final SimulationState produced by Step 1
     against schema/step1_output_schema.json.
     Converts numpy arrays to lists before validation.
-    Supports both dataclass instances and dict-like objects.
+    Supports dataclasses, objects with __dict__, and mapping-like objects.
     """
-    # Convert dataclass → dict, or fallback to __dict__
+    # Convert dataclass → dict
     if is_dataclass(state_obj):
         data = asdict(state_obj)
-    else:
-        # Used in corrupted-state tests
+
+    # Fallback: object with __dict__
+    elif hasattr(state_obj, "__dict__"):
         data = dict(state_obj.__dict__)
+
+    # Last fallback: treat as mapping (used in corrupted-state tests)
+    else:
+        data = dict(state_obj)
 
     # Convert numpy arrays → lists
     data = _convert_numpy(data)
