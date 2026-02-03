@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from jsonschema import validate, ValidationError
 import numpy as np
 
@@ -36,9 +36,14 @@ def validate_output_schema(state_obj) -> None:
     Validate the final SimulationState produced by Step 1
     against schema/step1_output_schema.json.
     Converts numpy arrays to lists before validation.
+    Supports both dataclass instances and dict-like objects.
     """
-    # Convert dataclass → dict
-    data = asdict(state_obj)
+    # Convert dataclass → dict, or fallback to __dict__
+    if is_dataclass(state_obj):
+        data = asdict(state_obj)
+    else:
+        # Used in corrupted-state tests
+        data = dict(state_obj.__dict__)
 
     # Convert numpy arrays → lists
     data = _convert_numpy(data)
