@@ -1,4 +1,28 @@
-# noqa
+import numpy as np
+
+
+class SimulationState:
+    """
+    Minimal placeholder SimulationState object.
+    Only includes fields required by test_01_happy_path.py.
+    """
+
+    def __init__(self, P, U, V, W, mask, grid, constants):
+        self.P = P
+        self.U = U
+        self.V = V
+        self.W = W
+        self.mask = mask
+        self.grid = grid
+        self.constants = constants
+
+
+class GridConfig:
+    """Minimal placeholder grid config."""
+    def __init__(self, dx):
+        self.dx = dx
+
+
 def construct_simulation_state(json_input):
     """
     Minimal stub implementation that satisfies:
