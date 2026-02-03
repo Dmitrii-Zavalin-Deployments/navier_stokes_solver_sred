@@ -33,6 +33,7 @@ def construct_simulation_state(json_input):
     - test_04_grid_initialization.py
     - test_05_field_allocation.py
     - test_06_initial_conditions.py
+    - test_07_geometry_mask.py
 
     This is NOT the final Step 1 implementation.
     """
@@ -100,11 +101,16 @@ def construct_simulation_state(json_input):
         raise ValueError("initial_pressure contains NaN or Inf")
 
     # ----------------------------------------------------------------------
-    # 4. Mask length check
+    # 4. Mask length + value checks
     # ----------------------------------------------------------------------
     expected_len = nx * ny * nz
     if len(mask_flat) != expected_len:
         raise ValueError("geometry_mask_flat has incorrect length")
+
+    # Mask values must be 0 or 1
+    for m in mask_flat:
+        if m not in (0, 1):
+            raise ValueError("geometry_mask_flat contains invalid values")
 
     # ----------------------------------------------------------------------
     # 5. Physical constraints
@@ -141,7 +147,30 @@ def construct_simulation_state(json_input):
         raise ValueError("CFL pre-check failed: dt * |u| > dx")
 
     # ----------------------------------------------------------------------
-    # 6. Minimal stub logic (unchanged)
+    # 6. Geometry mask reshaping
+    # ----------------------------------------------------------------------
+    flat = np.array(mask_flat, dtype=np.int32)
+
+    order = simulation["flattening_order"].strip()
+
+    if order == "i + nx*(j + ny*k)":
+        # Default C-order flattening
+        mask = flat.reshape((nx, ny, nz), order="C")
+
+    elif order == "j + ny*(i + nx*k)":
+        # Custom flattening: swap i and j indexing
+        mask = np.zeros((nx, ny, nz), dtype=np.int32)
+        idx = 0
+        for k in range(nz):
+            for i in range(nx):
+                for j in range(ny):
+                    mask[i, j, k] = flat[idx]
+                    idx += 1
+    else:
+        raise ValueError("Unsupported flattening_order")
+
+    # ----------------------------------------------------------------------
+    # 7. Minimal stub logic (unchanged)
     # ----------------------------------------------------------------------
     x_min = domain["x_min"]
     x_max = domain["x_max"]
@@ -151,7 +180,6 @@ def construct_simulation_state(json_input):
     U = np.zeros((nx + 1, ny, nz))
     V = np.zeros((nx, ny + 1, nz))
     W = np.zeros((nx, ny, nz + 1))
-    mask = np.zeros((nx, ny, nz))
 
     grid = GridConfig(dx=dx)
     constants = {"dx": dx, "mu": fluid["viscosity"]}
