@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Step 2 Output Schema",
+  "type": "object",
+
+  "required": [
+    "grid",
+    "P", "U", "V", "W",
+    "mask",
+    "config",
+    "constants",
+    "operators",
+    "ppe",
+    "health",
+    "is_fluid",
+    "is_boundary_cell"
+  ],
+
+  "properties": {
+
+    "grid": {
+      "type": "object",
+      "required": [
+        "x_min", "x_max",
+        "y_min", "y_max",
+        "z_min", "z_max",
+        "nx", "ny", "nz",
+        "dx", "dy", "dz"
+      ],
+      "properties": {
+        "x_min": { "type": "number" },
+        "x_max": { "type": "number" },
+        "y_min": { "type": "number" },
+        "y_max": { "type": "number" },
+        "z_min": { "type": "number" },
+        "z_max": { "type": "number" },
+
+        "nx": { "type": "integer", "minimum": 1 },
+        "ny": { "type": "integer", "minimum": 1 },
+        "nz": { "type": "integer", "minimum": 1 },
+
+        "dx": { "type": "number", "exclusiveMinimum": 0 },
+        "dy": { "type": "number", "exclusiveMinimum": 0 },
+        "dz": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+
+    "P": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+    "U": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+    "V": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+    "W": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+
+    "mask": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "integer", "minimum": 0 } } }
+    },
+
+    "is_fluid": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
+    },
+
+    "is_boundary_cell": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
+    },
+
+    "constants": {
+      "type": "object",
+      "required": [
+        "rho", "mu", "dt",
+        "dx", "dy", "dz",
+        "inv_dx", "inv_dy", "inv_dz",
+        "inv_dx2", "inv_dy2", "inv_dz2"
+      ],
+      "properties": {
+        "rho": { "type": "number", "exclusiveMinimum": 0 },
+        "mu": { "type": "number", "minimum": 0 },
+        "dt": { "type": "number", "exclusiveMinimum": 0 },
+
+        "dx": { "type": "number", "exclusiveMinimum": 0 },
+        "dy": { "type": "number", "exclusiveMinimum": 0 },
+        "dz": { "type": "number", "exclusiveMinimum": 0 },
+
+        "inv_dx": { "type": "number" },
+        "inv_dy": { "type": "number" },
+        "inv_dz": { "type": "number" },
+
+        "inv_dx2": { "type": "number" },
+        "inv_dy2": { "type": "number" },
+        "inv_dz2": { "type": "number" }
+      }
+    },
+
+    "operators": {
+      "type": "object",
+      "required": [
+        "divergence",
+        "gradient_p_x", "gradient_p_y", "gradient_p_z",
+        "laplacian_u", "laplacian_v", "laplacian_w",
+        "advection_u", "advection_v", "advection_w"
+      ],
+      "properties": {
+        "divergence": { "type": "string" },
+        "gradient_p_x": { "type": "string" },
+        "gradient_p_y": { "type": "string" },
+        "gradient_p_z": { "type": "string" },
+
+        "laplacian_u": { "type": "string" },
+        "laplacian_v": { "type": "string" },
+        "laplacian_w": { "type": "string" },
+
+        "advection_u": { "type": "string" },
+        "advection_v": { "type": "string" },
+        "advection_w": { "type": "string" }
+      },
+      "description": "Operators stored as symbolic identifiers or function names."
+    },
+
+    "ppe": {
+      "type": "object",
+      "required": ["A", "rhs_builder"],
+      "properties": {
+        "A": {
+          "type": "object",
+          "description": "Sparse matrix representation (CSR/COO/etc.)."
+        },
+        "rhs_builder": {
+          "type": "string",
+          "description": "Reference to RHS builder function."
+        }
+      }
+    },
+
+    "health": {
+      "type": "object",
+      "required": [
+        "initial_divergence_norm",
+        "max_velocity_magnitude",
+        "cfl_advection_estimate"
+      ],
+      "properties": {
+        "initial_divergence_norm": { "type": "number", "minimum": 0 },
+        "max_velocity_magnitude": { "type": "number", "minimum": 0 },
+        "cfl_advection_estimate": { "type": "number", "minimum": 0 }
+      }
+    },
+
+    "config": {
+      "type": "object",
+      "description": "Original validated input JSON passed through unchanged."
+    }
+  }
+}
