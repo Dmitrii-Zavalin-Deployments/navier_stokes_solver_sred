@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Step 1 Output Schema",
+  "type": "object",
+  "required": [
+    "grid",
+    "P",
+    "U",
+    "V",
+    "W",
+    "mask",
+    "constants",
+    "config"
+  ],
+
+  "properties": {
+    "grid": {
+      "type": "object",
+      "required": [
+        "x_min", "x_max",
+        "y_min", "y_max",
+        "z_min", "z_max",
+        "nx", "ny", "nz",
+        "dx", "dy", "dz"
+      ],
+      "properties": {
+        "x_min": { "type": "number" },
+        "x_max": { "type": "number" },
+        "y_min": { "type": "number" },
+        "y_max": { "type": "number" },
+        "z_min": { "type": "number" },
+        "z_max": { "type": "number" },
+
+        "nx": { "type": "integer", "minimum": 1 },
+        "ny": { "type": "integer", "minimum": 1 },
+        "nz": { "type": "integer", "minimum": 1 },
+
+        "dx": { "type": "number", "exclusiveMinimum": 0 },
+        "dy": { "type": "number", "exclusiveMinimum": 0 },
+        "dz": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+
+    "P": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+
+    "U": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+
+    "V": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+
+    "W": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+
+    "mask": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+
+    "constants": {
+      "type": "object",
+      "required": ["mu", "dx"],
+      "properties": {
+        "mu": { "type": "number", "minimum": 0 },
+        "dx": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+
+    "config": {
+      "type": "object",
+      "description": "Original validated input JSON passed through unchanged."
+    }
+  }
+}
