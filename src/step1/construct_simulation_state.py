@@ -107,20 +107,22 @@ def construct_simulation_state(json_input):
     if len(mask_flat) != expected_len:
         raise ValueError("geometry_mask_flat has incorrect length")
 
-    # Determine if mask is binary or pattern
-    unique_vals = set(mask_flat)
+    # All mask values must be integers
+    for m in mask_flat:
+        if not isinstance(m, int):
+            raise ValueError("geometry_mask_flat must contain integers only")
 
-    # Case 1: binary mask → must contain only 0 or 1
+    # Negative values are always invalid
+    if any(m < 0 for m in mask_flat):
+        raise ValueError("geometry_mask_flat contains invalid values")
+
+    # Binary mask (0/1 only) → valid
+    unique_vals = set(mask_flat)
     if unique_vals.issubset({0, 1}):
         pass  # valid binary mask
 
-    # Case 2: pattern mask → allowed only if it contains no 0/1
-    elif unique_vals.isdisjoint({0, 1}):
-        pass  # valid pattern mask (used for reshaping tests)
-
-    # Case 3: mixed mask → invalid
-    else:
-        raise ValueError("geometry_mask_flat contains invalid values")
+    # Pattern mask (any non-negative integers) → valid
+    # No further restrictions
 
     # ----------------------------------------------------------------------
     # 5. Physical constraints
