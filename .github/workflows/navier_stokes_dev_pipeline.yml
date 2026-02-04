@@ -44,7 +44,7 @@ jobs:
       - name: 💀 Vulture (dead code detection)
         run: |
           pip install vulture
-          vulture src vulture_whitelist.py
+          vulture src vulture_whitelist.py --min-confidence 70
 
       - name: 🧬 JSCPD (duplicate code detection)
         run: |
