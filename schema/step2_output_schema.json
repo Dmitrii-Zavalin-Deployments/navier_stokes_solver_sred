@@ -4,21 +4,21 @@
   "type": "object",
 
   "required": [
-    "grid",
+    "Grid",
     "P", "U", "V", "W",
-    "mask",
-    "config",
-    "constants",
-    "operators",
-    "ppe",
-    "health",
+    "Mask",
+    "Config",
+    "Constants",
+    "Operators",
+    "PPE",
+    "Health",
     "is_fluid",
     "is_boundary_cell"
   ],
 
   "properties": {
 
-    "grid": {
+    "Grid": {
       "type": "object",
       "required": [
         "x_min", "x_max",
@@ -62,9 +62,18 @@
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
     },
 
-    "mask": {
+    "Mask": {
       "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "integer", "minimum": 0 } } }
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "enum": [-1, 0, 1]
+          }
+        }
+      }
     },
 
     "is_fluid": {
@@ -77,7 +86,7 @@
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
     },
 
-    "constants": {
+    "Constants": {
       "type": "object",
       "required": [
         "rho", "mu", "dt",
@@ -104,7 +113,7 @@
       }
     },
 
-    "operators": {
+    "Operators": {
       "type": "object",
       "required": [
         "divergence",
@@ -124,27 +133,34 @@
 
         "advection_u": { "type": "string" },
         "advection_v": { "type": "string" },
-        "advection_w": { "type": "string" }
-      },
-      "description": "Operators stored as symbolic identifiers or function names."
-    },
+        "advection_w": { "type": "string" },
 
-    "ppe": {
-      "type": "object",
-      "required": ["A", "rhs_builder"],
-      "properties": {
-        "A": {
-          "type": "object",
-          "description": "Sparse matrix representation (CSR/COO/etc.)."
-        },
-        "rhs_builder": {
-          "type": "string",
-          "description": "Reference to RHS builder function."
+        "interpolation_stencils": {
+          "type": ["string", "null"],
+          "description": "Optional precomputed interpolation maps."
         }
       }
     },
 
-    "health": {
+    "PPE": {
+      "type": "object",
+      "required": [
+        "rhs_builder",
+        "solver_type",
+        "tolerance",
+        "max_iterations",
+        "ppe_is_singular"
+      ],
+      "properties": {
+        "rhs_builder": { "type": "string" },
+        "solver_type": { "type": "string" },
+        "tolerance": { "type": "number", "minimum": 0 },
+        "max_iterations": { "type": "integer", "minimum": 1 },
+        "ppe_is_singular": { "type": "boolean" }
+      }
+    },
+
+    "Health": {
       "type": "object",
       "required": [
         "initial_divergence_norm",
@@ -158,7 +174,7 @@
       }
     },
 
-    "config": {
+    "Config": {
       "type": "object",
       "description": "Original validated input JSON passed through unchanged."
     }
