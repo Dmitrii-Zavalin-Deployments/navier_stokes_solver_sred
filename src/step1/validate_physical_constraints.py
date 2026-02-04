@@ -17,9 +17,7 @@ def validate_physical_constraints(config: dict) -> None:
     nz = dom["nz"]
     x_min, x_max = dom["x_min"], dom["x_max"]
 
-    # -----------------------------
     # 1. Basic physical constraints
-    # -----------------------------
     if density <= 0.0:
         raise ValueError("Density must be positive")
 
@@ -32,9 +30,7 @@ def validate_physical_constraints(config: dict) -> None:
     if x_max <= x_min:
         raise ValueError("Invalid domain extent in x")
 
-    # -----------------------------
     # 2. NaN / Inf checks
-    # -----------------------------
     u0 = ic["initial_velocity"]
     if any(math.isnan(v) or math.isinf(v) for v in u0):
         raise ValueError("initial_velocity contains NaN or Inf")
@@ -47,18 +43,12 @@ def validate_physical_constraints(config: dict) -> None:
     if any(math.isnan(f) or math.isinf(f) for f in fvec):
         raise ValueError("force_vector contains NaN or Inf")
 
-    # -----------------------------
-    # 3. Geometry mask structural constraint
-    # -----------------------------
+    # 3. Minimal geometry structural check
     shape = geom["geometry_mask_shape"]
-
-    # Only structural check here; all other mask logic is in map_geometry_mask.
     if len(shape) != 3:
         raise ValidationError("geometry_mask_shape must have length 3")
 
-    # -----------------------------
     # 4. CFL-like precheck
-    # -----------------------------
     dt = sim["time_step"]
     speed = math.sqrt(u0[0] ** 2 + u0[1] ** 2 + u0[2] ** 2)
     dx = abs(x_max - x_min) / nx

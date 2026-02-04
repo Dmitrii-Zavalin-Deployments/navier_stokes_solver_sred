@@ -5,7 +5,6 @@ from jsonschema import validate, ValidationError
 import numpy as np
 
 
-# Path to schema/step1_output_schema.json
 SCHEMA_PATH = (
     Path(__file__)
     .resolve()
@@ -55,7 +54,4 @@ def validate_output_schema(state_obj) -> None:
     data = _convert_numpy(data)
 
     # 3. Validate against JSON Schema
-    try:
-        validate(instance=data, schema=STEP1_OUTPUT_SCHEMA)
-    except ValidationError:
-        raise
+    validate(instance=data, schema=STEP1_OUTPUT_SCHEMA)
