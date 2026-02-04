@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import Any, Dict
-
 import math
 
 
@@ -36,11 +35,15 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     init = data["initial_conditions"]
     geom = data["geometry_definition"]
 
-    # Density, viscosity
+    # ---------------------------------------------------------
+    # Fluid properties
+    # ---------------------------------------------------------
     _ensure_positive("density", float(fluid["density"]))
     _ensure_non_negative("viscosity", float(fluid["viscosity"]))
 
+    # ---------------------------------------------------------
     # Grid counts
+    # ---------------------------------------------------------
     nx = int(domain["nx"])
     ny = int(domain["ny"])
     nz = int(domain["nz"])
@@ -48,7 +51,9 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     _ensure_positive_int("ny", ny)
     _ensure_positive_int("nz", nz)
 
+    # ---------------------------------------------------------
     # Domain extents
+    # ---------------------------------------------------------
     x_min = float(domain["x_min"])
     x_max = float(domain["x_max"])
     y_min = float(domain["y_min"])
@@ -63,29 +68,51 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     if not z_max > z_min:
         raise ValueError("z_max must be > z_min")
 
-    # Mask length
+    # ---------------------------------------------------------
+    # Geometry mask consistency
+    # ---------------------------------------------------------
     mask_flat = geom["geometry_mask_flat"]
-    if len(mask_flat) != nx * ny * nz:
+    mask_shape = geom["geometry_mask_shape"]
+
+    if len(mask_shape) != 3:
+        raise ValueError("geometry_mask_shape must have 3 dimensions")
+
+    expected_len = mask_shape[0] * mask_shape[1] * mask_shape[2]
+    if expected_len != nx * ny * nz:
         raise ValueError(
-            f"geometry_mask_flat length {len(mask_flat)} "
-            f"does not match nx*ny*nz={nx*ny*nz}"
+            f"geometry_mask_shape {mask_shape} does not match nx*ny*nz={nx*ny*nz}"
         )
 
-    # Initial velocity: length and finiteness
+    if len(mask_flat) != expected_len:
+        raise ValueError(
+            f"geometry_mask_flat length {len(mask_flat)} does not match "
+            f"geometry_mask_shape product {expected_len}"
+        )
+
+    # ---------------------------------------------------------
+    # Initial velocity
+    # ---------------------------------------------------------
     vel = init["initial_velocity"]
     if len(vel) != 3:
         raise ValueError("initial_velocity must have exactly 3 components")
+
     for i, v in enumerate(vel):
         _ensure_finite(f"initial_velocity[{i}]", float(v))
 
+    # ---------------------------------------------------------
     # Initial pressure
+    # ---------------------------------------------------------
     _ensure_finite("initial_pressure", float(init["initial_pressure"]))
 
-    # Optional CFL pre-check (very light)
+    # ---------------------------------------------------------
+    # Time step + CFL pre-check
+    # ---------------------------------------------------------
     sim = data["simulation_parameters"]
     dt = float(sim["time_step"])
     _ensure_positive("time_step", dt)
+
     dx = (x_max - x_min) / nx
     max_u = max(abs(float(v)) for v in vel)
+
     if max_u > 0.0 and dt * max_u > dx:
         raise ValueError("CFL pre-check failed: dt * |u| > dx")
