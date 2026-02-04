@@ -14,10 +14,8 @@ with open(SCHEMA_PATH, "r") as f:
     INPUT_SCHEMA = json.load(f)
 
 def validate_json_schema(json_input: dict) -> None:
-    # 1. Schema validation
     validate(instance=json_input, schema=INPUT_SCHEMA)
 
-    # 2. Extra check required by test_geometry_mask_shape_mismatch
     dom = json_input["domain_definition"]
     geom = json_input["geometry_definition"]
 

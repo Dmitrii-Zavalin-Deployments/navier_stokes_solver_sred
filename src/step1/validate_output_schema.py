@@ -26,7 +26,6 @@ def _convert_numpy(obj):
     return obj
 
 def validate_output_schema(state_obj) -> None:
-    # Convert object → dict
     if is_dataclass(state_obj):
         data = asdict(state_obj)
     elif hasattr(state_obj, "__dict__"):
@@ -39,8 +38,6 @@ def validate_output_schema(state_obj) -> None:
         except Exception:
             raise TypeError("Unsupported state object type")
 
-    # Convert numpy arrays → lists
     data = _convert_numpy(data)
 
-    # Validate against JSON Schema
     validate(instance=data, schema=STEP1_OUTPUT_SCHEMA)

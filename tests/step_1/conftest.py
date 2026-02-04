@@ -43,6 +43,10 @@ def sample_json_input():
             "geometry_mask_flat": [1] * (nx * ny * nz),
             "geometry_mask_shape": [nx, ny, nz],
             "flattening_order": "i + nx*(j + ny*k)",
+            "mask_encoding": {
+                "fluid": 1,
+                "solid": 0
+            }
         },
         "external_forces": {
             "force_vector": [0.0, 0.0, 0.0],
