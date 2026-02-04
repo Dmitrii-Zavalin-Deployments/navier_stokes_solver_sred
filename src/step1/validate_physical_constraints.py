@@ -48,16 +48,11 @@ def validate_physical_constraints(config: dict) -> None:
         raise ValueError("force_vector contains NaN or Inf")
 
     # -----------------------------
-    # 3. Geometry mask constraints
+    # 3. Geometry mask structural constraint
     # -----------------------------
-    # Only structural check remains here.
-    # All other mask checks (shape mismatch, length mismatch,
-    # invalid values) are handled in map_geometry_mask.py
-    # because the tests expect them there.
-
     shape = geom["geometry_mask_shape"]
 
-    # 3a. Shape must be length 3
+    # Only structural check here; all other mask logic is in map_geometry_mask.
     if len(shape) != 3:
         raise ValidationError("geometry_mask_shape must have length 3")
 
