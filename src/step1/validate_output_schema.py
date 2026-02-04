@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from dataclasses import asdict, is_dataclass
-from jsonschema import validate, ValidationError
+from jsonschema import validate
 import numpy as np
 
 
