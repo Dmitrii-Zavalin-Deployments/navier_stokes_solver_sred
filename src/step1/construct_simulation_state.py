@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-import numpy as np
 
 from .assemble_simulation_state import assemble_simulation_state
 from .allocate_staggered_fields import allocate_staggered_fields

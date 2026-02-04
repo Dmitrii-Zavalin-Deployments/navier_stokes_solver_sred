@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Dict
 
-import numpy as np
 
 from .types import Fields
 
