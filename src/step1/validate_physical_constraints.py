@@ -50,26 +50,16 @@ def validate_physical_constraints(config: dict) -> None:
     # -----------------------------
     # 3. Geometry mask constraints
     # -----------------------------
+    # Only structural check remains here.
+    # All other mask checks (shape mismatch, length mismatch,
+    # invalid values) are handled in map_geometry_mask.py
+    # because the tests expect them there.
+
     shape = geom["geometry_mask_shape"]
-    flat = geom["geometry_mask_flat"]
 
     # 3a. Shape must be length 3
     if len(shape) != 3:
         raise ValidationError("geometry_mask_shape must have length 3")
-
-    # 3b. Shape must match grid resolution (nx, ny, nz)
-    if shape != [nx, ny, nz]:
-        raise ValidationError("geometry_mask_shape does not match grid resolution")
-
-    expected_len = shape[0] * shape[1] * shape[2]
-
-    # 3c. Flat mask length must match shape product
-    if len(flat) != expected_len:
-        raise ValidationError("geometry_mask_flat length does not match geometry_mask_shape")
-
-    # 3d. Mask values must be only 0 or 1 (ValueError per tests)
-    if any(v not in (0, 1) for v in flat):
-        raise ValueError("geometry_mask_flat contains invalid values")
 
     # -----------------------------
     # 4. CFL-like precheck
