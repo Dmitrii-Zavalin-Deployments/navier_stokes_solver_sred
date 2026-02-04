@@ -38,21 +38,23 @@ def validate_output_schema(state_obj) -> None:
     Converts numpy arrays to lists before validation.
     Supports dataclasses, objects with __dict__, and mapping-like objects.
     """
-    # Convert dataclass → dict
+    # 1. Convert object → dict
     if is_dataclass(state_obj):
         data = asdict(state_obj)
-
-    # Fallback: object with __dict__
     elif hasattr(state_obj, "__dict__"):
         data = dict(state_obj.__dict__)
-
-    # Last fallback: treat as mapping (used in corrupted-state tests)
+    elif isinstance(state_obj, dict):
+        data = state_obj
     else:
-        data = dict(state_obj)
+        try:
+            data = dict(state_obj)
+        except Exception:
+            raise TypeError("Unsupported state object type")
 
-    # Convert numpy arrays → lists
+    # 2. Convert numpy arrays → lists
     data = _convert_numpy(data)
 
+    # 3. Validate against JSON Schema
     try:
         validate(instance=data, schema=STEP1_OUTPUT_SCHEMA)
     except ValidationError:
