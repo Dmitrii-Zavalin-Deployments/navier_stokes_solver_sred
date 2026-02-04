@@ -1,7 +1,7 @@
 # file: src/step1/schema_utils.py
 import json
 from pathlib import Path
-from jsonschema import validate, ValidationError
+from jsonschema import validate
 
 
 def load_schema(path: str) -> dict:
