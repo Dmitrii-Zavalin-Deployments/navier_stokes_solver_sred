@@ -1,9 +1,15 @@
 import numpy as np
 
-class DummyState:
+class DummyState(dict):
     """
-    A test double that mimics the real Step 1 → Step 2 SimulationState structure.
-    Step 2 code expects capitalized attributes: Grid, Config, Constants, Mask, etc.
+    Dict-backed test state that matches Step 2 expectations:
+    - state["Grid"]["nx"], state["Grid"]["dx"], ...
+    - state["Config"]["simulation_parameters"]["dt"]
+    - state["Mask"]
+    - state["Constants"] (filled by precompute_constants)
+    - state["BoundaryTable"]
+
+    Also exposes U, V, W, P as attributes for convenience.
     """
 
     def __init__(
@@ -21,31 +27,49 @@ class DummyState:
         boundary_table=None,
         scheme="upwind",
     ):
-        # Match Step 1 naming conventions (capitalized)
-        self.Grid = type("Grid", (), dict(nx=nx, ny=ny, nz=nz, dx=dx, dy=dy, dz=dz))()
+        super().__init__()
+
+        # Grid dictionary (Step 2 expects dict-like access)
+        grid = {
+            "nx": nx,
+            "ny": ny,
+            "nz": nz,
+            "dx": dx,
+            "dy": dy,
+            "dz": dz,
+        }
+
+        # Config dictionary (Step 2 expects dict-like access)
+        config = {
+            "fluid_properties": {
+                "density": rho,
+                "viscosity": mu,
+            },
+            "simulation_parameters": {
+                "dt": dt,
+                "advection_scheme": scheme,
+            },
+        }
 
         # Mask
         if mask is None:
             mask = np.ones((nx, ny, nz), dtype=int)
-        self.Mask = mask
 
-        # Config (capitalized)
-        self.Config = type(
-            "Config",
-            (),
-            dict(
-                fluid_properties={"density": rho, "viscosity": mu},
-                simulation_parameters={"dt": dt, "advection_scheme": scheme},
-            ),
-        )()
+        # Populate dict entries
+        self["Grid"] = grid
+        self["Config"] = config
+        self["Mask"] = mask
+        self["BoundaryTable"] = boundary_table or []
+        self["Constants"] = None  # Filled by precompute_constants
 
-        # Boundary table
-        self.BoundaryTable = boundary_table or []
+        # Also expose attribute-style access (optional convenience)
+        self.Grid = self["Grid"]
+        self.Config = self["Config"]
+        self.Mask = self["Mask"]
+        self.BoundaryTable = self["BoundaryTable"]
+        self.Constants = self["Constants"]
 
-        # Constants (Step 2 fills this)
-        self.Constants = None
-
-        # Fields expected by Step 2
+        # Fields used by Step 2 operators
         self.P = np.zeros((nx, ny, nz), dtype=float)
         self.U = np.zeros((nx + 1, ny, nz), dtype=float)
         self.V = np.zeros((nx, ny + 1, nz), dtype=float)
