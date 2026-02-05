@@ -20,7 +20,7 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
     # ------------------------------------------------------------------
     # Central differences
     # ------------------------------------------------------------------
-    def _central_x(F):
+    def _central_x(F: np.ndarray) -> np.ndarray:
         d = np.zeros_like(F)
         if F.shape[0] > 1:
             d[1:-1] = (F[2:] - F[:-2]) / (2 * dx)
@@ -28,7 +28,7 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
             d[-1] = (F[-1] - F[-2]) / dx
         return d
 
-    def _central_y(F):
+    def _central_y(F: np.ndarray) -> np.ndarray:
         d = np.zeros_like(F)
         if F.shape[1] > 1:
             d[:, 1:-1] = (F[:, 2:] - F[:, :-2]) / (2 * dy)
@@ -36,7 +36,7 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
             d[:, -1] = (F[:, -1] - F[:, -2]) / dy
         return d
 
-    def _central_z(F):
+    def _central_z(F: np.ndarray) -> np.ndarray:
         d = np.zeros_like(F)
         if F.shape[2] > 1:
             d[:, :, 1:-1] = (F[:, :, 2:] - F[:, :, :-2]) / (2 * dz)
@@ -45,103 +45,116 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
         return d
 
     # ------------------------------------------------------------------
-    # Upwind differences (shape-safe, loop-based)
+    # Upwind advection in flux form (shape-safe, 1D loops)
     # ------------------------------------------------------------------
-    def _upwind_x(F, U):
-        nx = F.shape[0]
-        d = np.zeros_like(F)
-
+    def _upwind_flux_x(U: np.ndarray) -> np.ndarray:
+        """
+        Compute (u · ∂u/∂x) in a simple first-order upwind flux form:
+            a_u[i] ≈ (F_i - F_{i-1}) / dx,  F = u^2 / 2
+        using the sign of u to pick the upstream side.
+        """
+        nx = U.shape[0]
+        a = np.zeros_like(U)
         if nx <= 1:
-            return d
+            return a
+
+        F = 0.5 * U**2
 
         for i in range(1, nx):
-            if U[i].mean() > 0:  # backward
-                d[i] = (F[i] - F[i - 1]) / dx
-            else:  # forward
+            ui_mean = U[i].mean()
+            if ui_mean > 0:
+                a[i] = (F[i] - F[i - 1]) / dx
+            else:
                 if i + 1 < nx:
-                    d[i] = (F[i + 1] - F[i]) / dx
+                    a[i] = (F[i + 1] - F[i]) / dx
                 else:
-                    d[i] = (F[i] - F[i - 1]) / dx
+                    a[i] = (F[i] - F[i - 1]) / dx
 
-        d[0] = (F[1] - F[0]) / dx
-        return d
+        a[0] = a[1]
+        return a
 
-    def _upwind_y(F, V):
-        ny = F.shape[1]
-        d = np.zeros_like(F)
-
+    # For now, keep y/z upwind contributions simple and symmetric with x
+    def _upwind_flux_y(V: np.ndarray) -> np.ndarray:
+        ny = V.shape[1]
+        a = np.zeros_like(V)
         if ny <= 1:
-            return d
+            return a
+
+        F = 0.5 * V**2
 
         for j in range(1, ny):
-            if V[:, j].mean() > 0:
-                d[:, j] = (F[:, j] - F[:, j - 1]) / dy
+            vj_mean = V[:, j].mean()
+            if vj_mean > 0:
+                a[:, j] = (F[:, j] - F[:, j - 1]) / dy
             else:
                 if j + 1 < ny:
-                    d[:, j] = (F[:, j + 1] - F[:, j]) / dy
+                    a[:, j] = (F[:, j + 1] - F[:, j]) / dy
                 else:
-                    d[:, j] = (F[:, j] - F[:, j - 1]) / dy
+                    a[:, j] = (F[:, j] - F[:, j - 1]) / dy
 
-        d[:, 0] = (F[:, 1] - F[:, 0]) / dy
-        return d
+        a[:, 0] = a[:, 1]
+        return a
 
-    def _upwind_z(F, W):
-        nz = F.shape[2]
-        d = np.zeros_like(F)
-
+    def _upwind_flux_z(W: np.ndarray) -> np.ndarray:
+        nz = W.shape[2]
+        a = np.zeros_like(W)
         if nz <= 1:
-            return d
+            return a
+
+        F = 0.5 * W**2
 
         for k in range(1, nz):
-            if W[:, :, k].mean() > 0:
-                d[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+            wk_mean = W[:, :, k].mean()
+            if wk_mean > 0:
+                a[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
             else:
                 if k + 1 < nz:
-                    d[:, :, k] = (F[:, :, k + 1] - F[:, :, k]) / dz
+                    a[:, :, k] = (F[:, :, k + 1] - F[:, :, k]) / dz
                 else:
-                    d[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+                    a[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
 
-        d[:, :, 0] = (F[:, :, 1] - F[:, :, 0]) / dz
-        return d
+        a[:, :, 0] = a[:, :, 1]
+        return a
 
     # ------------------------------------------------------------------
     # Advection operators
     # ------------------------------------------------------------------
-    def advection_u(U, V, W):
+    def advection_u(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
         if scheme == "upwind":
-            du_dx = _upwind_x(U, U)
-            du_dy = _upwind_y(U, V)
-            du_dz = _upwind_z(U, W)
+            # Flux-form upwind in x, plus simple contributions in y/z
+            ax = _upwind_flux_x(U)
+            ay = _upwind_flux_y(U)
+            az = _upwind_flux_z(U)
+            return ax + 0.5 * (ay + az)
         else:
             du_dx = _central_x(U)
             du_dy = _central_y(U)
             du_dz = _central_z(U)
+            return U * du_dx + 0.5 * (du_dy + du_dz)
 
-        return U * du_dx + 0.5 * (du_dy + du_dz)
-
-    def advection_v(U, V, W):
+    def advection_v(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
         if scheme == "upwind":
-            dv_dx = _upwind_x(V, U)
-            dv_dy = _upwind_y(V, V)
-            dv_dz = _upwind_z(V, W)
+            ax = _upwind_flux_x(V)
+            ay = _upwind_flux_y(V)
+            az = _upwind_flux_z(V)
+            return ax + 0.5 * (ay + az)
         else:
             dv_dx = _central_x(V)
             dv_dy = _central_y(V)
             dv_dz = _central_z(V)
+            return V * dv_dy + 0.5 * (dv_dx + dv_dz)
 
-        return V * dv_dy + 0.5 * (dv_dx + dv_dz)
-
-    def advection_w(U, V, W):
+    def advection_w(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
         if scheme == "upwind":
-            dw_dx = _upwind_x(W, U)
-            dw_dy = _upwind_y(W, V)
-            dw_dz = _upwind_z(W, W)
+            ax = _upwind_flux_x(W)
+            ay = _upwind_flux_y(W)
+            az = _upwind_flux_z(W)
+            return ax + 0.5 * (ay + az)
         else:
             dw_dx = _central_x(W)
             dw_dy = _central_y(W)
             dw_dz = _central_z(W)
-
-        return W * dw_dz + 0.5 * (dw_dx + dw_dy)
+            return W * dw_dz + 0.5 * (dw_dx + dw_dy)
 
     # ------------------------------------------------------------------
     # Package operators
