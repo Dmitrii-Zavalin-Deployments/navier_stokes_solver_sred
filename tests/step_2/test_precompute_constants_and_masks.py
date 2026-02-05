@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 
-from step2.precompute_constants import precompute_constants
-from step2.create_fluid_mask import create_fluid_mask
+from src.step2.precompute_constants import precompute_constants
+from src.step2.create_fluid_mask import create_fluid_mask
 
 
 class DummyState:

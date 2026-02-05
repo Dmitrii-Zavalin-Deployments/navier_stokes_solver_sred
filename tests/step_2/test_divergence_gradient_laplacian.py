@@ -2,10 +2,10 @@
 import numpy as np
 import pytest
 
-from step2.build_divergence_operator import build_divergence_operator
-from step2.build_gradient_operators import build_gradient_operators
-from step2.build_laplacian_operators import build_laplacian_operators
-from step2.create_fluid_mask import create_fluid_mask
+from src.step2.build_divergence_operator import build_divergence_operator
+from src.step2.build_gradient_operators import build_gradient_operators
+from src.step2.build_laplacian_operators import build_laplacian_operators
+from src.step2.create_fluid_mask import create_fluid_mask
 
 
 class DummyState:

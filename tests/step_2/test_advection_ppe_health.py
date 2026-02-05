@@ -2,11 +2,11 @@
 import numpy as np
 import pytest
 
-from step2.build_advection_structure import build_advection_structure
-from step2.prepare_ppe_structure import prepare_ppe_structure
-from step2.compute_initial_health import compute_initial_health
-from step2.create_fluid_mask import create_fluid_mask
-from step2.precompute_constants import precompute_constants
+from src.step2.build_advection_structure import build_advection_structure
+from src.step2.prepare_ppe_structure import prepare_ppe_structure
+from src.step2.compute_initial_health import compute_initial_health
+from src.step2.create_fluid_mask import create_fluid_mask
+from src.step2.precompute_constants import precompute_constants
 
 
 class DummyState:

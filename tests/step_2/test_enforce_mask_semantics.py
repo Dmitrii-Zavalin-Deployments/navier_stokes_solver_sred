@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from step2.enforce_mask_semantics import enforce_mask_semantics
+from src.step2.enforce_mask_semantics import enforce_mask_semantics
 
 
 class DummyState:
