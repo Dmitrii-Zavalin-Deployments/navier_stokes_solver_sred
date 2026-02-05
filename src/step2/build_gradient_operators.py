@@ -39,7 +39,7 @@ def build_gradient_operators(state: Any) -> Dict[str, Callable[[np.ndarray], np.
     dy = float(state.Constants["dy"])
     dz = float(state.Constants["dz"])
 
-    is_fluid = np.asarray(state.is_fluid)
+    np.asarray(state.is_fluid)
 
     def gradient_p_x(P: np.ndarray) -> np.ndarray:
         """

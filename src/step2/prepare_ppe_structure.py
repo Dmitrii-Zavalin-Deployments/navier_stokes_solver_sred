@@ -1,7 +1,7 @@
 # file: step2/prepare_ppe_structure.py
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
 import numpy as np
 

@@ -57,7 +57,7 @@ def build_laplacian_operators(state: Any) -> Dict[str, Callable[[np.ndarray], np
     dy = float(state.Constants["dy"])
     dz = float(state.Constants["dz"])
 
-    is_fluid = np.asarray(state.is_fluid)
+    np.asarray(state.is_fluid)
 
     def laplacian_u(U: np.ndarray) -> np.ndarray:
         """
