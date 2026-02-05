@@ -1,3 +1,5 @@
+# tests/step_2/test_enforce_mask_semantics.py
+
 import numpy as np
 import pytest
 
@@ -5,6 +7,10 @@ from src.step2.enforce_mask_semantics import enforce_mask_semantics
 
 
 class DummyState:
+    """
+    Minimal dummy state for mask semantics tests.
+    Only needs a .Mask attribute.
+    """
     def __init__(self, mask):
         self.Mask = np.array(mask)
 

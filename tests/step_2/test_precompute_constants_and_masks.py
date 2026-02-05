@@ -1,3 +1,5 @@
+# tests/step_2/test_precompute_constants_and_masks.py
+
 import numpy as np
 import pytest
 
@@ -9,7 +11,8 @@ from src.step2.create_fluid_mask import create_fluid_mask
 
 def test_precompute_constants_normal():
     state = DummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
-    constants = precompute_constants(state)
+    precompute_constants(state)
+    constants = state["Constants"]
 
     assert constants["dx"] == pytest.approx(0.1)
     assert constants["inv_dx"] == pytest.approx(10.0)
@@ -18,7 +21,8 @@ def test_precompute_constants_normal():
 
 def test_precompute_constants_very_small_dx():
     state = DummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
-    constants = precompute_constants(state)
+    precompute_constants(state)
+    constants = state["Constants"]
 
     assert np.isfinite(constants["inv_dx"])
     assert np.isfinite(constants["inv_dx2"])
@@ -32,9 +36,12 @@ def test_precompute_constants_dt_zero_rejected():
 
 def test_precompute_constants_existing_constants_passthrough():
     state = DummyState(1, 1, 1)
-    state.Constants = {"dx": 0.1}
-    constants = precompute_constants(state)
-    assert constants is state.Constants
+    original = {"dx": 0.1}
+    state["Constants"] = original
+
+    precompute_constants(state)
+
+    assert state["Constants"] is original
 
 
 def test_create_fluid_mask_mixed():
@@ -51,9 +58,14 @@ def test_create_fluid_mask_mixed():
     assert is_fluid.shape == mask.shape
     assert is_boundary.shape == mask.shape
 
+    # fluid cells
     assert is_fluid[0, 0, 1]
     assert is_fluid[1, 0, 0]
+
+    # boundary-fluid
     assert is_boundary[1, 0, 0]
+
+    # solid
     assert not is_fluid[0, 0, 0]
 
 

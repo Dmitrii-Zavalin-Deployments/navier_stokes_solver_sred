@@ -213,3 +213,53 @@ def test_laplacian_quadratic_constant():
     for i in range(nx + 1):
         U[i, 0, 0] = float(i ** 2)
 
+    lap = lap_u(U)
+    interior = lap[2:-2, 0, 0]
+
+    assert np.allclose(interior, 2.0)
+
+
+def test_laplacian_solid_neighbors_truncated():
+    nx, ny, nz = 4, 4, 4
+    mask = np.ones((nx, ny, nz), dtype=int)
+    mask[1, 1, 1] = 0
+
+    state = DummyState(nx, ny, nz, mask=mask)
+    precompute_constants(state)
+    lap_u, _, _ = build_laplacian_operators(state)
+
+    U = np.ones((nx + 1, ny, nz), dtype=float)
+    lap = lap_u(U)
+
+    assert lap[1, 1, 1] == 0.0
+
+
+def test_laplacian_boundary_fluid_treated_as_fluid():
+    nx, ny, nz = 4, 1, 1
+    mask = np.ones((nx, ny, nz), dtype=int)
+    mask[1, 0, 0] = -1  # boundary-fluid
+
+    state = DummyState(nx, ny, nz, mask=mask)
+    precompute_constants(state)
+    lap_u, _, _ = build_laplacian_operators(state)
+
+    U = np.zeros((nx + 1, ny, nz), dtype=float)
+    for i in range(nx + 1):
+        U[i, 0, 0] = float(i ** 2)
+
+    lap = lap_u(U)
+    assert np.isfinite(lap[1, 0, 0])
+
+
+def test_laplacian_minimal_grid():
+    state = DummyState(1, 1, 1)
+    precompute_constants(state)
+    lap_u, lap_v, lap_w = build_laplacian_operators(state)
+
+    U = np.zeros((2, 1, 1), dtype=float)
+    V = np.zeros((1, 2, 1), dtype=float)
+    W = np.zeros((1, 1, 2), dtype=float)
+
+    assert lap_u(U).shape == (2, 1, 1)
+    assert lap_v(V).shape == (1, 2, 1)
+    assert lap_w(W).shape == (1, 1, 2)
