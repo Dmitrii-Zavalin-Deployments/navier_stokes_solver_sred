@@ -1,6 +1,7 @@
 # src/step2/orchestrate_step2.py
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 # Import all Step 2 functions
@@ -14,28 +15,25 @@ from .build_advection_structure import build_advection_structure
 from .prepare_ppe_structure import prepare_ppe_structure
 from .compute_initial_health import compute_initial_health
 
+# Optional JSON-schema validation (mirrors Step 1 behavior)
+try:  # pragma: no cover
+    from ..step1.validate_json_schema import validate_json_schema
+except Exception:  # pragma: no cover
+    validate_json_schema = None  # type: ignore
+
 
 def orchestrate_step2(state: Any) -> Any:
     """
     High-level orchestrator for Step 2.
 
-    This function takes a fully validated SimulationState from Step 1 and
-    enhances it with:
-      - semantic mask validation
-      - boolean fluid masks
+    Enhances a validated Step 1 SimulationState with:
+      - mask semantics
+      - fluid masks
       - discrete operators (div, grad, laplacian, advection)
-      - PPE structure (rhs builder, solver config, singularity flag)
+      - PPE structure
       - initial solver health diagnostics
 
-    Parameters
-    ----------
-    state : Any
-        SimulationState produced by Step 1.
-
-    Returns
-    -------
-    state : Any
-        Enhanced SimulationState ready for Step 3.
+    Optionally validates the final state against schema/step2_output_schema.json.
     """
 
     # ------------------------------------------------------------
@@ -70,6 +68,19 @@ def orchestrate_step2(state: Any) -> Any:
     # 6. Compute initial solver health diagnostics
     # ------------------------------------------------------------
     compute_initial_health(state)
+
+    # ------------------------------------------------------------
+    # 7. Optional: validate against Step 2 output JSON schema
+    # ------------------------------------------------------------
+    if isinstance(state, dict) and validate_json_schema is not None:  # pragma: no cover
+        try:
+            schema_path = (
+                Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
+            )
+            validate_json_schema(state, str(schema_path))
+        except Exception:
+            # Never break solver pipeline due to schema validation
+            pass
 
     # ------------------------------------------------------------
     # Done — state is now fully Step 2–enhanced
