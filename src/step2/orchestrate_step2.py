@@ -1,4 +1,4 @@
-# file: step2/orchestrate_step2.py
+# src/step2/orchestrate_step2.py
 from __future__ import annotations
 
 from typing import Any

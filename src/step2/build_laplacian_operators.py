@@ -1,8 +1,7 @@
-# file: step2/build_laplacian_operators.py
+# src/step2/build_laplacian_operators.py
 from __future__ import annotations
 
 from typing import Any, Callable, Dict
-
 import numpy as np
 
 
@@ -40,9 +39,9 @@ def build_laplacian_operators(state: Any) -> Dict[str, Callable[[np.ndarray], np
     ----------
     state : Any
         SimulationState-like object with:
-        - Grid (nx, ny, nz)
-        - Constants (dx, dy, dz)
-        - is_fluid (bool[nx, ny, nz])
+        - state["Grid"] = {"nx", "ny", "nz"}
+        - state["Constants"] = {"dx", "dy", "dz"}
+        - state["Mask"] = int[nx, ny, nz] with values {1, 0, -1}
 
     Returns
     -------
@@ -53,42 +52,82 @@ def build_laplacian_operators(state: Any) -> Dict[str, Callable[[np.ndarray], np
           "laplacian_w": callable,
         }
     """
-    dx = float(state.Constants["dx"])
-    dy = float(state.Constants["dy"])
-    dz = float(state.Constants["dz"])
 
-    np.asarray(state.is_fluid)
+    const = state["Constants"]
+    dx = float(const["dx"])
+    dy = float(const["dy"])
+    dz = float(const["dz"])
 
+    mask = np.asarray(state["Mask"])
+    is_fluid = (mask != 0)  # treat -1 as fluid
+
+    # -------------------------------------------------------------
+    # Laplacian for U (nx+1, ny, nz)
+    # -------------------------------------------------------------
     def laplacian_u(U: np.ndarray) -> np.ndarray:
-        """
-        Laplacian of U (shape (nx+1, ny, nz)).
-        We map fluid mask to cell centers; for simplicity, we zero out
-        Laplacian at cells whose adjacent cell-center is not fluid.
-        """
         lap = _laplacian_scalar(U, dx, dy, dz)
-        # For now, we do not project mask exactly to faces; this is a first-pass.
-        return lap
 
+        # Map cell-centered mask to U-faces
+        nx_u, ny_u, nz_u = U.shape
+        fluid_u = np.zeros_like(U, dtype=bool)
+
+        # interior faces
+        if nx_u > 2:
+            fluid_u[1:-1, :, :] = is_fluid[:-1, :, :] | is_fluid[1:, :, :]
+
+        # left boundary
+        fluid_u[0, :, :] = is_fluid[0, :, :]
+
+        # right boundary
+        fluid_u[-1, :, :] = is_fluid[-1, :, :]
+
+        return np.where(fluid_u, lap, 0.0)
+
+    # -------------------------------------------------------------
+    # Laplacian for V (nx, ny+1, nz)
+    # -------------------------------------------------------------
     def laplacian_v(V: np.ndarray) -> np.ndarray:
-        """
-        Laplacian of V (shape (nx, ny+1, nz)).
-        """
         lap = _laplacian_scalar(V, dx, dy, dz)
-        return lap
 
+        nx_v, ny_v, nz_v = V.shape
+        fluid_v = np.zeros_like(V, dtype=bool)
+
+        if ny_v > 2:
+            fluid_v[:, 1:-1, :] = is_fluid[:, :-1, :] | is_fluid[:, 1:, :]
+
+        fluid_v[:, 0, :] = is_fluid[:, 0, :]
+        fluid_v[:, -1, :] = is_fluid[:, -1, :]
+
+        return np.where(fluid_v, lap, 0.0)
+
+    # -------------------------------------------------------------
+    # Laplacian for W (nx, ny, nz+1)
+    # -------------------------------------------------------------
     def laplacian_w(W: np.ndarray) -> np.ndarray:
-        """
-        Laplacian of W (shape (nx, ny, nz+1)).
-        """
         lap = _laplacian_scalar(W, dx, dy, dz)
-        return lap
 
+        nx_w, ny_w, nz_w = W.shape
+        fluid_w = np.zeros_like(W, dtype=bool)
+
+        if nz_w > 2:
+            fluid_w[:, :, 1:-1] = is_fluid[:, :, :-1] | is_fluid[:, :, 1:]
+
+        fluid_w[:, :, 0] = is_fluid[:, :, 0]
+        fluid_w[:, :, -1] = is_fluid[:, :, -1]
+
+        return np.where(fluid_w, lap, 0.0)
+
+    # -------------------------------------------------------------
+    # Package operators
+    # -------------------------------------------------------------
     ops = {
         "laplacian_u": laplacian_u,
         "laplacian_v": laplacian_v,
         "laplacian_w": laplacian_w,
     }
 
-    state.Operators = getattr(state, "Operators", {})
-    state.Operators.update(ops)
+    if "Operators" not in state:
+        state["Operators"] = {}
+    state["Operators"].update(ops)
+
     return ops

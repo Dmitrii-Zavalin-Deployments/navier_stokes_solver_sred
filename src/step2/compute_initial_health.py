@@ -1,8 +1,7 @@
-# file: step2/compute_initial_health.py
+# src/step2/compute_initial_health.py
 from __future__ import annotations
 
 from typing import Any, Dict
-
 import numpy as np
 
 
@@ -20,8 +19,8 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
     state : Any
         SimulationState-like object with:
         - U, V, W
-        - Constants (dt, dx, dy, dz)
-        - Operators["divergence"]
+        - state["Constants"] = {"dt", "dx", "dy", "dz"}
+        - state["Operators"]["divergence"]
 
     Returns
     -------
@@ -32,24 +31,34 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
           "cfl_advection_estimate": float,
         }
     """
+
+    # ------------------------------------------------------------------
+    # Extract fields
+    # ------------------------------------------------------------------
     U = np.asarray(state.U)
     V = np.asarray(state.V)
     W = np.asarray(state.W)
 
-    dt = float(state.Constants["dt"])
-    dx = float(state.Constants["dx"])
-    dy = float(state.Constants["dy"])
-    dz = float(state.Constants["dz"])
+    const = state["Constants"]
+    dt = float(const["dt"])
+    dx = float(const["dx"])
+    dy = float(const["dy"])
+    dz = float(const["dz"])
 
-    divergence_op = state.Operators["divergence"]
+    # ------------------------------------------------------------------
+    # Divergence
+    # ------------------------------------------------------------------
+    divergence_op = state["Operators"]["divergence"]
     div = divergence_op(U, V, W)
 
     initial_divergence_norm = float(np.linalg.norm(div.ravel(), ord=2))
 
-    # Compute velocity magnitude at cell centers by simple averaging to P-grid.
-    # First, build cell-centered velocities by averaging neighboring faces.
+    # ------------------------------------------------------------------
+    # Velocity magnitude at cell centers
+    # ------------------------------------------------------------------
     nx, ny, nz = div.shape
 
+    # Average staggered velocities to cell centers
     u_center = 0.5 * (U[0:nx, :, :] + U[1:nx + 1, :, :])
     v_center = 0.5 * (V[:, 0:ny, :] + V[:, 1:ny + 1, :])
     w_center = 0.5 * (W[:, :, 0:nz] + W[:, :, 1:nz + 1])
@@ -57,14 +66,25 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
     vel_mag = np.sqrt(u_center**2 + v_center**2 + w_center**2)
     max_velocity_magnitude = float(np.max(vel_mag))
 
-    # Conservative 3D CFL estimate: dt * (|u|/dx + |v|/dy + |w|/dz)
+    # ------------------------------------------------------------------
+    # CFL estimate
+    # ------------------------------------------------------------------
+    # Avoid division by zero (should not happen after Step 1, but safe)
+    dx_safe = dx if dx > 0 else 1e-12
+    dy_safe = dy if dy > 0 else 1e-12
+    dz_safe = dz if dz > 0 else 1e-12
+
     cfl_field = dt * (
-        np.abs(u_center) / dx
-        + np.abs(v_center) / dy
-        + np.abs(w_center) / dz
+        np.abs(u_center) / dx_safe
+        + np.abs(v_center) / dy_safe
+        + np.abs(w_center) / dz_safe
     )
+
     cfl_advection_estimate = float(np.max(cfl_field))
 
+    # ------------------------------------------------------------------
+    # Package results
+    # ------------------------------------------------------------------
     health = {
         "initial_divergence_norm": initial_divergence_norm,
         "max_velocity_magnitude": max_velocity_magnitude,

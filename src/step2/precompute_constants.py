@@ -1,4 +1,4 @@
-# file: step2/precompute_constants.py
+# src/step2/precompute_constants.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -16,8 +16,9 @@ def precompute_constants(state: Any) -> Dict[str, float]:
     ----------
     state : Any
         SimulationState-like object with:
-        - Config (with fluid_properties, simulation_parameters)
-        - Grid (with dx, dy, dz)
+        - state["Config"]["fluid_properties"]
+        - state["Config"]["simulation_parameters"]
+        - state["Grid"] (dx, dy, dz)
 
     Returns
     -------
@@ -25,19 +26,29 @@ def precompute_constants(state: Any) -> Dict[str, float]:
         Dictionary with rho, mu, dt, dx, dy, dz, inv_dx, inv_dy, inv_dz,
         inv_dx2, inv_dy2, inv_dz2.
     """
-    # If Step 1 already computed Constants, just return them.
-    if hasattr(state, "Constants"):
-        const = dict(state.Constants)
-        return const
 
-    # Fallback: derive from Config and Grid.
-    fluid = state.Config["fluid_properties"]
-    sim = state.Config["simulation_parameters"]
-    grid = state.Grid
+    # ------------------------------------------------------------
+    # If Constants already exists AND is a dict, reuse it.
+    # (DummyState sets Constants=None, so we must check type.)
+    # ------------------------------------------------------------
+    if "Constants" in state and isinstance(state["Constants"], dict):
+        return state["Constants"]
+
+    # ------------------------------------------------------------
+    # Otherwise compute constants from Config + Grid
+    # ------------------------------------------------------------
+    cfg = state["Config"]
+    grid = state["Grid"]
+
+    fluid = cfg["fluid_properties"]
+    sim = cfg["simulation_parameters"]
 
     rho = float(fluid["density"])
     mu = float(fluid["viscosity"])
-    dt = float(sim["time_step"])
+
+    dt = float(sim["dt"])
+    if dt <= 0:
+        raise ValueError("dt must be positive")
 
     dx = float(grid["dx"])
     dy = float(grid["dy"])
@@ -66,6 +77,8 @@ def precompute_constants(state: Any) -> Dict[str, float]:
         "inv_dz2": inv_dz2,
     }
 
-    # Optionally attach back to state for convenience.
+    # Store back into state (dict-style and attribute-style for compatibility)
+    state["Constants"] = constants
     state.Constants = constants
+
     return constants

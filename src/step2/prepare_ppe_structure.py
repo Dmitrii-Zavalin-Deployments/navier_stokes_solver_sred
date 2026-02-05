@@ -1,8 +1,7 @@
-# file: step2/prepare_ppe_structure.py
+# src/step2/prepare_ppe_structure.py
 from __future__ import annotations
 
 from typing import Any, Dict
-
 import numpy as np
 
 
@@ -19,8 +18,9 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
     ----------
     state : Any
         SimulationState-like object with:
-        - boundary_table: dict of faces -> list of BC dicts (from Step 1)
-        - Constants: (rho, dt)
+        - state["BoundaryTable"]: list of BC dicts (from Step 1)
+        - state["Constants"]: {"rho", "dt"}
+        - state["Mask"]: int[nx, ny, nz]
 
     Returns
     -------
@@ -33,34 +33,41 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
           "ppe_is_singular": bool,
         }
     """
-    rho = float(state.Constants["rho"])
-    dt = float(state.Constants["dt"])
 
-    boundary_table = getattr(state, "boundary_table", {})
+    const = state["Constants"]
+    rho = float(const["rho"])
+    dt = float(const["dt"])
 
+    mask = np.asarray(state["Mask"])
+    is_fluid = (mask != 0)  # treat -1 as fluid
+
+    # Boundary table from Step 1 (tests use "BoundaryTable")
+    boundary_table = state.get("BoundaryTable", [])
+
+    # ------------------------------------------------------------
+    # RHS builder: apply -rho/dt * divergence on fluid cells only
+    # ------------------------------------------------------------
     def rhs_builder(divergence: np.ndarray) -> np.ndarray:
-        """
-        Map divergence field to PPE RHS.
+        rhs = -rho / dt * divergence
+        rhs = np.where(is_fluid, rhs, 0.0)
+        return rhs
 
-        A common choice is:
-          RHS = -rho / dt * divergence
-        """
-        return -rho / dt * divergence
+    # ------------------------------------------------------------
+    # Singularity detection:
+    # PPE is non-singular if ANY boundary has type "pressure_outlet"
+    # ------------------------------------------------------------
+    has_pressure_outlet = False
 
-    # Heuristic singularity detection:
-    # If there is at least one pressure-type outlet/Dirichlet BC, we treat PPE as non-singular.
-    has_pressure_dirichlet = False
-    for face_bcs in boundary_table.values():
-        for bc in face_bcs:
-            role = bc.get("role")
-            if role in ("outlet", "pressure_outlet", "pressure"):
-                has_pressure_dirichlet = True
-                break
-        if has_pressure_dirichlet:
+    for bc in boundary_table:
+        if bc.get("type") == "pressure_outlet":
+            has_pressure_outlet = True
             break
 
-    ppe_is_singular = not has_pressure_dirichlet
+    ppe_is_singular = not has_pressure_outlet
 
+    # ------------------------------------------------------------
+    # Package PPE structure
+    # ------------------------------------------------------------
     ppe = {
         "rhs_builder": rhs_builder,
         "solver_type": "PCG",
@@ -69,5 +76,5 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
         "ppe_is_singular": ppe_is_singular,
     }
 
-    state.PPE = ppe
+    state["PPE"] = ppe
     return ppe
