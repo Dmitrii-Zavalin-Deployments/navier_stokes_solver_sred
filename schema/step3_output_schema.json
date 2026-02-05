@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Step 3 Output Schema",
+  "type": "object",
+
+  "required": [
+    "Config",
+    "Mask",
+    "is_fluid",
+    "is_boundary_cell",
+    "P",
+    "U",
+    "V",
+    "W",
+    "BCs",
+    "Constants",
+    "Operators",
+    "PPE",
+    "Health",
+    "AdvectionMeta"
+  ],
+
+  "properties": {
+
+    "Config": {
+      "type": "object",
+      "description": "Simulation configuration (unchanged from Step 1)."
+    },
+
+    "Mask": {
+      "type": "array",
+      "description": "Geometry mask (1=fluid, 0=solid, -1=boundary-fluid)."
+    },
+
+    "is_fluid": {
+      "type": "array",
+      "description": "Boolean mask of fluid cells."
+    },
+
+    "is_boundary_cell": {
+      "type": "array",
+      "description": "Boolean mask of boundary-adjacent cells."
+    },
+
+    "P": {
+      "type": "array",
+      "description": "Updated pressure field (cell-centered)."
+    },
+
+    "U": {
+      "type": "array",
+      "description": "Updated x-face velocity field."
+    },
+
+    "V": {
+      "type": "array",
+      "description": "Updated y-face velocity field."
+    },
+
+    "W": {
+      "type": "array",
+      "description": "Updated z-face velocity field."
+    },
+
+    "BCs": {
+      "type": "array",
+      "description": "Normalized boundary condition table."
+    },
+
+    "Constants": {
+      "type": "object",
+      "description": "Physical and numerical constants (unchanged from Step 2)."
+    },
+
+    "Operators": {
+      "type": "object",
+      "description": "Discrete operators (callables) built in Step 2.",
+      "properties": {
+        "divergence": { "type": "object" },
+        "gradient_p_x": { "type": "object" },
+        "gradient_p_y": { "type": "object" },
+        "gradient_p_z": { "type": "object" },
+        "laplacian_u": { "type": "object" },
+        "laplacian_v": { "type": "object" },
+        "laplacian_w": { "type": "object" },
+        "advection_u": { "type": "object" },
+        "advection_v": { "type": "object" },
+        "advection_w": { "type": "object" }
+      }
+    },
+
+    "PPE": {
+      "type": "object",
+      "description": "Pressure Poisson Equation metadata.",
+      "properties": {
+        "rhs_builder": { "type": "object" },
+        "solver_type": { "type": ["string", "null"] },
+        "tolerance": { "type": ["number", "null"] },
+        "max_iterations": { "type": ["integer", "null"] },
+        "ppe_is_singular": { "type": "boolean" }
+      },
+      "required": [
+        "rhs_builder",
+        "ppe_is_singular"
+      ]
+    },
+
+    "Health": {
+      "type": "object",
+      "description": "Updated diagnostics after the projection step.",
+      "properties": {
+        "initial_divergence_norm": { "type": "number" },
+        "max_velocity_magnitude": { "type": "number" },
+        "cfl_advection_estimate": { "type": "number" }
+      },
+      "required": [
+        "initial_divergence_norm",
+        "max_velocity_magnitude",
+        "cfl_advection_estimate"
+      ]
+    },
+
+    "AdvectionMeta": {
+      "type": "object",
+      "description": "Metadata for advection (unchanged from Step 2)."
+    }
+  }
+}
