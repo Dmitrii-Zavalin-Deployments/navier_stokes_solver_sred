@@ -16,8 +16,7 @@
     "Constants",
     "Operators",
     "PPE",
-    "Health",
-    "AdvectionMeta"
+    "Health"
   ],
 
   "properties": {
@@ -100,7 +99,6 @@
         "ppe_is_singular": { "type": "boolean" }
       },
       "required": [
-        "rhs_builder",
         "ppe_is_singular"
       ]
     },
@@ -109,12 +107,15 @@
       "type": "object",
       "description": "Updated diagnostics after the projection step.",
       "properties": {
-        "initial_divergence_norm": { "type": "number" },
+        "post_correction_divergence_norm": {
+          "type": "number",
+          "description": "Divergence norm after velocity correction."
+        },
         "max_velocity_magnitude": { "type": "number" },
         "cfl_advection_estimate": { "type": "number" }
       },
       "required": [
-        "initial_divergence_norm",
+        "post_correction_divergence_norm",
         "max_velocity_magnitude",
         "cfl_advection_estimate"
       ]
@@ -122,7 +123,19 @@
 
     "AdvectionMeta": {
       "type": "object",
-      "description": "Metadata for advection (unchanged from Step 2)."
+      "description": "Metadata for advection (unchanged from Step 2).",
+      "nullable": true
+    },
+
+    "History": {
+      "type": "object",
+      "description": "Optional time-series history appended during time stepping.",
+      "properties": {
+        "times": { "type": "array" },
+        "divergence_norms": { "type": "array" },
+        "max_velocity_history": { "type": "array" },
+        "ppe_iterations_history": { "type": "array" }
+      }
     }
   }
 }
