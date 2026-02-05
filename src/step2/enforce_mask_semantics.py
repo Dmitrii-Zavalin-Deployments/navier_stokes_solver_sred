@@ -13,22 +13,12 @@ def enforce_mask_semantics(state: Any) -> None:
     - Mask must be integer dtype.
     - Allowed values: -1 (boundary-fluid), 0 (solid), 1 (fluid).
     - There must be at least one fluid-like cell (1 or -1).
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with key "Mask" as a 3D integer array.
-
-    Raises
-    ------
-    ValueError
-        If invalid mask values are found, mask is not integer dtype,
-        or if there is no fluid or boundary-fluid cell.
     """
 
-    mask = np.asarray(state["Mask"])
+    # DummyState in tests exposes mask as attribute, not dict key
+    mask = np.asarray(state.Mask)
 
-    # Strict dtype check (tests require float masks to raise)
+    # Strict dtype check
     if not np.issubdtype(mask.dtype, np.integer):
         raise ValueError("Mask must be an integer array")
 
