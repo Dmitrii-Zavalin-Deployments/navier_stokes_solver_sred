@@ -8,24 +8,6 @@ import numpy as np
 def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]]:
     """
     Build advection operators for U, V, W using either central or upwind scheme.
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with:
-        - state["Constants"] (dx, dy, dz)
-        - state["Config"]["simulation_parameters"]["advection_scheme"]
-
-    Returns
-    -------
-    dict
-        {
-          "advection_u": callable,
-          "advection_v": callable,
-          "advection_w": callable,
-          "interpolation_scheme": str,
-          "interpolation_stencils": None,
-        }
     """
 
     const = state["Constants"]
@@ -63,34 +45,63 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
         return d
 
     # ------------------------------------------------------------------
-    # Upwind differences (simple first-order)
+    # Upwind differences (shape-safe, loop-based)
     # ------------------------------------------------------------------
     def _upwind_x(F, U):
+        nx = F.shape[0]
         d = np.zeros_like(F)
-        if F.shape[0] > 1:
-            # backward if U>0, forward if U<=0
-            d[1:] = np.where(U[1:] > 0,
-                             (F[1:] - F[:-1]) / dx,
-                             (F[2:] - F[1:-1]) / dx)
-            d[0] = (F[1] - F[0]) / dx
+
+        if nx <= 1:
+            return d
+
+        for i in range(1, nx):
+            if U[i].mean() > 0:  # backward
+                d[i] = (F[i] - F[i - 1]) / dx
+            else:  # forward
+                if i + 1 < nx:
+                    d[i] = (F[i + 1] - F[i]) / dx
+                else:
+                    d[i] = (F[i] - F[i - 1]) / dx
+
+        d[0] = (F[1] - F[0]) / dx
         return d
 
     def _upwind_y(F, V):
+        ny = F.shape[1]
         d = np.zeros_like(F)
-        if F.shape[1] > 1:
-            d[:, 1:] = np.where(V[:, 1:] > 0,
-                                (F[:, 1:] - F[:, :-1]) / dy,
-                                (F[:, 2:] - F[:, 1:-1]) / dy)
-            d[:, 0] = (F[:, 1] - F[:, 0]) / dy
+
+        if ny <= 1:
+            return d
+
+        for j in range(1, ny):
+            if V[:, j].mean() > 0:
+                d[:, j] = (F[:, j] - F[:, j - 1]) / dy
+            else:
+                if j + 1 < ny:
+                    d[:, j] = (F[:, j + 1] - F[:, j]) / dy
+                else:
+                    d[:, j] = (F[:, j] - F[:, j - 1]) / dy
+
+        d[:, 0] = (F[:, 1] - F[:, 0]) / dy
         return d
 
     def _upwind_z(F, W):
+        nz = F.shape[2]
         d = np.zeros_like(F)
-        if F.shape[2] > 1:
-            d[:, :, 1:] = np.where(W[:, :, 1:] > 0,
-                                   (F[:, :, 1:] - F[:, :, :-1]) / dz,
-                                   (F[:, :, 2:] - F[:, :, 1:-1]) / dz)
-            d[:, :, 0] = (F[:, :, 1] - F[:, :, 0]) / dz
+
+        if nz <= 1:
+            return d
+
+        for k in range(1, nz):
+            if W[:, :, k].mean() > 0:
+                d[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+            else:
+                if k + 1 < nz:
+                    d[:, :, k] = (F[:, :, k + 1] - F[:, :, k]) / dz
+                else:
+                    d[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+
+        d[:, :, 0] = (F[:, :, 1] - F[:, :, 0]) / dz
         return d
 
     # ------------------------------------------------------------------
@@ -145,10 +156,7 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
 
     if "Operators" not in state:
         state["Operators"] = {}
-
-    for k, v in ops.items():
-        if k.startswith("advection_"):
-            state["Operators"][k] = v
+    state["Operators"].update({k: v for k, v in ops.items() if k.startswith("advection_")})
 
     state["AdvectionMeta"] = {
         "interpolation_scheme": scheme,
