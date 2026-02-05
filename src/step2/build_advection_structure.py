@@ -2,25 +2,19 @@
 from __future__ import annotations
 
 from typing import Any, Callable, Dict
-
 import numpy as np
 
 
 def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]]:
     """
-    Prepare interpolation and upwind logic for the nonlinear advection term.
-
-    This is a first-pass implementation using simple central differences to
-    approximate u · ∇u. It is intentionally conservative and can be refined
-    later.
+    Build advection operators for U, V, W using either central or upwind scheme.
 
     Parameters
     ----------
     state : Any
         SimulationState-like object with:
-        - Grid (nx, ny, nz)
-        - Constants (dx, dy, dz)
-        - Mask / is_fluid (optional)
+        - state["Constants"] (dx, dy, dz)
+        - state["Config"]["simulation_parameters"]["advection_scheme"]
 
     Returns
     -------
@@ -34,87 +28,121 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
         }
     """
 
-    # Use dict-style access (DummyState and Step 2 both expect this)
     const = state["Constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    # ------------------------------------------------------------------
-    # Central difference helpers
-    # ------------------------------------------------------------------
+    scheme = state["Config"]["simulation_parameters"].get("advection_scheme", "central")
 
-    def _central_diff_x(F: np.ndarray, dx: float) -> np.ndarray:
+    # ------------------------------------------------------------------
+    # Central differences
+    # ------------------------------------------------------------------
+    def _central_x(F):
         d = np.zeros_like(F)
         if F.shape[0] > 1:
-            d[1:-1, :, :] = (F[2:, :, :] - F[:-2, :, :]) / (2.0 * dx)
-            d[0, :, :] = (F[1, :, :] - F[0, :, :]) / dx
-            d[-1, :, :] = (F[-1, :, :] - F[-2, :, :]) / dx
+            d[1:-1] = (F[2:] - F[:-2]) / (2 * dx)
+            d[0] = (F[1] - F[0]) / dx
+            d[-1] = (F[-1] - F[-2]) / dx
         return d
 
-    def _central_diff_y(F: np.ndarray, dy: float) -> np.ndarray:
+    def _central_y(F):
         d = np.zeros_like(F)
         if F.shape[1] > 1:
-            d[:, 1:-1, :] = (F[:, 2:, :] - F[:, :-2, :]) / (2.0 * dy)
-            d[:, 0, :] = (F[:, 1, :] - F[:, 0, :]) / dy
-            d[:, -1, :] = (F[:, -1, :] - F[:, -2, :]) / dy
+            d[:, 1:-1] = (F[:, 2:] - F[:, :-2]) / (2 * dy)
+            d[:, 0] = (F[:, 1] - F[:, 0]) / dy
+            d[:, -1] = (F[:, -1] - F[:, -2]) / dy
         return d
 
-    def _central_diff_z(F: np.ndarray, dz: float) -> np.ndarray:
+    def _central_z(F):
         d = np.zeros_like(F)
         if F.shape[2] > 1:
-            d[:, :, 1:-1] = (F[:, :, 2:] - F[:, :, :-2]) / (2.0 * dz)
+            d[:, :, 1:-1] = (F[:, :, 2:] - F[:, :, :-2]) / (2 * dz)
             d[:, :, 0] = (F[:, :, 1] - F[:, :, 0]) / dz
             d[:, :, -1] = (F[:, :, -1] - F[:, :, -2]) / dz
         return d
 
     # ------------------------------------------------------------------
+    # Upwind differences (simple first-order)
+    # ------------------------------------------------------------------
+    def _upwind_x(F, U):
+        d = np.zeros_like(F)
+        if F.shape[0] > 1:
+            # backward if U>0, forward if U<=0
+            d[1:] = np.where(U[1:] > 0,
+                             (F[1:] - F[:-1]) / dx,
+                             (F[2:] - F[1:-1]) / dx)
+            d[0] = (F[1] - F[0]) / dx
+        return d
+
+    def _upwind_y(F, V):
+        d = np.zeros_like(F)
+        if F.shape[1] > 1:
+            d[:, 1:] = np.where(V[:, 1:] > 0,
+                                (F[:, 1:] - F[:, :-1]) / dy,
+                                (F[:, 2:] - F[:, 1:-1]) / dy)
+            d[:, 0] = (F[:, 1] - F[:, 0]) / dy
+        return d
+
+    def _upwind_z(F, W):
+        d = np.zeros_like(F)
+        if F.shape[2] > 1:
+            d[:, :, 1:] = np.where(W[:, :, 1:] > 0,
+                                   (F[:, :, 1:] - F[:, :, :-1]) / dz,
+                                   (F[:, :, 2:] - F[:, :, 1:-1]) / dz)
+            d[:, :, 0] = (F[:, :, 1] - F[:, :, 0]) / dz
+        return d
+
+    # ------------------------------------------------------------------
     # Advection operators
     # ------------------------------------------------------------------
+    def advection_u(U, V, W):
+        if scheme == "upwind":
+            du_dx = _upwind_x(U, U)
+            du_dy = _upwind_y(U, V)
+            du_dz = _upwind_z(U, W)
+        else:
+            du_dx = _central_x(U)
+            du_dy = _central_y(U)
+            du_dz = _central_z(U)
 
-    def advection_u(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
-        """
-        Approximate (u · ∇)u on U-grid.
-        """
-        du_dx = _central_diff_x(U, dx)
-        du_dy = _central_diff_y(U, dy)
-        du_dz = _central_diff_z(U, dz)
+        return U * du_dx + 0.5 * (du_dy + du_dz)
 
-        adv = U * du_dx
-        adv += 0.5 * (du_dy + du_dz)
-        return adv
+    def advection_v(U, V, W):
+        if scheme == "upwind":
+            dv_dx = _upwind_x(V, U)
+            dv_dy = _upwind_y(V, V)
+            dv_dz = _upwind_z(V, W)
+        else:
+            dv_dx = _central_x(V)
+            dv_dy = _central_y(V)
+            dv_dz = _central_z(V)
 
-    def advection_v(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
-        dv_dx = _central_diff_x(V, dx)
-        dv_dy = _central_diff_y(V, dy)
-        dv_dz = _central_diff_z(V, dz)
+        return V * dv_dy + 0.5 * (dv_dx + dv_dz)
 
-        adv = V * dv_dy
-        adv += 0.5 * (dv_dx + dv_dz)
-        return adv
+    def advection_w(U, V, W):
+        if scheme == "upwind":
+            dw_dx = _upwind_x(W, U)
+            dw_dy = _upwind_y(W, V)
+            dw_dz = _upwind_z(W, W)
+        else:
+            dw_dx = _central_x(W)
+            dw_dy = _central_y(W)
+            dw_dz = _central_z(W)
 
-    def advection_w(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
-        dw_dx = _central_diff_x(W, dx)
-        dw_dy = _central_diff_y(W, dy)
-        dw_dz = _central_diff_z(W, dz)
-
-        adv = W * dw_dz
-        adv += 0.5 * (dw_dx + dw_dy)
-        return adv
+        return W * dw_dz + 0.5 * (dw_dx + dw_dy)
 
     # ------------------------------------------------------------------
     # Package operators
     # ------------------------------------------------------------------
-
     ops = {
         "advection_u": advection_u,
         "advection_v": advection_v,
         "advection_w": advection_w,
-        "interpolation_scheme": "central",
+        "interpolation_scheme": scheme,
         "interpolation_stencils": None,
     }
 
-    # Store callables in state["Operators"]
     if "Operators" not in state:
         state["Operators"] = {}
 
@@ -122,10 +150,9 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
         if k.startswith("advection_"):
             state["Operators"][k] = v
 
-    # Metadata
     state["AdvectionMeta"] = {
-        "interpolation_scheme": ops["interpolation_scheme"],
-        "interpolation_stencils": ops["interpolation_stencils"],
+        "interpolation_scheme": scheme,
+        "interpolation_stencils": None,
     }
 
     return ops
