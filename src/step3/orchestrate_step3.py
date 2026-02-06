@@ -15,11 +15,33 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 
 
 # ---------------------------------------------------------------------------
+# Helper: Convert NumPy arrays → Python lists for JSON Schema validation
+# ---------------------------------------------------------------------------
+
+def _to_json_safe(obj):
+    """
+    Recursively convert numpy arrays to Python lists so JSON Schema can validate them.
+    """
+    import numpy as np
+
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+
+    if isinstance(obj, dict):
+        return {k: _to_json_safe(v) for k, v in obj.items()}
+
+    if isinstance(obj, list):
+        return [_to_json_safe(x) for x in obj]
+
+    return obj
+
+
+# ---------------------------------------------------------------------------
 # Load Step 3 schema relative to this file's directory
 # ---------------------------------------------------------------------------
 
 SCHEMA_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),  # go up from src/step3 to project root
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),  # src/step3 → src → project root
     "schema",
     "step3_output_schema.json"
 )
@@ -28,23 +50,54 @@ with open(SCHEMA_PATH, "r") as f:
     STEP3_SCHEMA = json.load(f)
 
 
+# ---------------------------------------------------------------------------
+# Main Orchestrator
+# ---------------------------------------------------------------------------
+
 def step3(state, current_time, step_index):
     """
     Full Step 3 projection time step.
+
+    Steps:
+      1. Pre-boundary conditions
+      2. Predict velocity (U*, V*, W*)
+      3. Build PPE RHS
+      4. Solve pressure
+      5. Correct velocity
+      6. Post-boundary conditions
+      7. Update health diagnostics
+      8. Log diagnostics
+      9. Validate final state against Step 3 schema
     """
 
+    # 1
     apply_boundary_conditions_pre(state)
+
+    # 2
     U_star, V_star, W_star = predict_velocity(state)
+
+    # 3
     rhs = build_ppe_rhs(state, U_star, V_star, W_star)
+
+    # 4
     P_new = solve_pressure(state, rhs)
+
+    # 5
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
+
+    # 6
     apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new)
+
+    # 7
     update_health(state)
+
+    # 8
     log_step_diagnostics(state, current_time, step_index)
 
-    # Validate final state against schema
+    # 9 — SCHEMA VALIDATION (audit-grade)
     try:
-        validate(instance=state, schema=STEP3_SCHEMA)
+        json_safe_state = _to_json_safe(state)
+        validate(instance=json_safe_state, schema=STEP3_SCHEMA)
     except ValidationError as e:
         raise RuntimeError(
             f"Step 3 output does NOT match step3_output_schema.json:\n{e.message}"
