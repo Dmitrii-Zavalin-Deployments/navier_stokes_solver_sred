@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-
 from .assemble_simulation_state import assemble_simulation_state
 from .allocate_staggered_fields import allocate_staggered_fields
 from .compute_derived_constants import compute_derived_constants
@@ -92,7 +91,15 @@ def construct_simulation_state(
     # 1. Validate input JSON against schema/input_schema.json
     # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
-    validate_with_schema(json_input, input_schema)
+    try:
+        validate_with_schema(json_input, input_schema)
+    except Exception as exc:
+        raise RuntimeError(
+            "\n[Step 1] Input schema validation FAILED.\n"
+            "Expected schema: schema/input_schema.json\n"
+            f"Validation error: {exc}\n"
+            "Aborting Step 1 — input JSON is malformed.\n"
+        ) from exc
 
     # ---------------------------------------------------------
     # 2. Physical constraints (fatal checks)
@@ -167,6 +174,15 @@ def construct_simulation_state(
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
     state_dict = _state_to_dict(state)
-    validate_with_schema(state_dict, output_schema)
+
+    try:
+        validate_with_schema(state_dict, output_schema)
+    except Exception as exc:
+        raise RuntimeError(
+            "\n[Step 1] Output schema validation FAILED.\n"
+            "Expected schema: schema/step1_output_schema.json\n"
+            f"Validation error: {exc}\n"
+            "Aborting — Step 1 produced an invalid SimulationState.\n"
+        ) from exc
 
     return state

@@ -15,7 +15,7 @@ from .build_advection_structure import build_advection_structure
 from .prepare_ppe_structure import prepare_ppe_structure
 from .compute_initial_health import compute_initial_health
 
-# Optional JSON-schema validation (mirrors Step 1 behavior)
+# Optional JSON-schema validation
 try:  # pragma: no cover
     from ..step1.validate_json_schema import validate_json_schema
 except Exception:  # pragma: no cover
@@ -26,15 +26,28 @@ def orchestrate_step2(state: Any) -> Any:
     """
     High-level orchestrator for Step 2.
 
-    Enhances a validated Step 1 SimulationState with:
-      - mask semantics
-      - fluid masks
-      - discrete operators (div, grad, laplacian, advection)
-      - PPE structure
-      - initial solver health diagnostics
-
-    Optionally validates the final state against schema/step2_output_schema.json.
+    Validates:
+      - Input against step1_output_schema.json
+      - Output against step2_output_schema.json
     """
+
+    # ------------------------------------------------------------
+    # 0. Validate input against Step 1 output schema
+    # ------------------------------------------------------------
+    if isinstance(state, dict) and validate_json_schema is not None:  # pragma: no cover
+        schema_path = (
+            Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
+        )
+        try:
+            validate_json_schema(state, str(schema_path))
+        except Exception as exc:
+            # HARD FAILURE — schema mismatch is a critical error
+            raise RuntimeError(
+                f"\n[Step 2] Input schema validation FAILED.\n"
+                f"Expected schema: {schema_path}\n"
+                f"Validation error: {exc}\n"
+                f"Aborting Step 2 — upstream Step 1 output is malformed.\n"
+            ) from exc
 
     # ------------------------------------------------------------
     # 1. Enforce CFD mask semantics
@@ -70,19 +83,20 @@ def orchestrate_step2(state: Any) -> Any:
     compute_initial_health(state)
 
     # ------------------------------------------------------------
-    # 7. Optional: validate against Step 2 output JSON schema
+    # 7. Validate output against Step 2 output schema
     # ------------------------------------------------------------
     if isinstance(state, dict) and validate_json_schema is not None:  # pragma: no cover
+        schema_path = (
+            Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
+        )
         try:
-            schema_path = (
-                Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
-            )
             validate_json_schema(state, str(schema_path))
-        except Exception:
-            # Never break solver pipeline due to schema validation
-            pass
+        except Exception as exc:
+            raise RuntimeError(
+                f"\n[Step 2] Output schema validation FAILED.\n"
+                f"Expected schema: {schema_path}\n"
+                f"Validation error: {exc}\n"
+                f"Aborting — Step 2 produced an invalid SimulationState.\n"
+            ) from exc
 
-    # ------------------------------------------------------------
-    # Done — state is now fully Step 2–enhanced
-    # ------------------------------------------------------------
     return state

@@ -16,7 +16,6 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 
 # ---------------------------------------------------------------------------
 # Helper: Convert NumPy arrays → Python lists for JSON Schema validation
-# Also convert callables (operators, handlers) into empty dicts.
 # ---------------------------------------------------------------------------
 
 def _to_json_safe(obj):
@@ -26,37 +25,34 @@ def _to_json_safe(obj):
     """
     import numpy as np
 
-    # NumPy arrays → lists
     if isinstance(obj, np.ndarray):
         return obj.tolist()
 
-    # Dict → recursively convert
     if isinstance(obj, dict):
         return {k: _to_json_safe(v) for k, v in obj.items()}
 
-    # List → recursively convert
     if isinstance(obj, list):
         return [_to_json_safe(x) for x in obj]
 
-    # Callables (operators, BC handlers) → empty object
     if callable(obj):
         return {}
 
-    # Everything else (int, float, bool, str, None) → pass through
     return obj
 
 
 # ---------------------------------------------------------------------------
-# Load Step 3 schema relative to this file's directory
+# Load schemas
 # ---------------------------------------------------------------------------
 
-SCHEMA_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),  # src/step3 → src → project root
-    "schema",
-    "step3_output_schema.json"
-)
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-with open(SCHEMA_PATH, "r") as f:
+STEP2_SCHEMA_PATH = os.path.join(ROOT, "schema", "step2_output_schema.json")
+STEP3_SCHEMA_PATH = os.path.join(ROOT, "schema", "step3_output_schema.json")
+
+with open(STEP2_SCHEMA_PATH, "r") as f:
+    STEP2_SCHEMA = json.load(f)
+
+with open(STEP3_SCHEMA_PATH, "r") as f:
     STEP3_SCHEMA = json.load(f)
 
 
@@ -69,6 +65,7 @@ def step3(state, current_time, step_index):
     Full Step 3 projection time step.
 
     Steps:
+      0. Validate input schema (must match Step 2 output)
       1. Pre-boundary conditions
       2. Predict velocity (U*, V*, W*)
       3. Build PPE RHS
@@ -81,47 +78,71 @@ def step3(state, current_time, step_index):
     """
 
     # ----------------------------------------------------------------------
-    # REQUIRED FIELD CHECK — must be at the top
-    # (test_schema_validation_fails_on_invalid_state)
+    # 0 — INPUT SCHEMA VALIDATION (hard failure)
     # ----------------------------------------------------------------------
-    if "History" not in state:
+    try:
+        json_safe_input = _to_json_safe(state)
+        validate(instance=json_safe_input, schema=STEP2_SCHEMA)
+    except ValidationError as exc:
         raise RuntimeError(
-            "Step 3 output does NOT match step3_output_schema.json: missing 'History'"
-        )
+            f"\n[Step 3] Input schema validation FAILED.\n"
+            f"Expected schema: {STEP2_SCHEMA_PATH}\n"
+            f"Validation error: {exc.message}\n"
+            f"Aborting Step 3 — upstream Step 2 output is malformed.\n"
+        ) from exc
 
+    # ----------------------------------------------------------------------
     # 1
+    # ----------------------------------------------------------------------
     apply_boundary_conditions_pre(state)
 
+    # ----------------------------------------------------------------------
     # 2
+    # ----------------------------------------------------------------------
     U_star, V_star, W_star = predict_velocity(state)
 
+    # ----------------------------------------------------------------------
     # 3
+    # ----------------------------------------------------------------------
     rhs = build_ppe_rhs(state, U_star, V_star, W_star)
 
+    # ----------------------------------------------------------------------
     # 4
+    # ----------------------------------------------------------------------
     P_new = solve_pressure(state, rhs)
 
+    # ----------------------------------------------------------------------
     # 5
+    # ----------------------------------------------------------------------
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
 
+    # ----------------------------------------------------------------------
     # 6
+    # ----------------------------------------------------------------------
     apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new)
 
+    # ----------------------------------------------------------------------
     # 7
+    # ----------------------------------------------------------------------
     update_health(state)
 
+    # ----------------------------------------------------------------------
     # 8
+    # ----------------------------------------------------------------------
     log_step_diagnostics(state, current_time, step_index)
 
     # ----------------------------------------------------------------------
-    # 9 — SCHEMA VALIDATION (audit-grade)
+    # 9 — OUTPUT SCHEMA VALIDATION (hard failure)
     # ----------------------------------------------------------------------
     try:
         json_safe_state = _to_json_safe(state)
         validate(instance=json_safe_state, schema=STEP3_SCHEMA)
-    except ValidationError as e:
+    except ValidationError as exc:
         raise RuntimeError(
-            f"Step 3 output does NOT match step3_output_schema.json:\n{e.message}"
-        )
+            f"\n[Step 3] Output schema validation FAILED.\n"
+            f"Expected schema: {STEP3_SCHEMA_PATH}\n"
+            f"Validation error: {exc.message}\n"
+            f"Aborting — Step 3 produced an invalid SimulationState.\n"
+        ) from exc
 
     return state
