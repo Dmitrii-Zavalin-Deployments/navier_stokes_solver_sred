@@ -60,8 +60,8 @@ def test_convergence_flag(minimal_state):
 
     solve_pressure(state, rhs)
 
-    # PPE dict must contain convergence flag
-    assert "ppe_converged" in state["PPE"] or True  # placeholder if your solver sets it
+    # PPE dict must contain convergence flag (set in the solver=None branch)
+    assert "ppe_converged" in state["PPE"]
 
 
 def test_minimal_grid():
@@ -76,3 +76,26 @@ def test_minimal_grid():
     P_new = solve_pressure(state, rhs)
 
     assert P_new.shape == (1, 1, 1)
+
+
+def test_solve_pressure_with_custom_solver(minimal_state):
+    state = minimal_state
+
+    # Fake solver that returns a pressure field and metadata
+    def fake_solver(rhs):
+        P = rhs + 5.0
+        info = {"converged": False, "iterations": 7}
+        return P, info
+
+    state["PPE"]["solver"] = fake_solver
+    state["PPE"]["ppe_is_singular"] = False
+
+    rhs = np.ones_like(state["P"])
+    P_new = solve_pressure(state, rhs)
+
+    # Solver must have been used
+    assert np.allclose(P_new, rhs + 5.0)
+
+    # Metadata must be recorded
+    assert state["PPE"]["ppe_converged"] is False
+    assert state["PPE"]["last_iterations"] == 7
