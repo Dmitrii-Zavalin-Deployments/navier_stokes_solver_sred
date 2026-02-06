@@ -73,7 +73,7 @@
 
     "Operators": {
       "type": "object",
-      "description": "Discrete operators (callables) built in Step 2.",
+      "description": "Discrete operators (Python callables; not JSON-serializable).",
       "properties": {
         "divergence": { "type": "object" },
         "gradient_p_x": { "type": "object" },
@@ -96,7 +96,11 @@
         "solver_type": { "type": ["string", "null"] },
         "tolerance": { "type": ["number", "null"] },
         "max_iterations": { "type": ["integer", "null"] },
-        "ppe_is_singular": { "type": "boolean" }
+        "ppe_is_singular": { "type": "boolean" },
+        "ppe_converged": {
+          "type": "boolean",
+          "description": "True if PPE solver reached tolerance before max_iterations."
+        }
       },
       "required": [
         "ppe_is_singular"
@@ -134,7 +138,11 @@
         "times": { "type": "array" },
         "divergence_norms": { "type": "array" },
         "max_velocity_history": { "type": "array" },
-        "ppe_iterations_history": { "type": "array" }
+        "ppe_iterations_history": { "type": "array" },
+        "energy_history": {
+          "type": "array",
+          "description": "Total kinetic energy per time step."
+        }
       }
     }
   }
