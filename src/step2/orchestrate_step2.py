@@ -18,8 +18,10 @@ from .compute_initial_health import compute_initial_health
 # Optional JSON-schema validation
 try:  # pragma: no cover
     from ..step1.validate_json_schema import validate_json_schema
+    from ..step1.schema_utils import load_schema
 except Exception:  # pragma: no cover
     validate_json_schema = None  # type: ignore
+    load_schema = None  # type: ignore
 
 
 def orchestrate_step2(state: Any) -> Any:
@@ -34,14 +36,14 @@ def orchestrate_step2(state: Any) -> Any:
     # ------------------------------------------------------------
     # 0. Validate input against Step 1 output schema
     # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None:  # pragma: no cover
+    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:  # pragma: no cover
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
         )
         try:
-            validate_json_schema(state, str(schema_path))
+            schema = load_schema(str(schema_path))  # <-- FIX: load schema JSON
+            validate_json_schema(state, schema)
         except Exception as exc:
-            # HARD FAILURE — schema mismatch is a critical error
             raise RuntimeError(
                 f"\n[Step 2] Input schema validation FAILED.\n"
                 f"Expected schema: {schema_path}\n"
@@ -85,12 +87,13 @@ def orchestrate_step2(state: Any) -> Any:
     # ------------------------------------------------------------
     # 7. Validate output against Step 2 output schema
     # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None:  # pragma: no cover
+    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:  # pragma: no cover
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
         )
         try:
-            validate_json_schema(state, str(schema_path))
+            schema = load_schema(str(schema_path))  # <-- FIX: load schema JSON
+            validate_json_schema(state, schema)
         except Exception as exc:
             raise RuntimeError(
                 f"\n[Step 2] Output schema validation FAILED.\n"
