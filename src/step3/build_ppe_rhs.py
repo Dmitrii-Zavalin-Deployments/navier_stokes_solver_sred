@@ -1,6 +1,5 @@
 # src/step3/build_ppe_rhs.py
 
-import numpy as np
 
 def build_ppe_rhs(state, U_star, V_star, W_star):
     """
