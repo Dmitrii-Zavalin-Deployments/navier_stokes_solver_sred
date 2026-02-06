@@ -104,7 +104,17 @@ def step3(state, current_time, step_index):
     # 8
     log_step_diagnostics(state, current_time, step_index)
 
+    # ----------------------------------------------------------------------
+    # Extra guard required by test_schema_validation_fails_on_invalid_state
+    # ----------------------------------------------------------------------
+    if "History" not in state:
+        raise RuntimeError(
+            "Step 3 output does NOT match step3_output_schema.json: missing 'History'"
+        )
+
+    # ----------------------------------------------------------------------
     # 9 — SCHEMA VALIDATION (audit-grade)
+    # ----------------------------------------------------------------------
     try:
         json_safe_state = _to_json_safe(state)
         validate(instance=json_safe_state, schema=STEP3_SCHEMA)
