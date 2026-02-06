@@ -5,7 +5,7 @@
   "properties": {
     "P_ext": {
       "type": "array",
-      "description": "Extended pressure field with ghost layers (3D float array)",
+      "description": "Extended pressure field with ghost layers (3D float64 array)",
       "items": {
         "type": "array",
         "items": {
@@ -16,7 +16,7 @@
     },
     "U_ext": {
       "type": "array",
-      "description": "Extended U-velocity field on x-faces with ghost layers (3D float array)",
+      "description": "Extended U-velocity field on x-faces with ghost layers (3D float64 array)",
       "items": {
         "type": "array",
         "items": {
@@ -27,7 +27,7 @@
     },
     "V_ext": {
       "type": "array",
-      "description": "Extended V-velocity field on y-faces with ghost layers (3D float array)",
+      "description": "Extended V-velocity field on y-faces with ghost layers (3D float64 array)",
       "items": {
         "type": "array",
         "items": {
@@ -38,7 +38,7 @@
     },
     "W_ext": {
       "type": "array",
-      "description": "Extended W-velocity field on z-faces with ghost layers (3D float array)",
+      "description": "Extended W-velocity field on z-faces with ghost layers (3D float64 array)",
       "items": {
         "type": "array",
         "items": {
@@ -54,6 +54,7 @@
       "properties": {
         "Coordinates": {
           "type": "object",
+          "description": "Cell-centered and face-centered coordinates",
           "properties": {
             "x_centers": { "type": "array", "items": { "type": "number" } },
             "y_centers": { "type": "array", "items": { "type": "number" } },
@@ -70,6 +71,7 @@
 
         "GhostLayers": {
           "type": "object",
+          "description": "Views into ghost regions of extended fields",
           "properties": {
             "P_ext": {
               "type": "array",
@@ -93,6 +95,7 @@
 
         "IndexRanges": {
           "type": "object",
+          "description": "String-encoded slice descriptors for interior and ghost regions",
           "properties": {
             "INTERIOR": { "type": "string" },
             "GHOST_X_LO": { "type": "string" },
@@ -112,6 +115,7 @@
 
         "StencilMaps": {
           "type": "object",
+          "description": "Boolean masks indicating valid stencil directions",
           "properties": {
             "xp": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
             "xm": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
@@ -125,7 +129,7 @@
 
         "InterpolationMaps": {
           "type": "object",
-          "description": "Interpolation maps between staggered fields",
+          "description": "Interpolation operators between staggered fields (sparse matrices or weight tensors)",
           "properties": {
             "interp_u_to_v": {},
             "interp_u_to_w": {},
@@ -155,6 +159,7 @@
 
     "RHS_Source": {
       "type": "object",
+      "description": "Staggered external force fields",
       "properties": {
         "Fx_u": {
           "type": "array",
@@ -174,12 +179,21 @@
 
     "BCApplied": {
       "type": "object",
+      "description": "Boundary condition application metadata",
       "properties": {
         "initial_velocity_enforced": { "type": "boolean" },
         "pressure_initial_applied": { "type": "boolean" },
         "velocity_initial_applied": { "type": "boolean" },
         "ghost_cells_filled": { "type": "boolean" },
         "boundary_cells_checked": { "type": "integer" },
+        "version": {
+          "type": "string",
+          "description": "Optional version tag for BC configuration"
+        },
+        "timestamp_applied": {
+          "type": "string",
+          "description": "Optional timestamp when BCs were applied"
+        },
         "boundary_conditions_status": {
           "type": "object",
           "properties": {
@@ -205,6 +219,7 @@
 
     "Diagnostics": {
       "type": "object",
+      "description": "Post-BC diagnostic metrics",
       "properties": {
         "total_fluid_cells": { "type": "integer" },
         "grid_volume_per_cell": { "type": "number" },
