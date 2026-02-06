@@ -1,32 +1,30 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Step 3 Output Schema",
   "type": "object",
 
   "required": [
-    "Config",
-    "Mask",
+    "config",
+    "mask",
     "is_fluid",
     "is_boundary_cell",
-    "P",
-    "U",
-    "V",
-    "W",
-    "BCs",
-    "Constants",
-    "Operators",
-    "PPE",
-    "Health"
+    "fields",
+    "bcs",
+    "constants",
+    "operators",
+    "ppe",
+    "health",
+    "history"
   ],
 
   "properties": {
 
-    "Config": {
+    "config": {
       "type": "object",
       "description": "Simulation configuration (unchanged from Step 1)."
     },
 
-    "Mask": {
+    "mask": {
       "type": "array",
       "description": "Geometry mask (1=fluid, 0=solid, -1=boundary-fluid)."
     },
@@ -41,39 +39,42 @@
       "description": "Boolean mask of boundary-adjacent cells."
     },
 
-    "P": {
-      "type": "array",
-      "description": "Updated pressure field (cell-centered)."
+    "fields": {
+      "type": "object",
+      "required": ["P", "U", "V", "W"],
+      "properties": {
+        "P": {
+          "type": "array",
+          "description": "Updated pressure field (cell-centered)."
+        },
+        "U": {
+          "type": "array",
+          "description": "Updated x-face velocity field."
+        },
+        "V": {
+          "type": "array",
+          "description": "Updated y-face velocity field."
+        },
+        "W": {
+          "type": "array",
+          "description": "Updated z-face velocity field."
+        }
+      }
     },
 
-    "U": {
-      "type": "array",
-      "description": "Updated x-face velocity field."
-    },
-
-    "V": {
-      "type": "array",
-      "description": "Updated y-face velocity field."
-    },
-
-    "W": {
-      "type": "array",
-      "description": "Updated z-face velocity field."
-    },
-
-    "BCs": {
+    "bcs": {
       "type": "array",
       "description": "Normalized boundary condition table."
     },
 
-    "Constants": {
+    "constants": {
       "type": "object",
       "description": "Physical and numerical constants (unchanged from Step 2)."
     },
 
-    "Operators": {
+    "operators": {
       "type": "object",
-      "description": "Discrete operators (Python callables; not JSON-serializable).",
+      "description": "Discrete operators (Python callables; replaced with placeholders during JSON validation).",
       "properties": {
         "divergence": { "type": "object" },
         "gradient_p_x": { "type": "object" },
@@ -88,7 +89,7 @@
       }
     },
 
-    "PPE": {
+    "ppe": {
       "type": "object",
       "description": "Pressure Poisson Equation metadata.",
       "properties": {
@@ -102,12 +103,10 @@
           "description": "True if PPE solver reached tolerance before max_iterations."
         }
       },
-      "required": [
-        "ppe_is_singular"
-      ]
+      "required": ["ppe_is_singular"]
     },
 
-    "Health": {
+    "health": {
       "type": "object",
       "description": "Updated diagnostics after the projection step.",
       "properties": {
@@ -125,15 +124,14 @@
       ]
     },
 
-    "AdvectionMeta": {
-      "type": "object",
-      "description": "Metadata for advection (unchanged from Step 2).",
-      "nullable": true
+    "advection_meta": {
+      "type": ["object", "null"],
+      "description": "Metadata for advection (unchanged from Step 2)."
     },
 
-    "History": {
+    "history": {
       "type": "object",
-      "description": "Optional time-series history appended during time stepping.",
+      "description": "Time-series history appended during time stepping.",
       "properties": {
         "times": { "type": "array" },
         "divergence_norms": { "type": "array" },

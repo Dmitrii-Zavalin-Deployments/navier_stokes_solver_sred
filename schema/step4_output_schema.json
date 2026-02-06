@@ -1,60 +1,69 @@
 {
-  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Step 4 Output Schema",
   "description": "SimulationState after Step 4 — fully initialized, boundary-conditioned, and ready for the time loop.",
+  "type": "object",
+
+  "required": [
+    "p_ext",
+    "u_ext",
+    "v_ext",
+    "w_ext",
+    "domain",
+    "rhs_source",
+    "bc_applied",
+    "diagnostics",
+    "history",
+    "initialized",
+    "ready_for_time_loop"
+  ],
+
   "properties": {
-    "P_ext": {
+
+    "p_ext": {
       "type": "array",
       "description": "Extended pressure field with ghost layers (3D float64 array)",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
-    },
-    "U_ext": {
-      "type": "array",
-      "description": "Extended U-velocity field on x-faces with ghost layers (3D float64 array)",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
-    },
-    "V_ext": {
-      "type": "array",
-      "description": "Extended V-velocity field on y-faces with ghost layers (3D float64 array)",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
-    },
-    "W_ext": {
-      "type": "array",
-      "description": "Extended W-velocity field on z-faces with ghost layers (3D float64 array)",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
     },
 
-    "Domain": {
+    "u_ext": {
+      "type": "array",
+      "description": "Extended U-velocity field on x-faces with ghost layers",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+
+    "v_ext": {
+      "type": "array",
+      "description": "Extended V-velocity field on y-faces with ghost layers",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+
+    "w_ext": {
+      "type": "array",
+      "description": "Extended W-velocity field on z-faces with ghost layers",
+      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    },
+
+    "domain": {
       "type": "object",
       "description": "Domain metadata, coordinates, ghost layers, index ranges, and interpolation maps",
+
+      "required": [
+        "coordinates",
+        "ghost_layers",
+        "index_ranges",
+        "stencil_maps",
+        "interpolation_maps"
+      ],
+
       "properties": {
-        "Coordinates": {
+
+        "coordinates": {
           "type": "object",
-          "description": "Cell-centered and face-centered coordinates",
+          "required": [
+            "x_centers", "y_centers", "z_centers",
+            "x_faces_u", "y_faces_v", "z_faces_w"
+          ],
           "properties": {
             "x_centers": { "type": "array", "items": { "type": "number" } },
             "y_centers": { "type": "array", "items": { "type": "number" } },
@@ -62,82 +71,54 @@
             "x_faces_u": { "type": "array", "items": { "type": "number" } },
             "y_faces_v": { "type": "array", "items": { "type": "number" } },
             "z_faces_w": { "type": "array", "items": { "type": "number" } }
-          },
+          }
+        },
+
+        "ghost_layers": {
+          "type": "object",
+          "required": ["p_ext", "u_ext", "v_ext", "w_ext"],
+          "properties": {
+            "p_ext": { "type": "array" },
+            "u_ext": { "type": "array" },
+            "v_ext": { "type": "array" },
+            "w_ext": { "type": "array" }
+          }
+        },
+
+        "index_ranges": {
+          "type": "object",
           "required": [
-            "x_centers", "y_centers", "z_centers",
-            "x_faces_u", "y_faces_v", "z_faces_w"
-          ]
+            "interior",
+            "ghost_x_lo", "ghost_x_hi",
+            "ghost_y_lo", "ghost_y_hi",
+            "ghost_z_lo", "ghost_z_hi"
+          ],
+          "properties": {
+            "interior": { "type": "string" },
+            "ghost_x_lo": { "type": "string" },
+            "ghost_x_hi": { "type": "string" },
+            "ghost_y_lo": { "type": "string" },
+            "ghost_y_hi": { "type": "string" },
+            "ghost_z_lo": { "type": "string" },
+            "ghost_z_hi": { "type": "string" }
+          }
         },
 
-        "GhostLayers": {
+        "stencil_maps": {
           "type": "object",
-          "description": "Views into ghost regions of extended fields",
+          "required": ["xp", "xm", "yp", "ym", "zp", "zm"],
           "properties": {
-            "P_ext": {
-              "type": "array",
-              "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-            },
-            "U_ext": {
-              "type": "array",
-              "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-            },
-            "V_ext": {
-              "type": "array",
-              "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-            },
-            "W_ext": {
-              "type": "array",
-              "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-            }
-          },
-          "required": ["P_ext", "U_ext", "V_ext", "W_ext"]
+            "xp": { "type": "array" },
+            "xm": { "type": "array" },
+            "yp": { "type": "array" },
+            "ym": { "type": "array" },
+            "zp": { "type": "array" },
+            "zm": { "type": "array" }
+          }
         },
 
-        "IndexRanges": {
+        "interpolation_maps": {
           "type": "object",
-          "description": "String-encoded slice descriptors for interior and ghost regions",
-          "properties": {
-            "INTERIOR": { "type": "string" },
-            "GHOST_X_LO": { "type": "string" },
-            "GHOST_X_HI": { "type": "string" },
-            "GHOST_Y_LO": { "type": "string" },
-            "GHOST_Y_HI": { "type": "string" },
-            "GHOST_Z_LO": { "type": "string" },
-            "GHOST_Z_HI": { "type": "string" }
-          },
-          "required": [
-            "INTERIOR",
-            "GHOST_X_LO", "GHOST_X_HI",
-            "GHOST_Y_LO", "GHOST_Y_HI",
-            "GHOST_Z_LO", "GHOST_Z_HI"
-          ]
-        },
-
-        "StencilMaps": {
-          "type": "object",
-          "description": "Boolean masks indicating valid stencil directions",
-          "properties": {
-            "xp": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
-            "xm": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
-            "yp": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
-            "ym": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
-            "zp": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } },
-            "zm": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
-          },
-          "required": ["xp", "xm", "yp", "ym", "zp", "zm"]
-        },
-
-        "InterpolationMaps": {
-          "type": "object",
-          "description": "Interpolation operators between staggered fields (sparse matrices or weight tensors)",
-          "properties": {
-            "interp_u_to_v": {},
-            "interp_u_to_w": {},
-            "interp_v_to_u": {},
-            "interp_v_to_w": {},
-            "interp_w_to_u": {},
-            "interp_w_to_v": {}
-          },
           "required": [
             "interp_u_to_v",
             "interp_u_to_w",
@@ -145,68 +126,31 @@
             "interp_v_to_w",
             "interp_w_to_u",
             "interp_w_to_v"
-          ]
-        }
-      },
-      "required": [
-        "Coordinates",
-        "GhostLayers",
-        "IndexRanges",
-        "StencilMaps",
-        "InterpolationMaps"
-      ]
-    },
-
-    "RHS_Source": {
-      "type": "object",
-      "description": "Staggered external force fields",
-      "properties": {
-        "Fx_u": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-        },
-        "Fy_v": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-        },
-        "Fz_w": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-        }
-      },
-      "required": ["Fx_u", "Fy_v", "Fz_w"]
-    },
-
-    "BCApplied": {
-      "type": "object",
-      "description": "Boundary condition application metadata",
-      "properties": {
-        "initial_velocity_enforced": { "type": "boolean" },
-        "pressure_initial_applied": { "type": "boolean" },
-        "velocity_initial_applied": { "type": "boolean" },
-        "ghost_cells_filled": { "type": "boolean" },
-        "boundary_cells_checked": { "type": "integer" },
-        "version": {
-          "type": "string",
-          "description": "Optional version tag for BC configuration"
-        },
-        "timestamp_applied": {
-          "type": "string",
-          "description": "Optional timestamp when BCs were applied"
-        },
-        "boundary_conditions_status": {
-          "type": "object",
+          ],
           "properties": {
-            "x_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
-            "x_max": { "type": "string", "enum": ["applied", "skipped", "error"] },
-            "y_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
-            "y_max": { "type": "string", "enum": ["applied", "skipped", "error"] },
-            "z_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
-            "z_max": { "type": "string", "enum": ["applied", "skipped", "error"] }
-          },
-          "required": ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
+            "interp_u_to_v": {},
+            "interp_u_to_w": {},
+            "interp_v_to_u": {},
+            "interp_v_to_w": {},
+            "interp_w_to_u": {},
+            "interp_w_to_v": {}
+          }
         }
-      },
+      }
+    },
+
+    "rhs_source": {
+      "type": "object",
+      "required": ["fx_u", "fy_v", "fz_w"],
+      "properties": {
+        "fx_u": { "type": "array" },
+        "fy_v": { "type": "array" },
+        "fz_w": { "type": "array" }
+      }
+    },
+
+    "bc_applied": {
+      "type": "object",
       "required": [
         "initial_velocity_enforced",
         "pressure_initial_applied",
@@ -214,20 +158,34 @@
         "ghost_cells_filled",
         "boundary_cells_checked",
         "boundary_conditions_status"
-      ]
+      ],
+      "properties": {
+        "initial_velocity_enforced": { "type": "boolean" },
+        "pressure_initial_applied": { "type": "boolean" },
+        "velocity_initial_applied": { "type": "boolean" },
+        "ghost_cells_filled": { "type": "boolean" },
+        "boundary_cells_checked": { "type": "integer" },
+
+        "version": { "type": "string" },
+        "timestamp_applied": { "type": "string" },
+
+        "boundary_conditions_status": {
+          "type": "object",
+          "required": ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"],
+          "properties": {
+            "x_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
+            "x_max": { "type": "string", "enum": ["applied", "skipped", "error"] },
+            "y_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
+            "y_max": { "type": "string", "enum": ["applied", "skipped", "error"] },
+            "z_min": { "type": "string", "enum": ["applied", "skipped", "error"] },
+            "z_max": { "type": "string", "enum": ["applied", "skipped", "error"] }
+          }
+        }
+      }
     },
 
-    "Diagnostics": {
+    "diagnostics": {
       "type": "object",
-      "description": "Post-BC diagnostic metrics",
-      "properties": {
-        "total_fluid_cells": { "type": "integer" },
-        "grid_volume_per_cell": { "type": "number" },
-        "initialized": { "type": "boolean" },
-        "post_bc_max_velocity": { "type": "number" },
-        "post_bc_divergence_norm": { "type": "number" },
-        "bc_violation_count": { "type": "integer" }
-      },
       "required": [
         "total_fluid_cells",
         "grid_volume_per_cell",
@@ -235,41 +193,35 @@
         "post_bc_max_velocity",
         "post_bc_divergence_norm",
         "bc_violation_count"
-      ]
+      ],
+      "properties": {
+        "total_fluid_cells": { "type": "integer" },
+        "grid_volume_per_cell": { "type": "number" },
+        "initialized": { "type": "boolean" },
+        "post_bc_max_velocity": { "type": "number" },
+        "post_bc_divergence_norm": { "type": "number" },
+        "bc_violation_count": { "type": "integer" }
+      }
     },
 
-    "History": {
+    "history": {
       "type": ["object", "null"],
-      "description": "Optional time-series history (may be initialized or appended in Step 4)",
       "properties": {
         "times": { "type": "array", "items": { "type": "number" } },
-        "divergence_norms": { "type": "array", "items": { "type": "number" } },
+        "diverggence_norms": { "type": "array", "items": { "type": "number" } },
         "max_velocity_history": { "type": "array", "items": { "type": "number" } },
         "ppe_iterations_history": { "type": "array", "items": { "type": "integer" } }
       }
     },
 
-    "Initialized": {
+    "initialized": {
       "type": "boolean",
       "description": "True if Step 4 completed successfully"
     },
 
-    "ReadyForTimeLoop": {
+    "ready_for_time_loop": {
       "type": "boolean",
-      "description": "True if the state is fully prepared for repeated projection steps in the time loop"
+      "description": "True if the state is fully prepared for repeated projection steps"
     }
-  },
-
-  "required": [
-    "P_ext",
-    "U_ext",
-    "V_ext",
-    "W_ext",
-    "Domain",
-    "RHS_Source",
-    "BCApplied",
-    "Diagnostics",
-    "Initialized",
-    "ReadyForTimeLoop"
-  ]
+  }
 }

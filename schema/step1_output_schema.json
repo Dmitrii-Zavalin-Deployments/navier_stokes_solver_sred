@@ -2,18 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Step 1 Output Schema",
   "type": "object",
+
   "required": [
     "grid",
-    "P",
-    "U",
-    "V",
-    "W",
-    "mask",
+    "fields",
+    "mask_3d",
+    "boundary_table",
     "constants",
     "config"
   ],
 
   "properties": {
+
     "grid": {
       "type": "object",
       "required": [
@@ -41,73 +41,94 @@
       }
     },
 
-    "P": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": {
+    "fields": {
+      "type": "object",
+      "required": ["P", "U", "V", "W", "Mask"],
+      "properties": {
+        "P": {
           "type": "array",
-          "items": { "type": "number" }
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "U": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "V": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "W": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "Mask": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "integer", "enum": [-1, 0, 1] }
+            }
+          }
         }
       }
     },
 
-    "U": {
+    "mask_3d": {
       "type": "array",
+      "description": "3D geometry mask reconstructed from flattened input",
       "items": {
         "type": "array",
         "items": {
           "type": "array",
-          "items": { "type": "number" }
+          "items": { "type": "integer", "enum": [-1, 0, 1] }
         }
       }
     },
 
-    "V": {
+    "boundary_table": {
       "type": "array",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
-    },
-
-    "W": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "number" }
-        }
-      }
-    },
-
-    "mask": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "array",
-          "items": { "type": "integer", "minimum": 0 }
-        }
-      }
+      "description": "Normalized boundary condition table produced in Step 1"
     },
 
     "constants": {
       "type": "object",
-      "required": ["mu", "dx"],
+      "required": [
+        "rho", "mu", "dt",
+        "dx", "dy", "dz",
+        "inv_dx", "inv_dy", "inv_dz",
+        "inv_dx2", "inv_dy2", "inv_dz2"
+      ],
       "properties": {
+        "rho": { "type": "number", "exclusiveMinimum": 0 },
         "mu": { "type": "number", "minimum": 0 },
-        "dx": { "type": "number", "exclusiveMinimum": 0 }
+        "dt": { "type": "number", "exclusiveMinimum": 0 },
+
+        "dx": { "type": "number", "exclusiveMinimum": 0 },
+        "dy": { "type": "number", "exclusiveMinimum": 0 },
+        "dz": { "type": "number", "exclusiveMinimum": 0 },
+
+        "inv_dx": { "type": "number" },
+        "inv_dy": { "type": "number" },
+        "inv_dz": { "type": "number" },
+
+        "inv_dx2": { "type": "number" },
+        "inv_dy2": { "type": "number" },
+        "inv_dz2": { "type": "number" }
       }
     },
 
     "config": {
       "type": "object",
-      "description": "Original validated input JSON passed through unchanged."
+      "description": "Original validated input JSON passed through unchanged.",
+      "properties": {
+        "domain": { "type": "object" },
+        "fluid": { "type": "object" },
+        "simulation": { "type": "object" },
+        "forces": { "type": "object" },
+        "boundary_conditions": { "type": "object" },
+        "geometry_definition": { "type": "object" }
+      }
     }
   }
 }

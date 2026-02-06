@@ -4,21 +4,21 @@
   "type": "object",
 
   "required": [
-    "Grid",
-    "P", "U", "V", "W",
-    "Mask",
-    "Config",
-    "Constants",
-    "Operators",
-    "PPE",
-    "Health",
+    "grid",
+    "fields",
+    "mask",
+    "constants",
+    "config",
+    "operators",
+    "ppe",
+    "health",
     "is_fluid",
     "is_boundary_cell"
   ],
 
   "properties": {
 
-    "Grid": {
+    "grid": {
       "type": "object",
       "required": [
         "x_min", "x_max",
@@ -45,24 +45,30 @@
       }
     },
 
-    "P": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-    },
-    "U": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-    },
-    "V": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
-    },
-    "W": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+    "fields": {
+      "type": "object",
+      "required": ["P", "U", "V", "W"],
+      "properties": {
+        "P": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "U": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "V": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        },
+        "W": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+        }
+      }
     },
 
-    "Mask": {
+    "mask": {
       "type": "array",
       "items": {
         "type": "array",
@@ -86,7 +92,7 @@
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
     },
 
-    "Constants": {
+    "constants": {
       "type": "object",
       "required": [
         "rho", "mu", "dt",
@@ -113,7 +119,7 @@
       }
     },
 
-    "Operators": {
+    "operators": {
       "type": "object",
       "required": [
         "divergence",
@@ -142,7 +148,7 @@
       }
     },
 
-    "PPE": {
+    "ppe": {
       "type": "object",
       "required": [
         "rhs_builder",
@@ -160,7 +166,7 @@
       }
     },
 
-    "Health": {
+    "health": {
       "type": "object",
       "required": [
         "initial_divergence_norm",
@@ -174,7 +180,7 @@
       }
     },
 
-    "Config": {
+    "config": {
       "type": "object",
       "description": "Original validated input JSON passed through unchanged."
     }
