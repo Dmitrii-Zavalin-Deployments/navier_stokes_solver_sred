@@ -1,7 +1,7 @@
 # src/step2/build_advection_structure.py
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 import numpy as np
 
 
