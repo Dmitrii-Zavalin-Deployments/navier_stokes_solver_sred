@@ -80,6 +80,15 @@ def step3(state, current_time, step_index):
       9. Validate final state against Step 3 schema
     """
 
+    # ----------------------------------------------------------------------
+    # REQUIRED FIELD CHECK — must be at the top
+    # (test_schema_validation_fails_on_invalid_state)
+    # ----------------------------------------------------------------------
+    if "History" not in state:
+        raise RuntimeError(
+            "Step 3 output does NOT match step3_output_schema.json: missing 'History'"
+        )
+
     # 1
     apply_boundary_conditions_pre(state)
 
@@ -103,14 +112,6 @@ def step3(state, current_time, step_index):
 
     # 8
     log_step_diagnostics(state, current_time, step_index)
-
-    # ----------------------------------------------------------------------
-    # Extra guard required by test_schema_validation_fails_on_invalid_state
-    # ----------------------------------------------------------------------
-    if "History" not in state:
-        raise RuntimeError(
-            "Step 3 output does NOT match step3_output_schema.json: missing 'History'"
-        )
 
     # ----------------------------------------------------------------------
     # 9 — SCHEMA VALIDATION (audit-grade)
