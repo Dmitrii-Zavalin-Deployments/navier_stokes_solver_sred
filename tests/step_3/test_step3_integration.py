@@ -42,8 +42,8 @@ def test_schema_validation_fails_on_invalid_state(minimal_state):
     """
     state = minimal_state
 
-    # Introduce an invalid modification BEFORE running Step 3
-    del state["Constants"]  # required by schema
+    # Remove a required field that is NOT used during computation
+    del state["History"]
 
     with pytest.raises(RuntimeError):
         step3(state, current_time=0.0, step_index=0)

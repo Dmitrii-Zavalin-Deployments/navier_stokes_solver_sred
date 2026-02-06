@@ -16,23 +16,33 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 
 # ---------------------------------------------------------------------------
 # Helper: Convert NumPy arrays → Python lists for JSON Schema validation
+# Also convert callables (operators, handlers) into empty dicts.
 # ---------------------------------------------------------------------------
 
 def _to_json_safe(obj):
     """
     Recursively convert numpy arrays to Python lists so JSON Schema can validate them.
+    Functions and other non-JSON types are converted to simple placeholders.
     """
     import numpy as np
 
+    # NumPy arrays → lists
     if isinstance(obj, np.ndarray):
         return obj.tolist()
 
+    # Dict → recursively convert
     if isinstance(obj, dict):
         return {k: _to_json_safe(v) for k, v in obj.items()}
 
+    # List → recursively convert
     if isinstance(obj, list):
         return [_to_json_safe(x) for x in obj]
 
+    # Callables (operators, BC handlers) → empty object
+    if callable(obj):
+        return {}
+
+    # Everything else (int, float, bool, str, None) → pass through
     return obj
 
 
