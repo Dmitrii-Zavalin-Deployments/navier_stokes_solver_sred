@@ -10,7 +10,8 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
     Rules enforced:
       • Apply correction everywhere EXCEPT faces adjacent to solid cells.
       • Faces adjacent to solids are zeroed (no-through condition).
-      • No extra zeroing occurs when all cells are fluid.
+      • Faces not adjacent to ANY fluid cell are also zeroed.
+      • No unintended zeroing occurs when all cells are fluid.
     """
 
     rho = state["Constants"]["rho"]
@@ -34,10 +35,11 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
     # Mask logic
     mask = state["Mask"]
     is_solid = (mask == 0)
+    is_fluid = state["is_fluid"]
     nx, ny, nz = mask.shape
 
     # ----------------------------------------------------------------------
-    # Zero faces adjacent to solids (OR logic)
+    # 1. Zero faces adjacent to solids (OR logic)
     # ----------------------------------------------------------------------
 
     # U faces: between i-1 and i
@@ -54,5 +56,25 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
     solid_w = np.zeros_like(W_new, dtype=bool)
     solid_w[:, :, 1:-1] = is_solid[:, :, :-1] | is_solid[:, :, 1:]
     W_new[solid_w] = 0.0
+
+    # ----------------------------------------------------------------------
+    # 2. Zero faces NOT adjacent to any fluid cell
+    #    (this satisfies test_fluid_adjacent_faces)
+    # ----------------------------------------------------------------------
+
+    # U faces: fluid if either adjacent cell is fluid
+    fluid_u = np.zeros_like(U_new, bool)
+    fluid_u[1:-1, :, :] = is_fluid[:-1, :, :] | is_fluid[1:, :, :]
+    U_new[~fluid_u] = 0.0
+
+    # V faces
+    fluid_v = np.zeros_like(V_new, bool)
+    fluid_v[:, 1:-1, :] = is_fluid[:, :-1, :] | is_fluid[:, 1:, :]
+    V_new[~fluid_v] = 0.0
+
+    # W faces
+    fluid_w = np.zeros_like(W_new, bool)
+    fluid_w[:, :, 1:-1] = is_fluid[:, :, :-1] | is_fluid[:, :, 1:]
+    W_new[~fluid_w] = 0.0
 
     return U_new, V_new, W_new
