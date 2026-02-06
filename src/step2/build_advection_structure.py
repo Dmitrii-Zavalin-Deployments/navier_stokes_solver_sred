@@ -5,17 +5,17 @@ from typing import Any, Callable, Dict
 import numpy as np
 
 
-def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]]:
+def build_advection_structure(state: Any) -> Dict[str, Any]:
     """
     Build advection operators for U, V, W using either central or upwind scheme.
     """
 
-    const = state["Constants"]
+    const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    scheme = state["Config"]["simulation_parameters"].get("advection_scheme", "central")
+    scheme = state["config"]["simulation_parameters"].get("advection_scheme", "central")
 
     # ------------------------------------------------------------------
     # Central differences
@@ -159,7 +159,7 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
     # ------------------------------------------------------------------
     # Package operators
     # ------------------------------------------------------------------
-    ops = {
+    ops: Dict[str, Any] = {
         "advection_u": advection_u,
         "advection_v": advection_v,
         "advection_w": advection_w,
@@ -167,11 +167,11 @@ def build_advection_structure(state: Any) -> Dict[str, Callable[..., np.ndarray]
         "interpolation_stencils": None,
     }
 
-    if "Operators" not in state:
-        state["Operators"] = {}
-    state["Operators"].update({k: v for k, v in ops.items() if k.startswith("advection_")})
+    if "operators" not in state:
+        state["operators"] = {}
+    state["operators"].update({k: v for k, v in ops.items() if k.startswith("advection_")})
 
-    state["AdvectionMeta"] = {
+    state["advection_meta"] = {
         "interpolation_scheme": scheme,
         "interpolation_stencils": None,
     }

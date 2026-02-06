@@ -15,33 +15,22 @@ def build_divergence_operator(state: Any) -> Callable[[np.ndarray, np.ndarray, n
     Mask-aware:
     - Fluid cells (1) and boundary-fluid cells (-1) compute divergence normally.
     - Solid cells (0) are forced to zero.
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with:
-        - state["Grid"] = {"nx", "ny", "nz", "dx", "dy", "dz"}
-        - state["Constants"] = {"dx", "dy", "dz", ...}
-        - state["Mask"] = int[nx, ny, nz] with values {1, 0, -1}
-
-    Returns
-    -------
-    divergence : callable
-        divergence(U, V, W) -> np.ndarray[nx, ny, nz]
     """
 
-    grid = state["Grid"]
+    # Grid geometry
+    grid = state["grid"]
     nx = int(grid["nx"])
     ny = int(grid["ny"])
     nz = int(grid["nz"])
 
-    const = state["Constants"]
+    # Physical spacing
+    const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
     # Mask: treat -1 (boundary-fluid) as fluid
-    mask = np.asarray(state["Mask"])
+    mask = np.asarray(state["fields"]["Mask"])
     is_fluid = (mask != 0)
 
     def divergence(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
@@ -70,9 +59,9 @@ def build_divergence_operator(state: Any) -> Callable[[np.ndarray, np.ndarray, n
         div = np.where(is_fluid, div, 0.0)
         return div
 
-    # Store operator
-    if "Operators" not in state:
-        state["Operators"] = {}
-    state["Operators"]["divergence"] = divergence
+    # Store operator in schema-correct location
+    if "operators" not in state:
+        state["operators"] = {}
+    state["operators"]["divergence"] = divergence
 
     return divergence
