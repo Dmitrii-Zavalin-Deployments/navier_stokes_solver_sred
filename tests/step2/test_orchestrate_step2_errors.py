@@ -14,13 +14,12 @@ def test_json_compatible_converts_functions_and_callables():
     def dummy():
         pass
 
-    # Callable object WITH a __name__ attribute → hits line 33
     class CallableObj:
-        __name__ = "callable_obj"
         def __call__(self):
             return 42
 
     obj = CallableObj()
+    obj.__name__ = "callable_obj"   # ensures line 33 is hit
 
     converted = _to_json_compatible({"f": dummy, "c": obj})
 
@@ -29,41 +28,23 @@ def test_json_compatible_converts_functions_and_callables():
 
 
 # ------------------------------------------------------------
-# Test 2 — Step‑1 schema validation failure (lines 49–50)
+# Test 2 — Step‑1 schema validation failure (covers lines 49–50)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step1_schema_validation_failure():
+    from tests.helpers.schema_dummy_state import SchemaDummyState
     from src.step2.orchestrate_step2 import orchestrate_step2
 
-    bad_state = {
-        "grid": {
-            "x_min": 0, "x_max": 1,
-            "y_min": 0, "y_max": 1,
-            "z_min": 0, "z_max": 1,
-            "nx": 1, "ny": 1, "nz": 1,
-            "dx": 1, "dy": 1, "dz": 1,
-        },
-        "config": {
-            "fluid": {"density": 1.0, "viscosity": 0.1},
-            # missing "simulation"
-        },
-        "fields": {
-            "P": [[[0.0]]],
-            "U": [[[0.0]]],
-            "V": [[[0.0]]],
-            "W": [[[0.0]]],
-            "Mask": [[[1]]],
-        },
-        "constants": None,
-    }
+    state = SchemaDummyState(4, 4, 4)
+    state.pop("boundary_table")   # required by Step‑1 schema
 
-    with pytest.raises(KeyError) as excinfo:
-        orchestrate_step2(bad_state)
+    with pytest.raises(RuntimeError) as excinfo:
+        orchestrate_step2(state)
 
-    assert "simulation" in str(excinfo.value)
+    assert "Input schema validation FAILED" in str(excinfo.value)
 
 
 # ------------------------------------------------------------
-# Test 3 — Step‑2 schema validation failure (lines 90–91)
+# Test 3 — Step‑2 schema validation failure (covers lines 90–91)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
     from tests.helpers.schema_dummy_state import SchemaDummyState
@@ -73,12 +54,11 @@ def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
 
     real_json = orch._to_json_compatible
 
-    # Wrap the real converter → Step‑1 validation passes
     def break_json(obj):
         out = real_json(obj)
-        if isinstance(out, dict) and "mask" in out:
+        if isinstance(out, dict) and "mask_3d" in out:
             out = dict(out)
-            out.pop("mask", None)  # remove required Step‑2 key
+            out.pop("mask_3d")   # required by Step‑2 schema
         return out
 
     monkeypatch.setattr(orch, "_to_json_compatible", break_json)
