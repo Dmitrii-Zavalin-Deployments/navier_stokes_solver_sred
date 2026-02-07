@@ -26,7 +26,7 @@ def precompute_constants(state: Any) -> Dict[str, float]:
     cfg = state["config"]
     grid = state["grid"]
 
-    # NEW Step‑1 schema
+    # Step‑1 schema fields
     fluid = cfg["fluid"]
     sim = cfg["simulation"]
 

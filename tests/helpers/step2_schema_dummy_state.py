@@ -14,8 +14,9 @@ class Step2SchemaDummyState(dict):
         "grid",
         "config",
         "fields",
-        "boundary_table",
         "constants",
+        # boundary_table is intentionally NOT protected
+        # mask_3d is intentionally NOT protected
     }
 
     def __init__(
@@ -36,7 +37,9 @@ class Step2SchemaDummyState(dict):
     ):
         super().__init__()
 
+        # -----------------------------
         # Grid block
+        # -----------------------------
         self["grid"] = {
             "x_min": 0.0,
             "x_max": dx * nx,
@@ -52,7 +55,9 @@ class Step2SchemaDummyState(dict):
             "dz": dz,
         }
 
+        # -----------------------------
         # Config block
+        # -----------------------------
         self["config"] = {
             "boundary_conditions": [],
             "domain": {},
@@ -62,11 +67,15 @@ class Step2SchemaDummyState(dict):
             "simulation": {"dt": dt, "advection_scheme": scheme},
         }
 
+        # -----------------------------
         # Mask
+        # -----------------------------
         if mask is None:
             mask = np.ones((nx, ny, nz), dtype=int)
 
-        # Fields
+        # -----------------------------
+        # Fields block
+        # -----------------------------
         self["fields"] = {
             "P": np.zeros((nx, ny, nz), float),
             "U": np.zeros((nx + 1, ny, nz), float),
@@ -75,23 +84,17 @@ class Step2SchemaDummyState(dict):
             "Mask": mask,
         }
 
+        # JSON‑friendly mask
         self["mask_3d"] = mask.tolist()
 
-        # Boundary table must be an object
-        self["boundary_table"] = (
-            boundary_table
-            if boundary_table is not None
-            else {
-                "x_min": [],
-                "x_max": [],
-                "y_min": [],
-                "y_max": [],
-                "z_min": [],
-                "z_max": [],
-            }
-        )
+        # -----------------------------
+        # Boundary table (Step‑2 expects a LIST)
+        # -----------------------------
+        self["boundary_table"] = boundary_table if boundary_table is not None else []
 
-        # Constants
+        # -----------------------------
+        # Constants block
+        # -----------------------------
         self["constants"] = {
             "rho": rho,
             "mu": mu,
@@ -107,6 +110,9 @@ class Step2SchemaDummyState(dict):
             "inv_dz2": 1.0 / (dz * dz),
         }
 
+    # -----------------------------
+    # Protect structured blocks
+    # -----------------------------
     def __setitem__(self, key, value):
         if key in self.PROTECTED_KEYS and not isinstance(value, dict):
             raise TypeError(f"Cannot overwrite structured block '{key}' with non-dict value")
