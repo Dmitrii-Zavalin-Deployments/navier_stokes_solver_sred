@@ -54,11 +54,12 @@ def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
 
     real_json = orch._to_json_compatible
 
+    # Break ONLY Step‑2 schema validation by removing "mask"
     def break_json(obj):
         out = real_json(obj)
-        if isinstance(out, dict) and "mask_3d" in out:
+        if isinstance(out, dict) and "mask" in out:
             out = dict(out)
-            out.pop("mask_3d")   # required by Step‑2 schema
+            out.pop("mask")   # required by Step‑2 schema, NOT Step‑1
         return out
 
     monkeypatch.setattr(orch, "_to_json_compatible", break_json)
