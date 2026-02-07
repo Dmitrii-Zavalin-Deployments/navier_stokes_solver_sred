@@ -20,18 +20,19 @@ def test_json_compatible_converts_functions():
 
 
 # ------------------------------------------------------------
-# Test 2 — Step 1 validation failure triggers RuntimeError
+# Test 2 — Malformed Step‑1 input fails early in precompute_constants
 # ------------------------------------------------------------
 def test_orchestrate_step2_step1_validation_failure():
     from src.step2.orchestrate_step2 import orchestrate_step2
 
-    # Missing required Step‑1 keys → should fail validation
+    # Missing required Step‑1 keys → should fail inside precompute_constants
     bad_state = {"fields": {}, "grid": {}, "config": {}}
 
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(KeyError) as excinfo:
         orchestrate_step2(bad_state)
 
-    assert "Input schema validation FAILED" in str(excinfo.value)
+    # Ensure the failure is due to missing Step‑1 fluid block
+    assert "fluid" in str(excinfo.value)
 
 
 # ------------------------------------------------------------
