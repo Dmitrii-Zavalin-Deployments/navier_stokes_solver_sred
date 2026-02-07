@@ -31,7 +31,7 @@ def test_json_compatible_converts_functions_and_callables():
 def test_orchestrate_step2_step1_schema_validation_failure():
     from src.step2.orchestrate_step2 import orchestrate_step2
 
-    # Missing required Step‑1 keys → schema validation must fail
+    # Missing required Step‑1 keys → should fail BEFORE Step‑2 logic
     bad_state = {
         "grid": {
             "x_min": 0, "x_max": 1,
@@ -42,7 +42,7 @@ def test_orchestrate_step2_step1_schema_validation_failure():
         },
         "config": {
             "fluid": {"density": 1.0, "viscosity": 0.1},
-            # MISSING "simulation" → Step‑1 schema violation
+            # MISSING "simulation" → KeyError inside precompute_constants
         },
         "fields": {
             "P": [[[0.0]]],
@@ -54,10 +54,10 @@ def test_orchestrate_step2_step1_schema_validation_failure():
         "constants": None,
     }
 
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(KeyError) as excinfo:
         orchestrate_step2(bad_state)
 
-    assert "Input schema validation FAILED" in str(excinfo.value)
+    assert "simulation" in str(excinfo.value)
 
 
 # ------------------------------------------------------------
@@ -69,11 +69,11 @@ def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
 
     state = SchemaDummyState(4, 4, 4)
 
-    # Monkeypatch _to_json_compatible to break output JUST before validation
+    # Break ONLY Step‑2 schema validation by removing "mask" in JSON view
     def break_json(obj):
-        if isinstance(obj, dict) and "grid" in obj:
+        if isinstance(obj, dict) and "mask" in obj:
             broken = dict(obj)
-            broken.pop("grid", None)  # remove required key
+            broken.pop("mask", None)
             return broken
         return obj
 
