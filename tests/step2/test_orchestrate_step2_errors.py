@@ -26,12 +26,11 @@ def test_json_compatible_converts_functions_and_callables():
 
 
 # ------------------------------------------------------------
-# Test 2 — Step‑1 schema validation failure (covers lines 49–50)
+# Test 2 — Step‑1 schema validation failure (lines 49–50)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step1_schema_validation_failure():
     from src.step2.orchestrate_step2 import orchestrate_step2
 
-    # Missing required Step‑1 keys → should fail BEFORE Step‑2 logic
     bad_state = {
         "grid": {
             "x_min": 0, "x_max": 1,
@@ -42,7 +41,7 @@ def test_orchestrate_step2_step1_schema_validation_failure():
         },
         "config": {
             "fluid": {"density": 1.0, "viscosity": 0.1},
-            # MISSING "simulation" → KeyError inside precompute_constants
+            # missing "simulation"
         },
         "fields": {
             "P": [[[0.0]]],
@@ -61,7 +60,7 @@ def test_orchestrate_step2_step1_schema_validation_failure():
 
 
 # ------------------------------------------------------------
-# Test 3 — Step‑2 schema validation failure (covers lines 90–91)
+# Test 3 — Step‑2 schema validation failure (lines 90–91)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
     from tests.helpers.schema_dummy_state import SchemaDummyState
@@ -69,13 +68,15 @@ def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
 
     state = SchemaDummyState(4, 4, 4)
 
-    # Break ONLY Step‑2 schema validation by removing "mask" in JSON view
+    real_json = orch._to_json_compatible
+
+    # Break ONLY Step‑2 schema validation
     def break_json(obj):
-        if isinstance(obj, dict) and "mask" in obj:
-            broken = dict(obj)
-            broken.pop("mask", None)
-            return broken
-        return obj
+        out = real_json(obj)
+        if isinstance(out, dict) and "mask" in out:
+            out = dict(out)
+            out.pop("mask", None)
+        return out
 
     monkeypatch.setattr(orch, "_to_json_compatible", break_json)
 
