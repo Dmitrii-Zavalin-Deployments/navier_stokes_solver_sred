@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.dummy_state_step2 import DummyState  # still needed for precompute_constants tests
+from tests.helpers.schema_dummy_state import SchemaDummyState
 
 from src.step2.precompute_constants import precompute_constants
 from src.step2.create_fluid_mask import create_fluid_mask
@@ -22,13 +22,13 @@ def make_minimal_mask_state(mask: np.ndarray) -> dict:
 
 
 # ----------------------------------------------------------------------
-# precompute_constants tests (DummyState is still valid input)
+# precompute_constants tests (now using SchemaDummyState)
 # ----------------------------------------------------------------------
 
 def test_precompute_constants_normal():
-    state = DummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
+    state = SchemaDummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
     precompute_constants(state)
-    constants = state["Constants"]
+    constants = state["constants"]
 
     assert constants["dx"] == pytest.approx(0.1)
     assert constants["inv_dx"] == pytest.approx(10.0)
@@ -36,32 +36,32 @@ def test_precompute_constants_normal():
 
 
 def test_precompute_constants_very_small_dx():
-    state = DummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
+    state = SchemaDummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
     precompute_constants(state)
-    constants = state["Constants"]
+    constants = state["constants"]
 
     assert np.isfinite(constants["inv_dx"])
     assert np.isfinite(constants["inv_dx2"])
 
 
 def test_precompute_constants_dt_zero_rejected():
-    state = DummyState(1, 1, 1, dt=0.0)
+    state = SchemaDummyState(1, 1, 1, dt=0.0)
     with pytest.raises(ValueError):
         precompute_constants(state)
 
 
 def test_precompute_constants_existing_constants_passthrough():
-    state = DummyState(1, 1, 1)
+    state = SchemaDummyState(1, 1, 1)
     original = {"dx": 0.1}
-    state["Constants"] = original
+    state["constants"] = original
 
     precompute_constants(state)
 
-    assert state["Constants"] is original
+    assert state["constants"] is original
 
 
 # ----------------------------------------------------------------------
-# create_fluid_mask tests (must use Step‑1 schema)
+# create_fluid_mask tests (minimal Step‑1 schema)
 # ----------------------------------------------------------------------
 
 def test_create_fluid_mask_mixed():
