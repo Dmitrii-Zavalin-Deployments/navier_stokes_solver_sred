@@ -1,4 +1,4 @@
-# tests/step_2/test_orchestrate_step2_health_structure.py
+# tests/step2/test_orchestrate_step2_health_structure.py
 
 import numpy as np
 

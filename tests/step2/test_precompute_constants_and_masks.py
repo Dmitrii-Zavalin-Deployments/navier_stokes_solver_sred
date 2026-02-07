@@ -1,4 +1,4 @@
-# tests/step_2/test_precompute_constants_and_masks.py
+# tests/step2/test_precompute_constants_and_masks.py
 
 import numpy as np
 import pytest

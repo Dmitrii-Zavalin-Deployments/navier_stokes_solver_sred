@@ -1,4 +1,4 @@
-# tests/step_2/test_advection_ppe_health.py
+# tests/step2/test_advection_ppe_health.py
 
 import numpy as np
 import pytest

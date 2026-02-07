@@ -1,4 +1,4 @@
-# tests/step_2/test_orchestrate_step2_errors.py
+# tests/step2/test_orchestrate_step2_errors.py
 
 import numpy as np
 import pytest

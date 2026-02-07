@@ -1,4 +1,4 @@
-# tests/step_2/test_divergence_gradient_laplacian.py
+# tests/step2/test_divergence_gradient_laplacian.py
 
 import numpy as np
 import pytest

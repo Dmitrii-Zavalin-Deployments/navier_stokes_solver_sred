@@ -1,4 +1,4 @@
-# tests/step_2/test_enforce_mask_semantics.py
+# tests/step2/test_enforce_mask_semantics.py
 
 import numpy as np
 import pytest

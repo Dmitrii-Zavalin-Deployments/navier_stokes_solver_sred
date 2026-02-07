@@ -1,4 +1,4 @@
-# tests/step_2/test_orchestrate_step2_no_validator.py
+# tests/step2/test_orchestrate_step2_no_validator.py
 
 import numpy as np
 import src.step2.orchestrate_step2 as o

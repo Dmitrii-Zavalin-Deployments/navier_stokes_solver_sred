@@ -1,4 +1,4 @@
-# tests/step_2/test_orchestrate_step2_ppe_structure.py
+# tests/step2/test_orchestrate_step2_ppe_structure.py
 
 import numpy as np
 from src.step2.orchestrate_step2 import orchestrate_step2
