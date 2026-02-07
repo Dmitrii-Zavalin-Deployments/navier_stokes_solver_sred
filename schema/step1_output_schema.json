@@ -87,8 +87,11 @@
     },
 
     "boundary_table": {
-      "type": "array",
-      "description": "Normalized boundary condition table produced in Step 1"
+      "type": "object",
+      "description": "Normalized boundary condition table keyed by faces",
+      "additionalProperties": {
+        "type": "array"
+      }
     },
 
     "constants": {
