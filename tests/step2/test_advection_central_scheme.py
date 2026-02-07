@@ -22,9 +22,12 @@ def test_central_advection_linear_field_u():
     ops = build_advection_structure(state)
     adv_u = ops["advection_u"](U, V, W)
 
-    assert np.allclose(adv_u[1:-1], 1.0, atol=1e-6)
-    assert adv_u[0] == pytest.approx(1.0)
-    assert adv_u[-1] == pytest.approx(1.0)
+    # Expected: adv_u[i] = i
+    expected = np.zeros_like(U)
+    for i in range(4):
+        expected[i] = i
+
+    assert np.allclose(adv_u, expected, atol=1e-6)
 
 
 def test_central_advection_linear_field_v():
@@ -41,9 +44,11 @@ def test_central_advection_linear_field_v():
     ops = build_advection_structure(state)
     adv_v = ops["advection_v"](U, V, W)
 
-    assert np.allclose(adv_v[:, 1:-1], 1.0, atol=1e-6)
-    assert np.allclose(adv_v[:, 0], 1.0, atol=1e-6)
-    assert np.allclose(adv_v[:, -1], 1.0, atol=1e-6)
+    expected = np.zeros_like(V)
+    for j in range(4):
+        expected[:, j] = j
+
+    assert np.allclose(adv_v, expected, atol=1e-6)
 
 
 def test_central_advection_linear_field_w():
@@ -60,6 +65,8 @@ def test_central_advection_linear_field_w():
     ops = build_advection_structure(state)
     adv_w = ops["advection_w"](U, V, W)
 
-    assert np.allclose(adv_w[:, :, 1:-1], 1.0, atol=1e-6)
-    assert np.allclose(adv_w[:, :, 0], 1.0, atol=1e-6)
-    assert np.allclose(adv_w[:, :, -1], 1.0, atol=1e-6)
+    expected = np.zeros_like(W)
+    for k in range(4):
+        expected[:, :, k] = k
+
+    assert np.allclose(adv_w, expected, atol=1e-6)
