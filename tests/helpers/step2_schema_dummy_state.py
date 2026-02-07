@@ -14,7 +14,6 @@ class Step2SchemaDummyState(dict):
         "grid",
         "config",
         "fields",
-        "mask_3d",
         "boundary_table",
         "constants",
     }
@@ -36,10 +35,6 @@ class Step2SchemaDummyState(dict):
         scheme="upwind",
     ):
         super().__init__()
-
-        # Validate dt
-        if dt <= 0:
-            raise ValueError("dt must be positive")
 
         # Grid block
         self["grid"] = {
@@ -112,7 +107,6 @@ class Step2SchemaDummyState(dict):
             "inv_dz2": 1.0 / (dz * dz),
         }
 
-    # Protect structured blocks
     def __setitem__(self, key, value):
         if key in self.PROTECTED_KEYS and not isinstance(value, dict):
             raise TypeError(f"Cannot overwrite structured block '{key}' with non-dict value")
