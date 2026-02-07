@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import numpy as np
 
 # Import all Step 2 functions
 from .enforce_mask_semantics import enforce_mask_semantics
@@ -24,25 +25,27 @@ except Exception:  # pragma: no cover
     load_schema = None  # type: ignore
 
 
+def _convert_fields_to_numpy(state: Any) -> None:
+    """Convert Step‑1 Python lists into NumPy arrays for Step‑2 numerical code."""
+    fields = state.get("fields", {})
+    for key, value in fields.items():
+        if not isinstance(value, np.ndarray):
+            fields[key] = np.asarray(value)
+
+
 def orchestrate_step2(state: Any) -> Any:
     """
     High-level orchestrator for Step 2.
 
     Validates:
-      - Input against step1_output_schema.json
-      - Output against step2_output_schema.json
+      - Input against step1_output_schema.json (lists)
+      - Output against step2_output_schema.json (arrays allowed)
     """
 
     # ------------------------------------------------------------
-    # 0. Precompute constants BEFORE schema validation
-    #    (Step 1 does NOT produce constants; Step 2 must)
+    # 0. Validate Step‑1 output (lists)
     # ------------------------------------------------------------
-    precompute_constants(state)
-
-    # ------------------------------------------------------------
-    # 1. Validate input against Step 1 output schema
-    # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:  # pragma: no cover
+    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
         )
@@ -58,17 +61,32 @@ def orchestrate_step2(state: Any) -> Any:
             ) from exc
 
     # ------------------------------------------------------------
-    # 2. Enforce CFD mask semantics
+    # 1. Convert lists → NumPy arrays (Step‑2 numerical world)
+    # ------------------------------------------------------------
+    _convert_fields_to_numpy(state)
+
+    # ------------------------------------------------------------
+    # 2. Precompute constants
+    # ------------------------------------------------------------
+    precompute_constants(state)
+
+    # ------------------------------------------------------------
+    # 3. Enforce CFD mask semantics
     # ------------------------------------------------------------
     enforce_mask_semantics(state)
 
     # ------------------------------------------------------------
-    # 3. Create boolean fluid masks
+    # 4. Create boolean fluid masks
     # ------------------------------------------------------------
     create_fluid_mask(state)
 
     # ------------------------------------------------------------
-    # 4. Build discrete operators
+    # 5. Provide top-level mask required by Step‑2 schema
+    # ------------------------------------------------------------
+    state["mask"] = state["fields"]["Mask"]
+
+    # ------------------------------------------------------------
+    # 6. Build discrete operators
     # ------------------------------------------------------------
     build_divergence_operator(state)
     build_gradient_operators(state)
@@ -76,19 +94,19 @@ def orchestrate_step2(state: Any) -> Any:
     build_advection_structure(state)
 
     # ------------------------------------------------------------
-    # 5. Prepare PPE structure (rhs builder, solver config, singularity flag)
+    # 7. Prepare PPE structure
     # ------------------------------------------------------------
     prepare_ppe_structure(state)
 
     # ------------------------------------------------------------
-    # 6. Compute initial solver health diagnostics
+    # 8. Compute initial solver health diagnostics
     # ------------------------------------------------------------
     compute_initial_health(state)
 
     # ------------------------------------------------------------
-    # 7. Validate output against Step 2 output schema
+    # 9. Validate Step‑2 output (arrays allowed)
     # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:  # pragma: no cover
+    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
         )
