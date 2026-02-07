@@ -9,6 +9,22 @@ from src.step2.precompute_constants import precompute_constants
 from src.step2.create_fluid_mask import create_fluid_mask
 
 
+def _wrap_for_mask(dummy: DummyState) -> dict:
+    """
+    Convert DummyState into the minimal Step‑1‑schema‑compliant dict
+    required by create_fluid_mask (only needs fields.Mask).
+    """
+    return {
+        "fields": {
+            "Mask": np.asarray(dummy["Mask"])
+        }
+    }
+
+
+# ----------------------------------------------------------------------
+# precompute_constants tests (DummyState is still valid input)
+# ----------------------------------------------------------------------
+
 def test_precompute_constants_normal():
     state = DummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
     precompute_constants(state)
@@ -44,6 +60,10 @@ def test_precompute_constants_existing_constants_passthrough():
     assert state["Constants"] is original
 
 
+# ----------------------------------------------------------------------
+# create_fluid_mask tests (must wrap DummyState into Step‑1 schema)
+# ----------------------------------------------------------------------
+
 def test_create_fluid_mask_mixed():
     mask = np.array(
         [
@@ -52,7 +72,9 @@ def test_create_fluid_mask_mixed():
         ],
         dtype=int,
     )
-    state = DummyState(2, 1, 2, mask=mask)
+    dummy = DummyState(2, 1, 2, mask=mask)
+    state = _wrap_for_mask(dummy)
+
     is_fluid, is_boundary = create_fluid_mask(state)
 
     assert is_fluid.shape == mask.shape
@@ -71,7 +93,9 @@ def test_create_fluid_mask_mixed():
 
 def test_create_fluid_mask_all_fluid():
     mask = np.ones((2, 2, 2), dtype=int)
-    state = DummyState(2, 2, 2, mask=mask)
+    dummy = DummyState(2, 2, 2, mask=mask)
+    state = _wrap_for_mask(dummy)
+
     is_fluid, is_boundary = create_fluid_mask(state)
 
     assert np.all(is_fluid)
@@ -80,7 +104,9 @@ def test_create_fluid_mask_all_fluid():
 
 def test_create_fluid_mask_all_boundary_fluid():
     mask = -np.ones((2, 2, 2), dtype=int)
-    state = DummyState(2, 2, 2, mask=mask)
+    dummy = DummyState(2, 2, 2, mask=mask)
+    state = _wrap_for_mask(dummy)
+
     is_fluid, is_boundary = create_fluid_mask(state)
 
     assert np.all(is_fluid)
@@ -89,7 +115,9 @@ def test_create_fluid_mask_all_boundary_fluid():
 
 def test_create_fluid_mask_shape_preserved():
     mask = np.zeros((3, 4, 5), dtype=int)
-    state = DummyState(3, 4, 5, mask=mask)
+    dummy = DummyState(3, 4, 5, mask=mask)
+    state = _wrap_for_mask(dummy)
+
     is_fluid, is_boundary = create_fluid_mask(state)
 
     assert is_fluid.shape == (3, 4, 5)
@@ -98,6 +126,8 @@ def test_create_fluid_mask_shape_preserved():
 
 def test_create_fluid_mask_float_rejected():
     mask = np.ones((2, 2, 2), dtype=float)
-    state = DummyState(2, 2, 2, mask=mask)
+    dummy = DummyState(2, 2, 2, mask=mask)
+    state = _wrap_for_mask(dummy)
+
     with pytest.raises(ValueError):
         create_fluid_mask(state)
