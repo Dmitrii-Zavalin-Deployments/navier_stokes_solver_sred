@@ -35,15 +35,30 @@ def _convert_fields_to_numpy(state: Any) -> None:
 
 def _to_json_compatible(obj: Any) -> Any:
     """
-    Recursively convert NumPy arrays to lists so JSON Schema
-    validation sees standard JSON types.
+    Recursively convert NumPy arrays and Python functions into JSON‑compatible
+    structures so JSON Schema validation sees only standard JSON types.
     """
+    # NumPy arrays → lists
     if isinstance(obj, np.ndarray):
         return obj.tolist()
+
+    # Python functions → string placeholders
+    if callable(obj):
+        try:
+            name = obj.__name__
+        except Exception:
+            name = str(obj)
+        return f"<function {name}>"
+
+    # Dict → recurse
     if isinstance(obj, dict):
         return {k: _to_json_compatible(v) for k, v in obj.items()}
+
+    # List / tuple → recurse
     if isinstance(obj, (list, tuple)):
         return [_to_json_compatible(v) for v in obj]
+
+    # Everything else stays as-is
     return obj
 
 
