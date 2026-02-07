@@ -5,13 +5,19 @@ import numpy as np
 
 class Step2SchemaDummyState(dict):
     """
-    A Step‑2 test fixture that mimics the *structure* of Step‑1 output
-    but uses NumPy arrays for all numerical fields, because Step‑2 tests
-    and operators require NumPy semantics (.shape, slicing, broadcasting).
-
-    Structure = Step‑1
-    Types     = Step‑2
+    Step‑2 dummy state:
+    - Structure matches Step‑1 output
+    - Types match Step‑2 numerical operators
     """
+
+    PROTECTED_KEYS = {
+        "grid",
+        "config",
+        "fields",
+        "mask_3d",
+        "boundary_table",
+        "constants",
+    }
 
     def __init__(
         self,
@@ -31,9 +37,11 @@ class Step2SchemaDummyState(dict):
     ):
         super().__init__()
 
-        # -----------------------------
-        # Grid block (Step‑1 structure)
-        # -----------------------------
+        # Validate dt
+        if dt <= 0:
+            raise ValueError("dt must be positive")
+
+        # Grid block
         self["grid"] = {
             "x_min": 0.0,
             "x_max": dx * nx,
@@ -49,34 +57,21 @@ class Step2SchemaDummyState(dict):
             "dz": dz,
         }
 
-        # -----------------------------
-        # Config block (Step‑1 structure)
-        # -----------------------------
+        # Config block
         self["config"] = {
             "boundary_conditions": [],
             "domain": {},
-            "fluid": {
-                "density": rho,
-                "viscosity": mu,
-            },
+            "fluid": {"density": rho, "viscosity": mu},
             "forces": {},
             "geometry_definition": {},
-            "simulation": {
-                "dt": dt,
-                "advection_scheme": scheme,
-            },
+            "simulation": {"dt": dt, "advection_scheme": scheme},
         }
 
-        # -----------------------------
-        # Mask (NumPy array for Step‑2)
-        # -----------------------------
+        # Mask
         if mask is None:
             mask = np.ones((nx, ny, nz), dtype=int)
 
-        # -----------------------------
-        # Fields block
-        # Step‑1 structure, Step‑2 types (NumPy arrays)
-        # -----------------------------
+        # Fields
         self["fields"] = {
             "P": np.zeros((nx, ny, nz), float),
             "U": np.zeros((nx + 1, ny, nz), float),
@@ -85,13 +80,9 @@ class Step2SchemaDummyState(dict):
             "Mask": mask,
         }
 
-        # JSON‑friendly version of mask (Step‑1 compatibility)
         self["mask_3d"] = mask.tolist()
 
-        # -----------------------------
-        # Boundary table (Step‑1 structure)
-        # Must be an object, not a list
-        # -----------------------------
+        # Boundary table must be an object
         self["boundary_table"] = (
             boundary_table
             if boundary_table is not None
@@ -105,9 +96,7 @@ class Step2SchemaDummyState(dict):
             }
         )
 
-        # -----------------------------
-        # Constants block (Step‑2 will overwrite)
-        # -----------------------------
+        # Constants
         self["constants"] = {
             "rho": rho,
             "mu": mu,
@@ -123,11 +112,8 @@ class Step2SchemaDummyState(dict):
             "inv_dz2": 1.0 / (dz * dz),
         }
 
-    # -----------------------------
-    # Allow dict‑like and attribute‑like access
-    # -----------------------------
-    def __getitem__(self, key):
-        return super().__getitem__(key)
-
+    # Protect structured blocks
     def __setitem__(self, key, value):
+        if key in self.PROTECTED_KEYS and not isinstance(value, dict):
+            raise TypeError(f"Cannot overwrite structured block '{key}' with non-dict value")
         super().__setitem__(key, value)
