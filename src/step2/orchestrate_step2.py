@@ -34,7 +34,13 @@ def orchestrate_step2(state: Any) -> Any:
     """
 
     # ------------------------------------------------------------
-    # 0. Validate input against Step 1 output schema
+    # 0. Precompute constants BEFORE schema validation
+    #    (Step 1 does NOT produce constants; Step 2 must)
+    # ------------------------------------------------------------
+    precompute_constants(state)
+
+    # ------------------------------------------------------------
+    # 1. Validate input against Step 1 output schema
     # ------------------------------------------------------------
     if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:  # pragma: no cover
         schema_path = (
@@ -52,14 +58,9 @@ def orchestrate_step2(state: Any) -> Any:
             ) from exc
 
     # ------------------------------------------------------------
-    # 1. Enforce CFD mask semantics
+    # 2. Enforce CFD mask semantics
     # ------------------------------------------------------------
     enforce_mask_semantics(state)
-
-    # ------------------------------------------------------------
-    # 2. Precompute constants (dx, dy, dz, rho, mu, dt, etc.)
-    # ------------------------------------------------------------
-    precompute_constants(state)
 
     # ------------------------------------------------------------
     # 3. Create boolean fluid masks
