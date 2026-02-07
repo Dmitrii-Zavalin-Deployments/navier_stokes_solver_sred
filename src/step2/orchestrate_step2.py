@@ -37,13 +37,18 @@ def orchestrate_step2(state: Any) -> Any:
     """
     High-level orchestrator for Step 2.
 
-    Validates:
-      - Input against step1_output_schema.json (lists)
-      - Output against step2_output_schema.json (arrays allowed)
+    Step 1 → lists
+    Step 2 → arrays
     """
 
     # ------------------------------------------------------------
-    # 0. Validate Step‑1 output (lists)
+    # 0. Precompute constants BEFORE Step‑1 validation
+    #    (Step‑1 dummy state sets constants=None)
+    # ------------------------------------------------------------
+    precompute_constants(state)
+
+    # ------------------------------------------------------------
+    # 1. Validate Step‑1 output (now constants is a dict)
     # ------------------------------------------------------------
     if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
         schema_path = (
@@ -61,14 +66,9 @@ def orchestrate_step2(state: Any) -> Any:
             ) from exc
 
     # ------------------------------------------------------------
-    # 1. Convert lists → NumPy arrays (Step‑2 numerical world)
+    # 2. Convert lists → NumPy arrays (Step‑2 numerical world)
     # ------------------------------------------------------------
     _convert_fields_to_numpy(state)
-
-    # ------------------------------------------------------------
-    # 2. Precompute constants
-    # ------------------------------------------------------------
-    precompute_constants(state)
 
     # ------------------------------------------------------------
     # 3. Enforce CFD mask semantics
