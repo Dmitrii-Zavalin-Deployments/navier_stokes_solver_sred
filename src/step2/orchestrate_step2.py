@@ -1,155 +1,114 @@
-# src/step2/orchestrate_step2.py
-from __future__ import annotations
+# tests/step_2/test_orchestrate_step2_errors.py
 
-from pathlib import Path
-from typing import Any
 import numpy as np
-
-# Import all Step 2 functions
-from .enforce_mask_semantics import enforce_mask_semantics
-from .precompute_constants import precompute_constants
-from .create_fluid_mask import create_fluid_mask
-from .build_divergence_operator import build_divergence_operator
-from .build_gradient_operators import build_gradient_operators
-from .build_laplacian_operators import build_laplacian_operators
-from .build_advection_structure import build_advection_structure
-from .prepare_ppe_structure import prepare_ppe_structure
-from .compute_initial_health import compute_initial_health
-
-# Optional JSON-schema validation
-try:  # pragma: no cover
-    from ..step1.validate_json_schema import validate_json_schema
-    from ..step1.schema_utils import load_schema
-except Exception:  # pragma: no cover
-    validate_json_schema = None  # type: ignore
-    load_schema = None  # type: ignore
+import pytest
 
 
-def _convert_fields_to_numpy(state: Any) -> None:
-    """Convert Step‑1 Python lists into NumPy arrays for Step‑2 numerical code."""
-    fields = state.get("fields", {})
-    for key, value in fields.items():
-        if not isinstance(value, np.ndarray):
-            fields[key] = np.asarray(value)
+# ------------------------------------------------------------
+# Test 1 — _to_json_compatible converts functions AND callable objects
+# ------------------------------------------------------------
+def test_json_compatible_converts_functions_and_callables():
+    from src.step2.orchestrate_step2 import _to_json_compatible
+
+    # Regular function
+    def dummy():
+        pass
+
+    # Callable object
+    class CallableObj:
+        def __call__(self):
+            return 42
+
+    obj = CallableObj()
+
+    converted = _to_json_compatible({"f": dummy, "c": obj})
+
+    assert "<function dummy>" in converted["f"]
+    assert "<function" in converted["c"]
 
 
-def _to_json_compatible(obj: Any) -> Any:
-    """
-    Recursively convert NumPy arrays and Python functions into JSON‑compatible
-    structures so JSON Schema validation sees only standard JSON types.
-    """
-    # NumPy arrays → lists
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
+# ------------------------------------------------------------
+# Test 2 — Step‑1 validation failure path (lines 49–50)
+# ------------------------------------------------------------
+def test_orchestrate_step2_step1_schema_validation_failure():
+    from src.step2.orchestrate_step2 import orchestrate_step2
 
-    # Python functions → string placeholders
-    if callable(obj):
-        try:
-            name = obj.__name__
-        except Exception:
-            name = str(obj)
-        return f"<function {name}>"
+    # This state MUST pass precompute_constants but fail Step‑1 schema validation
+    bad_state = {
+        "grid": {
+            "x_min": 0, "x_max": 1,
+            "y_min": 0, "y_max": 1,
+            "z_min": 0, "z_max": 1,
+            "nx": 1, "ny": 1, "nz": 1,
+            "dx": 1, "dy": 1, "dz": 1,
+        },
+        "config": {
+            "fluid": {"density": 1.0, "viscosity": 0.1},
+            # MISSING "simulation" → Step‑1 schema violation
+        },
+        "fields": {
+            "P": [[[0.0]]],
+            "U": [[[0.0]]],
+            "V": [[[0.0]]],
+            "W": [[[0.0]]],
+            "Mask": [[[1]]],
+        },
+        "constants": None,
+    }
 
-    # Dict → recurse
-    if isinstance(obj, dict):
-        return {k: _to_json_compatible(v) for k, v in obj.items()}
+    with pytest.raises(RuntimeError) as excinfo:
+        orchestrate_step2(bad_state)
 
-    # List / tuple → recurse
-    if isinstance(obj, (list, tuple)):
-        return [_to_json_compatible(v) for v in obj]
-
-    # Everything else stays as-is
-    return obj
+    assert "Input schema validation FAILED" in str(excinfo.value)
 
 
-def orchestrate_step2(state: Any) -> Any:
-    """
-    High-level orchestrator for Step 2.
+# ------------------------------------------------------------
+# Test 3 — Step‑2 validation failure path (lines 90–91)
+# ------------------------------------------------------------
+def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
+    from tests.helpers.schema_dummy_state import SchemaDummyState
+    from src.step2.orchestrate_step2 import orchestrate_step2
 
-    Step 1 → lists (JSON)
-    Step 2 → arrays (numerical)
-    """
+    state = SchemaDummyState(4, 4, 4)
 
-    # ------------------------------------------------------------
-    # 0. Precompute constants BEFORE Step‑1 validation
-    #    (Step‑1 dummy state sets constants=None)
-    # ------------------------------------------------------------
-    precompute_constants(state)
+    # Monkeypatch _to_json_compatible to break output JUST before validation
+    def break_json(obj):
+        if isinstance(obj, dict) and "grid" in obj:
+            broken = dict(obj)
+            broken.pop("grid", None)
+            return broken
+        return obj
 
-    # ------------------------------------------------------------
-    # 1. Validate Step‑1 output (using JSON‑compatible view)
-    # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
-        schema_path = (
-            Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
-        )
-        try:
-            schema = load_schema(str(schema_path))
-            json_view = _to_json_compatible(state)
-            validate_json_schema(json_view, schema)
-        except Exception as exc:
-            raise RuntimeError(
-                f"\n[Step 2] Input schema validation FAILED.\n"
-                f"Expected schema: {schema_path}\n"
-                f"Validation error: {exc}\n"
-                f"Aborting Step 2 — upstream Step 1 output is malformed.\n"
-            ) from exc
+    monkeypatch.setattr(
+        "src.step2.orchestrate_step2._to_json_compatible",
+        break_json
+    )
 
-    # ------------------------------------------------------------
-    # 2. Convert lists → NumPy arrays (Step‑2 numerical world)
-    # ------------------------------------------------------------
-    _convert_fields_to_numpy(state)
+    with pytest.raises(RuntimeError) as excinfo:
+        orchestrate_step2(state)
 
-    # ------------------------------------------------------------
-    # 3. Enforce CFD mask semantics
-    # ------------------------------------------------------------
-    enforce_mask_semantics(state)
+    assert "Output schema validation FAILED" in str(excinfo.value)
 
-    # ------------------------------------------------------------
-    # 4. Create boolean fluid masks
-    # ------------------------------------------------------------
-    create_fluid_mask(state)
 
-    # ------------------------------------------------------------
-    # 5. Provide top-level mask required by Step‑2 schema
-    # ------------------------------------------------------------
-    state["mask"] = state["fields"]["Mask"]
+# ------------------------------------------------------------
+# Test 4 — _to_json_compatible handles arrays, functions, nested structures
+# ------------------------------------------------------------
+def test_json_compatible_full_conversion():
+    from src.step2.orchestrate_step2 import _to_json_compatible
 
-    # ------------------------------------------------------------
-    # 6. Build discrete operators
-    # ------------------------------------------------------------
-    build_divergence_operator(state)
-    build_gradient_operators(state)
-    build_laplacian_operators(state)
-    build_advection_structure(state)
+    def f():
+        pass
 
-    # ------------------------------------------------------------
-    # 7. Prepare PPE structure
-    # ------------------------------------------------------------
-    prepare_ppe_structure(state)
+    obj = {
+        "arr": np.zeros((2, 2)),
+        "func": f,
+        "nested": {"x": np.array([1, 2])},
+        "list": [np.array([3, 4])]
+    }
 
-    # ------------------------------------------------------------
-    # 8. Compute initial solver health diagnostics
-    # ------------------------------------------------------------
-    compute_initial_health(state)
+    converted = _to_json_compatible(obj)
 
-    # ------------------------------------------------------------
-    # 9. Validate Step‑2 output (using JSON‑compatible view)
-    # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
-        schema_path = (
-            Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
-        )
-        try:
-            schema = load_schema(str(schema_path))
-            json_view = _to_json_compatible(state)
-            validate_json_schema(json_view, schema)
-        except Exception as exc:
-            raise RuntimeError(
-                f"\n[Step 2] Output schema validation FAILED.\n"
-                f"Expected schema: {schema_path}\n"
-                f"Validation error: {exc}\n"
-                f"Aborting — Step 2 produced an invalid SimulationState.\n"
-            ) from exc
-
-    return state
+    assert converted["arr"] == [[0.0, 0.0], [0.0, 0.0]]
+    assert "<function f>" in converted["func"]
+    assert converted["nested"]["x"] == [1, 2]
+    assert converted["list"] == [[3, 4]]
