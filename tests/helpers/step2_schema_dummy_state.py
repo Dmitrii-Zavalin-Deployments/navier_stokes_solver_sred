@@ -6,8 +6,8 @@ import numpy as np
 class Step2SchemaDummyState(dict):
     """
     Step‑2 dummy state:
-    - Structure matches Step‑1 output
-    - Types match Step‑2 numerical operators
+    - Must satisfy Step‑1 schema (for orchestrator validation)
+    - Must provide Step‑2‑friendly structures (for numerical operators)
     """
 
     PROTECTED_KEYS = {
@@ -15,7 +15,7 @@ class Step2SchemaDummyState(dict):
         "config",
         "fields",
         "constants",
-        # boundary_table is intentionally NOT protected
+        # boundary_table is protected because Step‑1 schema requires an object
         # mask_3d is intentionally NOT protected
     }
 
@@ -32,13 +32,13 @@ class Step2SchemaDummyState(dict):
         rho=1.0,
         mu=0.1,
         mask=None,
-        boundary_table=None,
+        boundary_table=None,   # Step‑2 list of BC dicts
         scheme="upwind",
     ):
         super().__init__()
 
         # -----------------------------
-        # Grid block
+        # Grid block (Step‑1 schema)
         # -----------------------------
         self["grid"] = {
             "x_min": 0.0,
@@ -56,7 +56,7 @@ class Step2SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Config block
+        # Config block (Step‑1 schema)
         # -----------------------------
         self["config"] = {
             "boundary_conditions": [],
@@ -68,13 +68,13 @@ class Step2SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Mask
+        # Mask (NumPy for Step‑2)
         # -----------------------------
         if mask is None:
             mask = np.ones((nx, ny, nz), dtype=int)
 
         # -----------------------------
-        # Fields block
+        # Fields (Step‑1 structure, Step‑2 types)
         # -----------------------------
         self["fields"] = {
             "P": np.zeros((nx, ny, nz), float),
@@ -84,13 +84,29 @@ class Step2SchemaDummyState(dict):
             "Mask": mask,
         }
 
-        # JSON‑friendly mask
         self["mask_3d"] = mask.tolist()
 
         # -----------------------------
-        # Boundary table (Step‑2 expects a LIST)
+        # Boundary table
+        #
+        # Step‑1 schema requires an OBJECT:
+        #   { "x_min": [], ... }
+        #
+        # Step‑2 operators require a LIST of BC dicts:
+        #   [ {"face": ..., "type": ...}, ... ]
+        #
+        # So we store BOTH.
         # -----------------------------
-        self["boundary_table"] = boundary_table if boundary_table is not None else []
+        self["boundary_table_list"] = boundary_table if boundary_table is not None else []
+
+        self["boundary_table"] = {
+            "x_min": [],
+            "x_max": [],
+            "y_min": [],
+            "y_max": [],
+            "z_min": [],
+            "z_max": [],
+        }
 
         # -----------------------------
         # Constants block
