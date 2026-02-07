@@ -18,18 +18,18 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
     # ------------------------------------------------------------
     # Ensure divergence operator exists (tests call this directly)
     # ------------------------------------------------------------
-    if "Operators" not in state or "divergence" not in state["Operators"]:
+    if "operators" not in state or "divergence" not in state["operators"]:
         from .build_divergence_operator import build_divergence_operator
         build_divergence_operator(state)
 
     # ------------------------------------------------------------
-    # Extract fields
+    # Extract fields (schema-correct)
     # ------------------------------------------------------------
-    U = np.asarray(state.U)
-    V = np.asarray(state.V)
-    W = np.asarray(state.W)
+    U = np.asarray(state["fields"]["U"])
+    V = np.asarray(state["fields"]["V"])
+    W = np.asarray(state["fields"]["W"])
 
-    const = state["Constants"]
+    const = state["constants"]
     dt = float(const["dt"])
     dx = float(const["dx"])
     dy = float(const["dy"])
@@ -38,7 +38,7 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
     # ------------------------------------------------------------
     # Divergence
     # ------------------------------------------------------------
-    divergence_op = state["Operators"]["divergence"]
+    divergence_op = state["operators"]["divergence"]
     div = divergence_op(U, V, W)
 
     initial_divergence_norm = float(np.linalg.norm(div.ravel(), ord=2))
@@ -71,7 +71,7 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
     cfl_advection_estimate = float(np.max(cfl_field))
 
     # ------------------------------------------------------------
-    # Package results
+    # Package results (schema-correct)
     # ------------------------------------------------------------
     health = {
         "initial_divergence_norm": initial_divergence_norm,
@@ -79,5 +79,5 @@ def compute_initial_health(state: Any) -> Dict[str, float]:
         "cfl_advection_estimate": cfl_advection_estimate,
     }
 
-    state["Health"] = health
+    state["health"] = health
     return health

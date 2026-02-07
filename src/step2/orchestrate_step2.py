@@ -41,7 +41,7 @@ def orchestrate_step2(state: Any) -> Any:
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
         )
         try:
-            schema = load_schema(str(schema_path))  # <-- FIX: load schema JSON
+            schema = load_schema(str(schema_path))
             validate_json_schema(state, schema)
         except Exception as exc:
             raise RuntimeError(
@@ -92,7 +92,7 @@ def orchestrate_step2(state: Any) -> Any:
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
         )
         try:
-            schema = load_schema(str(schema_path))  # <-- FIX: load schema JSON
+            schema = load_schema(str(schema_path))
             validate_json_schema(state, schema)
         except Exception as exc:
             raise RuntimeError(

@@ -15,8 +15,8 @@ def enforce_mask_semantics(state: Any) -> None:
     - There must be at least one fluid-like cell (1 or -1).
     """
 
-    # DummyState in tests exposes mask as attribute, not dict key
-    mask = np.asarray(state.Mask)
+    # Extract mask (schema-correct)
+    mask = np.asarray(state["fields"]["Mask"])
 
     # Strict dtype check
     if not np.issubdtype(mask.dtype, np.integer):

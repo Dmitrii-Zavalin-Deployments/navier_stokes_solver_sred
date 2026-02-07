@@ -13,21 +13,10 @@ def create_fluid_mask(state: Any) -> Tuple[np.ndarray, np.ndarray]:
     - mask ==  1 : fluid
     - mask == -1 : boundary-fluid (still fluid)
     - mask ==  0 : solid
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with key "Mask" (3D integer array).
-
-    Returns
-    -------
-    (is_fluid, is_boundary_cell) : Tuple[np.ndarray, np.ndarray]
-        is_fluid: bool[nx, ny, nz]  (mask == 1 or mask == -1)
-        is_boundary_cell: bool[nx, ny, nz]  (mask == -1)
     """
 
-    # Extract mask
-    mask = np.asarray(state["Mask"])
+    # Extract mask (schema-correct)
+    mask = np.asarray(state["fields"]["Mask"])
 
     # Strict dtype check (tests require float masks to raise)
     if not np.issubdtype(mask.dtype, np.integer):

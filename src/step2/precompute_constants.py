@@ -11,34 +11,19 @@ def precompute_constants(state: Any) -> Dict[str, float]:
     This function assumes Step 1 has already validated physical parameters and
     grid extents. It either returns the existing constants or constructs them
     from the state.
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with:
-        - state["Config"]["fluid_properties"]
-        - state["Config"]["simulation_parameters"]
-        - state["Grid"] (dx, dy, dz)
-
-    Returns
-    -------
-    Dict[str, float]
-        Dictionary with rho, mu, dt, dx, dy, dz, inv_dx, inv_dy, inv_dz,
-        inv_dx2, inv_dy2, inv_dz2.
     """
 
     # ------------------------------------------------------------
-    # If Constants already exists AND is a dict, reuse it.
-    # (DummyState sets Constants=None, so we must check type.)
+    # If constants already exist AND are a dict, reuse them.
     # ------------------------------------------------------------
-    if "Constants" in state and isinstance(state["Constants"], dict):
-        return state["Constants"]
+    if "constants" in state and isinstance(state["constants"], dict):
+        return state["constants"]
 
     # ------------------------------------------------------------
-    # Otherwise compute constants from Config + Grid
+    # Otherwise compute constants from config + grid
     # ------------------------------------------------------------
-    cfg = state["Config"]
-    grid = state["Grid"]
+    cfg = state["config"]
+    grid = state["grid"]
 
     fluid = cfg["fluid_properties"]
     sim = cfg["simulation_parameters"]
@@ -77,8 +62,7 @@ def precompute_constants(state: Any) -> Dict[str, float]:
         "inv_dz2": inv_dz2,
     }
 
-    # Store back into state (dict-style and attribute-style for compatibility)
-    state["Constants"] = constants
-    state.Constants = constants
+    # Store back into state (schema-correct)
+    state["constants"] = constants
 
     return constants

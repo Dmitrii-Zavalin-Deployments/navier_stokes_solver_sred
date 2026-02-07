@@ -13,36 +13,19 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
     - rhs_builder: how to map divergence to RHS
     - solver_type, tolerance, max_iterations
     - ppe_is_singular: whether the PPE is structurally singular (no pressure Dirichlet)
-
-    Parameters
-    ----------
-    state : Any
-        SimulationState-like object with:
-        - state["BoundaryTable"]: list of BC dicts (from Step 1)
-        - state["Constants"]: {"rho", "dt"}
-        - state["Mask"]: int[nx, ny, nz]
-
-    Returns
-    -------
-    dict
-        {
-          "rhs_builder": callable,
-          "solver_type": str,
-          "tolerance": float,
-          "max_iterations": int,
-          "ppe_is_singular": bool,
-        }
     """
 
-    const = state["Constants"]
+    # Physical constants (schema-correct)
+    const = state["constants"]
     rho = float(const["rho"])
     dt = float(const["dt"])
 
-    mask = np.asarray(state["Mask"])
+    # Mask (schema-correct)
+    mask = np.asarray(state["fields"]["Mask"])
     is_fluid = (mask != 0)  # treat -1 as fluid
 
-    # Boundary table from Step 1 (tests use "BoundaryTable")
-    boundary_table = state.get("BoundaryTable", [])
+    # Boundary table from Step 1 (schema-correct)
+    boundary_table = state.get("boundary_table", [])
 
     # ------------------------------------------------------------
     # RHS builder: apply -rho/dt * divergence on fluid cells only
@@ -56,12 +39,9 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
     # Singularity detection:
     # PPE is non-singular if ANY boundary has type "pressure_outlet"
     # ------------------------------------------------------------
-    has_pressure_outlet = False
-
-    for bc in boundary_table:
-        if bc.get("type") == "pressure_outlet":
-            has_pressure_outlet = True
-            break
+    has_pressure_outlet = any(
+        bc.get("type") == "pressure_outlet" for bc in boundary_table
+    )
 
     ppe_is_singular = not has_pressure_outlet
 
@@ -76,5 +56,6 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
         "ppe_is_singular": ppe_is_singular,
     }
 
-    state["PPE"] = ppe
+    # Store in schema-correct location
+    state["ppe"] = ppe
     return ppe
