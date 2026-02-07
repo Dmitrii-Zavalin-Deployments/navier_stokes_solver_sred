@@ -14,7 +14,7 @@ class Step2SchemaDummyState(dict):
         "grid",
         "config",
         "fields",
-        "constants",
+        # constants is intentionally NOT protected
         # boundary_table is protected because Step‑1 schema requires an object
         # mask_3d is intentionally NOT protected
     }
@@ -111,13 +111,12 @@ class Step2SchemaDummyState(dict):
         # -----------------------------
         # Constants block
         #
-        # IMPORTANT:
-        # Step‑1 output does NOT include constants.
-        # Step‑2 must compute them via precompute_constants().
-        #
-        # Therefore constants MUST be None here.
+        # Step‑1 output includes constants as an object.
+        # We initialize it as an EMPTY dict so:
+        # - Step‑1 schema (type: object) is satisfied
+        # - Step‑2 precompute_constants() can detect "empty" and recompute
         # -----------------------------
-        self["constants"] = None
+        self["constants"] = {}
 
     # -----------------------------
     # Protect structured blocks

@@ -14,10 +14,12 @@ def precompute_constants(state: Any) -> Dict[str, float]:
     """
 
     # ------------------------------------------------------------
-    # If constants already exist AND are a dict, reuse them.
+    # If constants already exist AND are a non-empty dict, reuse them.
+    # (Empty dict means "not yet computed" and will be recomputed.)
     # ------------------------------------------------------------
-    if "constants" in state and isinstance(state["constants"], dict):
-        return state["constants"]
+    const = state.get("constants")
+    if isinstance(const, dict) and const:
+        return const
 
     # ------------------------------------------------------------
     # Otherwise compute constants from config + grid
