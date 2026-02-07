@@ -29,9 +29,14 @@ def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
     is_fluid = (mask != 0)  # treat -1 as fluid
 
     # ------------------------------------------------------------------
-    # Boundary table from Step 1 (schema-correct)
+    # Boundary table for Step 2 operators
+    #
+    # Step 1 schema uses a dict-of-faces (boundary_table)
+    # Step 2 operators use a list of BC dicts (boundary_table_list)
+    #
+    # So we read the Step 2 representation here.
     # ------------------------------------------------------------------
-    boundary_table = state.get("boundary_table", [])
+    boundary_table = state.get("boundary_table_list", [])
 
     # ------------------------------------------------------------------
     # RHS builder: apply -rho/dt * divergence on fluid cells only
