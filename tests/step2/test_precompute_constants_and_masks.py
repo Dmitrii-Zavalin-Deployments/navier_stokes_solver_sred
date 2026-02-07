@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.step2_schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 from src.step2.precompute_constants import precompute_constants
 from src.step2.create_fluid_mask import create_fluid_mask
@@ -22,11 +22,11 @@ def make_minimal_mask_state(mask: np.ndarray) -> dict:
 
 
 # ----------------------------------------------------------------------
-# precompute_constants tests (now using SchemaDummyState)
+# precompute_constants tests (now using Step2SchemaDummyState)
 # ----------------------------------------------------------------------
 
 def test_precompute_constants_normal():
-    state = SchemaDummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
+    state = Step2SchemaDummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
     precompute_constants(state)
     constants = state["constants"]
 
@@ -36,7 +36,7 @@ def test_precompute_constants_normal():
 
 
 def test_precompute_constants_very_small_dx():
-    state = SchemaDummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
+    state = Step2SchemaDummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
     precompute_constants(state)
     constants = state["constants"]
 
@@ -45,13 +45,13 @@ def test_precompute_constants_very_small_dx():
 
 
 def test_precompute_constants_dt_zero_rejected():
-    state = SchemaDummyState(1, 1, 1, dt=0.0)
+    state = Step2SchemaDummyState(1, 1, 1, dt=0.0)
     with pytest.raises(ValueError):
         precompute_constants(state)
 
 
 def test_precompute_constants_existing_constants_passthrough():
-    state = SchemaDummyState(1, 1, 1)
+    state = Step2SchemaDummyState(1, 1, 1)
     original = {"dx": 0.1}
     state["constants"] = original
 

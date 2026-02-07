@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.step2_schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 from src.step2.build_divergence_operator import build_divergence_operator
 from src.step2.build_gradient_operators import build_gradient_operators
@@ -22,7 +22,7 @@ def make_uniform_velocity(state, u_val=0.0, v_val=0.0, w_val=0.0):
 
 
 def test_divergence_zero_velocity():
-    state = SchemaDummyState(4, 4, 4)
+    state = Step2SchemaDummyState(4, 4, 4)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -33,7 +33,7 @@ def test_divergence_zero_velocity():
 
 
 def test_divergence_uniform_velocity_zero():
-    state = SchemaDummyState(4, 4, 4, dx=0.5)
+    state = Step2SchemaDummyState(4, 4, 4, dx=0.5)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -45,7 +45,7 @@ def test_divergence_uniform_velocity_zero():
 
 def test_divergence_linear_u_field():
     nx, ny, nz = 8, 1, 1
-    state = SchemaDummyState(nx, ny, nz, dx=1.0)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=1.0)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -67,7 +67,7 @@ def test_divergence_solid_region_zeroed():
     mask = np.ones((nx, ny, nz), int)
     mask[1:3, 1:3, 1:3] = 0
 
-    state = SchemaDummyState(nx, ny, nz, mask=mask)
+    state = Step2SchemaDummyState(nx, ny, nz, mask=mask)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -81,7 +81,7 @@ def test_divergence_no_through_mask_single_fluid():
     mask = np.zeros((3, 3, 3), int)
     mask[1, 1, 1] = 1
 
-    state = SchemaDummyState(3, 3, 3, mask=mask)
+    state = Step2SchemaDummyState(3, 3, 3, mask=mask)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -92,7 +92,7 @@ def test_divergence_no_through_mask_single_fluid():
 
 
 def test_divergence_minimal_grid():
-    state = SchemaDummyState(1, 1, 1)
+    state = Step2SchemaDummyState(1, 1, 1)
     precompute_constants(state)
     div_op = build_divergence_operator(state)
 
@@ -104,7 +104,7 @@ def test_divergence_minimal_grid():
 
 def test_gradient_constant_pressure_zero():
     nx, ny, nz = 4, 4, 4
-    state = SchemaDummyState(nx, ny, nz, dx=0.5, dy=0.5, dz=0.5)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=0.5, dy=0.5, dz=0.5)
     precompute_constants(state)
     grad_x, grad_y, grad_z = build_gradient_operators(state)
 
@@ -121,7 +121,7 @@ def test_gradient_constant_pressure_zero():
 
 def test_gradient_linear_pressure_x():
     nx, ny, nz = 8, 1, 1
-    state = SchemaDummyState(nx, ny, nz, dx=0.5)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=0.5)
     precompute_constants(state)
     grad_x, _, _ = build_gradient_operators(state)
 
@@ -140,7 +140,7 @@ def test_gradient_solid_pressure_spike_zeroed():
     mask = np.ones((nx, ny, nz), int)
     mask[1, 1, 1] = 0
 
-    state = SchemaDummyState(nx, ny, nz, mask=mask)
+    state = Step2SchemaDummyState(nx, ny, nz, mask=mask)
     precompute_constants(state)
     grad_x, grad_y, grad_z = build_gradient_operators(state)
 
@@ -157,7 +157,7 @@ def test_gradient_solid_pressure_spike_zeroed():
 
 
 def test_gradient_minimal_grid():
-    state = SchemaDummyState(1, 1, 1)
+    state = Step2SchemaDummyState(1, 1, 1)
     precompute_constants(state)
     grad_x, grad_y, grad_z = build_gradient_operators(state)
 
@@ -174,7 +174,7 @@ def test_gradient_minimal_grid():
 
 def test_laplacian_constant_zero():
     nx, ny, nz = 4, 4, 4
-    state = SchemaDummyState(nx, ny, nz, dx=1.0)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=1.0)
     precompute_constants(state)
     lap_u, lap_v, lap_w = build_laplacian_operators(state)
 
@@ -189,7 +189,7 @@ def test_laplacian_constant_zero():
 
 def test_laplacian_linear_zero():
     nx, ny, nz = 8, 1, 1
-    state = SchemaDummyState(nx, ny, nz, dx=1.0)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=1.0)
     precompute_constants(state)
     lap_u, _, _ = build_laplacian_operators(state)
 
@@ -205,7 +205,7 @@ def test_laplacian_linear_zero():
 
 def test_laplacian_quadratic_constant():
     nx, ny, nz = 16, 1, 1
-    state = SchemaDummyState(nx, ny, nz, dx=1.0)
+    state = Step2SchemaDummyState(nx, ny, nz, dx=1.0)
     precompute_constants(state)
     lap_u, _, _ = build_laplacian_operators(state)
 
@@ -224,7 +224,7 @@ def test_laplacian_solid_neighbors_truncated():
     mask = np.ones((nx, ny, nz), int)
     mask[1, 1, 1] = 0
 
-    state = SchemaDummyState(nx, ny, nz, mask=mask)
+    state = Step2SchemaDummyState(nx, ny, nz, mask=mask)
     precompute_constants(state)
     lap_u, _, _ = build_laplacian_operators(state)
 
@@ -239,7 +239,7 @@ def test_laplacian_boundary_fluid_treated_as_fluid():
     mask = np.ones((nx, ny, nz), int)
     mask[1, 0, 0] = -1  # boundary-fluid
 
-    state = SchemaDummyState(nx, ny, nz, mask=mask)
+    state = Step2SchemaDummyState(nx, ny, nz, mask=mask)
     precompute_constants(state)
     lap_u, _, _ = build_laplacian_operators(state)
 
@@ -252,7 +252,7 @@ def test_laplacian_boundary_fluid_treated_as_fluid():
 
 
 def test_laplacian_minimal_grid():
-    state = SchemaDummyState(1, 1, 1)
+    state = Step2SchemaDummyState(1, 1, 1)
     precompute_constants(state)
     lap_u, lap_v, lap_w = build_laplacian_operators(state)
 

@@ -2,13 +2,13 @@
 
 import numpy as np
 
-from tests.helpers.step2_schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 from src.step2.orchestrate_step2 import orchestrate_step2
 
 
 def test_orchestrate_step2_health_structure():
     # Create a fully Step‑1‑schema‑compliant dummy state
-    state = SchemaDummyState(4, 4, 4)
+    state = Step2SchemaDummyState(4, 4, 4)
 
     # Run Step 2 orchestrator
     result = orchestrate_step2(state)

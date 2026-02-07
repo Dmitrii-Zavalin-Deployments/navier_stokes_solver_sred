@@ -3,12 +3,12 @@
 import numpy as np
 from src.step2.orchestrate_step2 import orchestrate_step2
 
-from tests.helpers.step2_schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
 def test_orchestrate_step2_ppe_structure():
     # Create a fully Step‑1‑schema‑compliant dummy state
-    state = SchemaDummyState(4, 4, 4)
+    state = Step2SchemaDummyState(4, 4, 4)
 
     # Run orchestrator
     result = orchestrate_step2(state)

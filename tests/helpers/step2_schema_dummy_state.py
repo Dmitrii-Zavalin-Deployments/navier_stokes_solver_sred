@@ -2,7 +2,7 @@
 
 import numpy as np
 
-class SchemaDummyState(dict):
+class Step2SchemaDummyState(dict):
     """
     A Step‑2 test fixture that mimics the *structure* of Step‑1 output
     but uses NumPy arrays for all numerical fields, because Step‑2 tests

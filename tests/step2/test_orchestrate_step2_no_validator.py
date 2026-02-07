@@ -3,7 +3,7 @@
 import numpy as np
 import src.step2.orchestrate_step2 as o
 
-from tests.helpers.step2_schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
 def test_orchestrate_step2_no_validator():
@@ -11,7 +11,7 @@ def test_orchestrate_step2_no_validator():
     o.validate_json_schema = None
 
     # Create a fully Step‑1‑schema‑compliant dummy state
-    state = SchemaDummyState(4, 4, 4)
+    state = Step2SchemaDummyState(4, 4, 4)
 
     # Run orchestrator
     result = o.orchestrate_step2(state)
