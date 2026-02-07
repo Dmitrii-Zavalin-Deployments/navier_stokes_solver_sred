@@ -6,16 +6,13 @@ import pytest
 
 # ------------------------------------------------------------
 # Test 1 — _to_json_compatible converts functions AND callables
-# (covers line 33)
 # ------------------------------------------------------------
 def test_json_compatible_converts_functions_and_callables():
     from src.step2.orchestrate_step2 import _to_json_compatible
 
-    # Regular function
     def dummy():
         pass
 
-    # Callable object
     class CallableObj:
         def __call__(self):
             return 42
