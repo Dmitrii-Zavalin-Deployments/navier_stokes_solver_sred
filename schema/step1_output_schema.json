@@ -76,7 +76,6 @@
 
     "mask_3d": {
       "type": "array",
-      "description": "3D geometry mask reconstructed from flattened input",
       "items": {
         "type": "array",
         "items": {
@@ -123,13 +122,17 @@
 
     "config": {
       "type": "object",
-      "description": "Original validated input JSON passed through unchanged.",
       "properties": {
         "domain": { "type": "object" },
         "fluid": { "type": "object" },
         "simulation": { "type": "object" },
         "forces": { "type": "object" },
-        "boundary_conditions": { "type": "object" },
+
+        "boundary_conditions": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+
         "geometry_definition": { "type": "object" }
       }
     }
