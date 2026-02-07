@@ -15,7 +15,7 @@ def create_fluid_mask(state: Any) -> Tuple[np.ndarray, np.ndarray]:
     - mask ==  0 : solid
     """
 
-    # Extract mask (schema-correct)
+    # Extract mask (Step‑1 schema)
     mask = np.asarray(state["fields"]["Mask"])
 
     # Strict dtype check (tests require float masks to raise)

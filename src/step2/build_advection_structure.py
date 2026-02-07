@@ -15,7 +15,8 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    scheme = state["config"]["simulation_parameters"].get("advection_scheme", "central")
+    # UPDATED: use Step‑1 schema: config.simulation.advection_scheme
+    scheme = state["config"]["simulation"].get("advection_scheme", "central")
 
     # ------------------------------------------------------------------
     # Central differences

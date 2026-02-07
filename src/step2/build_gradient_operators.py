@@ -19,19 +19,25 @@ def build_gradient_operators(
       grad_x(P), grad_y(P), grad_z(P)
     """
 
+    # ------------------------------------------------------------------
     # Grid geometry
+    # ------------------------------------------------------------------
     grid = state["grid"]
     nx = int(grid["nx"])
     ny = int(grid["ny"])
     nz = int(grid["nz"])
 
-    # Physical spacing
+    # ------------------------------------------------------------------
+    # Physical spacing (Step‑1 schema: constants.*)
+    # ------------------------------------------------------------------
     const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
+    # ------------------------------------------------------------------
     # Mask semantics: 0 = solid, ±1 = fluid / boundary-fluid
+    # ------------------------------------------------------------------
     mask = np.asarray(state["fields"]["Mask"])
     is_fluid = (mask != 0)
 
@@ -46,6 +52,7 @@ def build_gradient_operators(
             gx[0] = 0.0
             gx[nx] = 0.0
 
+        # Fluid mask for U faces
         fluid_u = np.zeros_like(gx, bool)
         if nx > 0:
             fluid_u[1:nx] = is_fluid[:-1] & is_fluid[1:]
@@ -65,6 +72,7 @@ def build_gradient_operators(
             gy[:, 0] = 0.0
             gy[:, ny] = 0.0
 
+        # Fluid mask for V faces
         fluid_v = np.zeros_like(gy, bool)
         if ny > 0:
             fluid_v[:, 1:ny] = is_fluid[:, :-1] & is_fluid[:, 1:]
@@ -84,6 +92,7 @@ def build_gradient_operators(
             gz[:, :, 0] = 0.0
             gz[:, :, nz] = 0.0
 
+        # Fluid mask for W faces
         fluid_w = np.zeros_like(gz, bool)
         if nz > 0:
             fluid_w[:, :, 1:nz] = is_fluid[:, :, :-1] & is_fluid[:, :, 1:]
@@ -92,9 +101,12 @@ def build_gradient_operators(
 
         return np.where(fluid_w, gz, 0.0)
 
-    # Store in schema-correct location
+    # ------------------------------------------------------------------
+    # Store operators in schema‑correct location
+    # ------------------------------------------------------------------
     if "operators" not in state:
         state["operators"] = {}
+
     state["operators"]["gradient_p_x"] = gradient_p_x
     state["operators"]["gradient_p_y"] = gradient_p_y
     state["operators"]["gradient_p_z"] = gradient_p_z

@@ -21,12 +21,14 @@ def precompute_constants(state: Any) -> Dict[str, float]:
 
     # ------------------------------------------------------------
     # Otherwise compute constants from config + grid
+    # (using the REAL Step‑1 schema)
     # ------------------------------------------------------------
     cfg = state["config"]
     grid = state["grid"]
 
-    fluid = cfg["fluid_properties"]
-    sim = cfg["simulation_parameters"]
+    # NEW Step‑1 schema
+    fluid = cfg["fluid"]
+    sim = cfg["simulation"]
 
     rho = float(fluid["density"])
     mu = float(fluid["viscosity"])
@@ -62,7 +64,7 @@ def precompute_constants(state: Any) -> Dict[str, float]:
         "inv_dz2": inv_dz2,
     }
 
-    # Store back into state (schema-correct)
+    # Store back into state (schema‑correct)
     state["constants"] = constants
 
     return constants

@@ -6,6 +6,9 @@ import numpy as np
 
 
 def _laplacian_scalar(F: np.ndarray, dx: float, dy: float, dz: float) -> np.ndarray:
+    """
+    Standard 3D 7‑point Laplacian stencil with edge padding.
+    """
     out = np.zeros_like(F)
     f = np.pad(F, ((1, 1), (1, 1), (1, 1)), mode="edge")
 
@@ -22,13 +25,25 @@ def build_laplacian_operators(state: Any) -> Tuple[
     Callable[[np.ndarray], np.ndarray],
     Callable[[np.ndarray], np.ndarray],
 ]:
-    # Physical spacing
+    """
+    Build Laplacian operators for U, V, W on a MAC grid.
+
+    Mask semantics:
+    - Fluid (1) and boundary‑fluid (‑1) cells compute normally.
+    - Solid (0) cells are forced to zero.
+    """
+
+    # ------------------------------------------------------------------
+    # Physical spacing (Step‑1 schema)
+    # ------------------------------------------------------------------
     const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    # Mask: 0 = solid, ±1 = fluid/boundary-fluid
+    # ------------------------------------------------------------------
+    # Mask: 0 = solid, ±1 = fluid/boundary‑fluid
+    # ------------------------------------------------------------------
     mask = np.asarray(state["fields"]["Mask"])
     is_fluid = (mask != 0)
 
@@ -80,9 +95,12 @@ def build_laplacian_operators(state: Any) -> Tuple[
 
         return np.where(fluid_w, lap, 0.0)
 
-    # Store in schema-correct location
+    # ------------------------------------------------------------------
+    # Store operators in schema‑correct location
+    # ------------------------------------------------------------------
     if "operators" not in state:
         state["operators"] = {}
+
     state["operators"]["laplacian_u"] = laplacian_u
     state["operators"]["laplacian_v"] = laplacian_v
     state["operators"]["laplacian_w"] = laplacian_w

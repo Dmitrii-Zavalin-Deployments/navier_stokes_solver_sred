@@ -17,22 +17,31 @@ def build_divergence_operator(state: Any) -> Callable[[np.ndarray, np.ndarray, n
     - Solid cells (0) are forced to zero.
     """
 
+    # ------------------------------------------------------------------
     # Grid geometry
+    # ------------------------------------------------------------------
     grid = state["grid"]
     nx = int(grid["nx"])
     ny = int(grid["ny"])
     nz = int(grid["nz"])
 
-    # Physical spacing
+    # ------------------------------------------------------------------
+    # Physical spacing (Step‑1 schema: constants.*)
+    # ------------------------------------------------------------------
     const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
+    # ------------------------------------------------------------------
     # Mask: treat -1 (boundary-fluid) as fluid
+    # ------------------------------------------------------------------
     mask = np.asarray(state["fields"]["Mask"])
     is_fluid = (mask != 0)
 
+    # ------------------------------------------------------------------
+    # Divergence operator
+    # ------------------------------------------------------------------
     def divergence(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
         """
         Compute ∇·u at cell centers.
@@ -59,7 +68,9 @@ def build_divergence_operator(state: Any) -> Callable[[np.ndarray, np.ndarray, n
         div = np.where(is_fluid, div, 0.0)
         return div
 
-    # Store operator in schema-correct location
+    # ------------------------------------------------------------------
+    # Store operator in schema‑correct location
+    # ------------------------------------------------------------------
     if "operators" not in state:
         state["operators"] = {}
     state["operators"]["divergence"] = divergence

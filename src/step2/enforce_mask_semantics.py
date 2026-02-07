@@ -15,7 +15,7 @@ def enforce_mask_semantics(state: Any) -> None:
     - There must be at least one fluid-like cell (1 or -1).
     """
 
-    # Extract mask (schema-correct)
+    # Extract mask (Step‑1 schema)
     mask = np.asarray(state["fields"]["Mask"])
 
     # Strict dtype check
