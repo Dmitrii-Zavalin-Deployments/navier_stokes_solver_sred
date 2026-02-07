@@ -50,26 +50,54 @@
       "required": ["P", "U", "V", "W"],
       "properties": {
         "P": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+          "type": ["array", "object"],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          },
+          "description": "3D pressure field; Python list or NumPy ndarray."
         },
         "U": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+          "type": ["array", "object"],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          },
+          "description": "3D x-velocity field; Python list or NumPy ndarray."
         },
         "V": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+          "type": ["array", "object"],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          },
+          "description": "3D y-velocity field; Python list or NumPy ndarray."
         },
         "W": {
-          "type": "array",
-          "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+          "type": ["array", "object"],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          },
+          "description": "3D z-velocity field; Python list or NumPy ndarray."
         }
       }
     },
 
     "mask": {
-      "type": "array",
+      "type": ["array", "object"],
       "items": {
         "type": "array",
         "items": {
@@ -79,17 +107,32 @@
             "enum": [-1, 0, 1]
           }
         }
-      }
+      },
+      "description": "3D cell-type mask; Python list or NumPy ndarray."
     },
 
     "is_fluid": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
+      "type": ["array", "object"],
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "boolean" }
+        }
+      },
+      "description": "3D boolean fluid mask; Python list or NumPy ndarray."
     },
 
     "is_boundary_cell": {
-      "type": "array",
-      "items": { "type": "array", "items": { "type": "array", "items": { "type": "boolean" } } }
+      "type": ["array", "object"],
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "boolean" }
+        }
+      },
+      "description": "3D boolean boundary-fluid mask; Python list or NumPy ndarray."
     },
 
     "constants": {
