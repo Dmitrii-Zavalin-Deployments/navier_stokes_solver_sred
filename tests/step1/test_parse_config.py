@@ -1,4 +1,4 @@
-# tests/step_1/test_parse_config.py
+# tests/step1/test_parse_config.py
 from src.step1.parse_config import parse_config
 
 

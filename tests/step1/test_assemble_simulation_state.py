@@ -1,4 +1,4 @@
-# tests/step_1/test_assemble_simulation_state.py
+# tests/step1/test_assemble_simulation_state.py
 import numpy as np
 from src.step1.assemble_simulation_state import assemble_simulation_state
 from src.step1.types import GridConfig, Fields, Config, DerivedConstants

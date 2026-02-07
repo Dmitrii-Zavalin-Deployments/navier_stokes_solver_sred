@@ -1,4 +1,4 @@
-# tests/step_1/test_schema_utils.py
+# tests/step1/test_schema_utils.py
 import json
 import pytest
 from src.step1.schema_utils import load_schema, validate_with_schema

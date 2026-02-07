@@ -1,4 +1,4 @@
-# tests/step_1/test_verify_staggered_shapes_full.py
+# tests/step1/test_verify_staggered_shapes_full.py
 
 import pytest
 import numpy as np

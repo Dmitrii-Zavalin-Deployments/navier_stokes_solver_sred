@@ -1,4 +1,4 @@
-# tests/step_1/test_parse_boundary_conditions_full.py
+# tests/step1/test_parse_boundary_conditions_full.py
 
 import pytest
 from src.step1.parse_boundary_conditions import parse_boundary_conditions

@@ -1,4 +1,4 @@
-# tests/step_1/test_compute_derived_constants.py
+# tests/step1/test_compute_derived_constants.py
 from src.step1.compute_derived_constants import compute_derived_constants
 from src.step1.types import GridConfig
 

@@ -1,4 +1,4 @@
-# tests/step_1/test_map_geometry_mask_full.py
+# tests/step1/test_map_geometry_mask_full.py
 
 import numpy as np
 from src.step1.map_geometry_mask import map_geometry_mask

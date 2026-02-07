@@ -1,4 +1,4 @@
-# tests/step_1/test_initialize_grid.py
+# tests/step1/test_initialize_grid.py
 import pytest
 from src.step1.initialize_grid import initialize_grid
 
