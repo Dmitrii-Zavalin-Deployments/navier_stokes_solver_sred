@@ -6,6 +6,7 @@ import pytest
 
 # ------------------------------------------------------------
 # Test 1 — _to_json_compatible converts functions AND callables
+# (covers line 33)
 # ------------------------------------------------------------
 def test_json_compatible_converts_functions_and_callables():
     from src.step2.orchestrate_step2 import _to_json_compatible
@@ -13,7 +14,9 @@ def test_json_compatible_converts_functions_and_callables():
     def dummy():
         pass
 
+    # Callable object WITH a __name__ attribute → hits line 33
     class CallableObj:
+        __name__ = "callable_obj"
         def __call__(self):
             return 42
 
@@ -22,7 +25,7 @@ def test_json_compatible_converts_functions_and_callables():
     converted = _to_json_compatible({"f": dummy, "c": obj})
 
     assert "<function dummy>" in converted["f"]
-    assert "<function" in converted["c"]
+    assert "<function callable_obj>" in converted["c"]
 
 
 # ------------------------------------------------------------
@@ -70,12 +73,12 @@ def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
 
     real_json = orch._to_json_compatible
 
-    # Break ONLY Step‑2 schema validation
+    # Wrap the real converter → Step‑1 validation passes
     def break_json(obj):
         out = real_json(obj)
         if isinstance(out, dict) and "mask" in out:
             out = dict(out)
-            out.pop("mask", None)
+            out.pop("mask", None)  # remove required Step‑2 key
         return out
 
     monkeypatch.setattr(orch, "_to_json_compatible", break_json)
