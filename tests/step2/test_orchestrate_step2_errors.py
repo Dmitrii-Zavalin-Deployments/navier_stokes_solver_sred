@@ -31,7 +31,7 @@ def test_json_compatible_converts_functions_and_callables():
 # Test 2 — Step‑1 schema validation failure (covers lines 49–50)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step1_schema_validation_failure():
-    from tests.helpers.schema_dummy_state import SchemaDummyState
+    from tests.helpers.step2_schema_dummy_state import SchemaDummyState
     from src.step2.orchestrate_step2 import orchestrate_step2
 
     state = SchemaDummyState(4, 4, 4)
@@ -47,7 +47,7 @@ def test_orchestrate_step2_step1_schema_validation_failure():
 # Test 3 — Step‑2 schema validation failure (covers lines 90–91)
 # ------------------------------------------------------------
 def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
-    from tests.helpers.schema_dummy_state import SchemaDummyState
+    from tests.helpers.step2_schema_dummy_state import SchemaDummyState
     import src.step2.orchestrate_step2 as orch
 
     state = SchemaDummyState(4, 4, 4)

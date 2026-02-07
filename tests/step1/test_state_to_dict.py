@@ -2,7 +2,7 @@
 
 import numpy as np
 from src.step1.construct_simulation_state import _state_to_dict
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step1_schema_dummy_state import SchemaDummyState
 
 
 def test_state_to_dict_conversion():

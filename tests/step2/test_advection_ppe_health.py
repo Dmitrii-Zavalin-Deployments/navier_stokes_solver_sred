@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 
 from src.step2.build_advection_structure import build_advection_structure
 from src.step2.prepare_ppe_structure import prepare_ppe_structure

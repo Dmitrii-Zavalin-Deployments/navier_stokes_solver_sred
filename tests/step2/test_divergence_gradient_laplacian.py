@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 
 from src.step2.build_divergence_operator import build_divergence_operator
 from src.step2.build_gradient_operators import build_gradient_operators

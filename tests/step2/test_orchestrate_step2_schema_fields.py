@@ -3,7 +3,7 @@
 import numpy as np
 from src.step2.orchestrate_step2 import orchestrate_step2
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 
 
 def test_orchestrate_step2_schema_fields():

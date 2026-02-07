@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 from src.step2.orchestrate_step2 import orchestrate_step2
 
 

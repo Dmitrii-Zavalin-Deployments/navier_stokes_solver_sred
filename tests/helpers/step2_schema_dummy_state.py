@@ -1,4 +1,4 @@
-# tests/helpers/schema_dummy_state.py
+# tests/helpers/step2_schema_dummy_state.py
 
 import numpy as np
 

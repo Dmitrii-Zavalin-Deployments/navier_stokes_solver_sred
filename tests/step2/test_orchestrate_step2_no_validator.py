@@ -3,7 +3,7 @@
 import numpy as np
 import src.step2.orchestrate_step2 as o
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 
 
 def test_orchestrate_step2_no_validator():

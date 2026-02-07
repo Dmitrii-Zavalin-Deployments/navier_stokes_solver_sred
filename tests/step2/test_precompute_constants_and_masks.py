@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tests.helpers.schema_dummy_state import SchemaDummyState
+from tests.helpers.step2_schema_dummy_state import SchemaDummyState
 
 from src.step2.precompute_constants import precompute_constants
 from src.step2.create_fluid_mask import create_fluid_mask
