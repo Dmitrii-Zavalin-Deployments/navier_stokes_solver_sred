@@ -2,6 +2,7 @@
 
 import numpy as np
 
+
 class Step2SchemaDummyState(dict):
     """
     A Step‑2 test fixture that mimics the *structure* of Step‑1 output
@@ -52,7 +53,7 @@ class Step2SchemaDummyState(dict):
         # Config block (Step‑1 structure)
         # -----------------------------
         self["config"] = {
-            "boundary_conditions": {},
+            "boundary_conditions": [],
             "domain": {},
             "fluid": {
                 "density": rho,
@@ -87,8 +88,46 @@ class Step2SchemaDummyState(dict):
         # JSON‑friendly version of mask (Step‑1 compatibility)
         self["mask_3d"] = mask.tolist()
 
+        # -----------------------------
         # Boundary table (Step‑1 structure)
-        self["boundary_table"] = boundary_table or []
+        # Must be an object, not a list
+        # -----------------------------
+        self["boundary_table"] = (
+            boundary_table
+            if boundary_table is not None
+            else {
+                "x_min": [],
+                "x_max": [],
+                "y_min": [],
+                "y_max": [],
+                "z_min": [],
+                "z_max": [],
+            }
+        )
 
-        # Step‑2 will compute this
-        self["constants"] = None
+        # -----------------------------
+        # Constants block (Step‑2 will overwrite)
+        # -----------------------------
+        self["constants"] = {
+            "rho": rho,
+            "mu": mu,
+            "dt": dt,
+            "dx": dx,
+            "dy": dy,
+            "dz": dz,
+            "inv_dx": 1.0 / dx,
+            "inv_dy": 1.0 / dy,
+            "inv_dz": 1.0 / dz,
+            "inv_dx2": 1.0 / (dx * dx),
+            "inv_dy2": 1.0 / (dy * dy),
+            "inv_dz2": 1.0 / (dz * dz),
+        }
+
+    # -----------------------------
+    # Allow dict‑like and attribute‑like access
+    # -----------------------------
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)

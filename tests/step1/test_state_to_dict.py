@@ -6,7 +6,7 @@ from tests.helpers.step1_schema_dummy_state import Step1SchemaDummyState
 
 
 def test_state_to_dict_conversion():
-    state = Step2SchemaDummyState(2, 2, 2)
+    state = Step1SchemaDummyState(2, 2, 2)
     d = _state_to_dict(state)
 
     # Check top-level keys
