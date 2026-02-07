@@ -9,7 +9,7 @@ class SchemaDummyState(dict):
     This fixture produces:
     - config: full Step‑1 config block
     - grid: full Step‑1 grid block
-    - fields: P, U, V, W, Mask with correct shapes
+    - fields: P, U, V, W, Mask with correct shapes (as Python lists)
     - mask_3d: Python list version of Mask
     - boundary_table: list of BC entries
     - constants: None (to be filled by precompute_constants)
@@ -79,13 +79,14 @@ class SchemaDummyState(dict):
 
         # -----------------------------
         # Fields block (Step‑1 schema)
+        # MUST be Python lists, not NumPy arrays
         # -----------------------------
         fields = {
-            "P": np.zeros((nx, ny, nz), float),
-            "U": np.zeros((nx + 1, ny, nz), float),
-            "V": np.zeros((nx, ny + 1, nz), float),
-            "W": np.zeros((nx, ny, nz + 1), float),
-            "Mask": mask,
+            "P": np.zeros((nx, ny, nz), float).tolist(),
+            "U": np.zeros((nx + 1, ny, nz), float).tolist(),
+            "V": np.zeros((nx, ny + 1, nz), float).tolist(),
+            "W": np.zeros((nx, ny, nz + 1), float).tolist(),
+            "Mask": mask.tolist(),
         }
 
         # -----------------------------
