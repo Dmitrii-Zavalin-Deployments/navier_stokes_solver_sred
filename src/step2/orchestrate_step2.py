@@ -33,12 +33,26 @@ def _convert_fields_to_numpy(state: Any) -> None:
             fields[key] = np.asarray(value)
 
 
+def _to_json_compatible(obj: Any) -> Any:
+    """
+    Recursively convert NumPy arrays to lists so JSON Schema
+    validation sees standard JSON types.
+    """
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: _to_json_compatible(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_json_compatible(v) for v in obj]
+    return obj
+
+
 def orchestrate_step2(state: Any) -> Any:
     """
     High-level orchestrator for Step 2.
 
-    Step 1 → lists
-    Step 2 → arrays
+    Step 1 → lists (JSON)
+    Step 2 → arrays (numerical)
     """
 
     # ------------------------------------------------------------
@@ -48,7 +62,7 @@ def orchestrate_step2(state: Any) -> Any:
     precompute_constants(state)
 
     # ------------------------------------------------------------
-    # 1. Validate Step‑1 output (now constants is a dict)
+    # 1. Validate Step‑1 output (using JSON‑compatible view)
     # ------------------------------------------------------------
     if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
         schema_path = (
@@ -56,7 +70,8 @@ def orchestrate_step2(state: Any) -> Any:
         )
         try:
             schema = load_schema(str(schema_path))
-            validate_json_schema(state, schema)
+            json_view = _to_json_compatible(state)
+            validate_json_schema(json_view, schema)
         except Exception as exc:
             raise RuntimeError(
                 f"\n[Step 2] Input schema validation FAILED.\n"
@@ -104,7 +119,7 @@ def orchestrate_step2(state: Any) -> Any:
     compute_initial_health(state)
 
     # ------------------------------------------------------------
-    # 9. Validate Step‑2 output (arrays allowed)
+    # 9. Validate Step‑2 output (using JSON‑compatible view)
     # ------------------------------------------------------------
     if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
         schema_path = (
@@ -112,7 +127,8 @@ def orchestrate_step2(state: Any) -> Any:
         )
         try:
             schema = load_schema(str(schema_path))
-            validate_json_schema(state, schema)
+            json_view = _to_json_compatible(state)
+            validate_json_schema(json_view, schema)
         except Exception as exc:
             raise RuntimeError(
                 f"\n[Step 2] Output schema validation FAILED.\n"

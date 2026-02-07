@@ -4,17 +4,12 @@ import numpy as np
 
 class SchemaDummyState(dict):
     """
-    A fully Step‑1‑schema‑compliant dummy state for Step‑2 tests.
+    A Step‑2 test fixture that mimics the *structure* of Step‑1 output
+    but uses NumPy arrays for all numerical fields, because Step‑2 tests
+    and operators require NumPy semantics (.shape, slicing, broadcasting).
 
-    This fixture produces:
-    - config: full Step‑1 config block
-    - grid: full Step‑1 grid block
-    - fields: P, U, V, W, Mask with correct shapes (as Python lists)
-    - mask_3d: Python list version of Mask
-    - boundary_table: list of BC entries
-    - constants: None (to be filled by precompute_constants)
-
-    It is intentionally minimal but 100% schema‑accurate.
+    Structure = Step‑1
+    Types     = Step‑2
     """
 
     def __init__(
@@ -36,9 +31,9 @@ class SchemaDummyState(dict):
         super().__init__()
 
         # -----------------------------
-        # Grid block (Step‑1 schema)
+        # Grid block (Step‑1 structure)
         # -----------------------------
-        grid = {
+        self["grid"] = {
             "x_min": 0.0,
             "x_max": dx * nx,
             "y_min": 0.0,
@@ -54,9 +49,9 @@ class SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Config block (Step‑1 schema)
+        # Config block (Step‑1 structure)
         # -----------------------------
-        config = {
+        self["config"] = {
             "boundary_conditions": {},
             "domain": {},
             "fluid": {
@@ -72,29 +67,28 @@ class SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Mask
+        # Mask (NumPy array for Step‑2)
         # -----------------------------
         if mask is None:
             mask = np.ones((nx, ny, nz), dtype=int)
 
         # -----------------------------
-        # Fields block (Step‑1 schema)
-        # MUST be Python lists, not NumPy arrays
+        # Fields block
+        # Step‑1 structure, Step‑2 types (NumPy arrays)
         # -----------------------------
-        fields = {
-            "P": np.zeros((nx, ny, nz), float).tolist(),
-            "U": np.zeros((nx + 1, ny, nz), float).tolist(),
-            "V": np.zeros((nx, ny + 1, nz), float).tolist(),
-            "W": np.zeros((nx, ny, nz + 1), float).tolist(),
-            "Mask": mask.tolist(),
+        self["fields"] = {
+            "P": np.zeros((nx, ny, nz), float),
+            "U": np.zeros((nx + 1, ny, nz), float),
+            "V": np.zeros((nx, ny + 1, nz), float),
+            "W": np.zeros((nx, ny, nz + 1), float),
+            "Mask": mask,
         }
 
-        # -----------------------------
-        # Final Step‑1 state
-        # -----------------------------
-        self["config"] = config
-        self["grid"] = grid
-        self["fields"] = fields
+        # JSON‑friendly version of mask (Step‑1 compatibility)
         self["mask_3d"] = mask.tolist()
+
+        # Boundary table (Step‑1 structure)
         self["boundary_table"] = boundary_table or []
-        self["constants"] = None  # Filled by precompute_constants
+
+        # Step‑2 will compute this
+        self["constants"] = None
