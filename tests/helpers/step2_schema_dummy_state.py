@@ -110,21 +110,14 @@ class Step2SchemaDummyState(dict):
 
         # -----------------------------
         # Constants block
+        #
+        # IMPORTANT:
+        # Step‑1 output does NOT include constants.
+        # Step‑2 must compute them via precompute_constants().
+        #
+        # Therefore constants MUST be None here.
         # -----------------------------
-        self["constants"] = {
-            "rho": rho,
-            "mu": mu,
-            "dt": dt,
-            "dx": dx,
-            "dy": dy,
-            "dz": dz,
-            "inv_dx": 1.0 / dx,
-            "inv_dy": 1.0 / dy,
-            "inv_dz": 1.0 / dz,
-            "inv_dx2": 1.0 / (dx * dx),
-            "inv_dy2": 1.0 / (dy * dy),
-            "inv_dz2": 1.0 / (dz * dz),
-        }
+        self["constants"] = None
 
     # -----------------------------
     # Protect structured blocks
