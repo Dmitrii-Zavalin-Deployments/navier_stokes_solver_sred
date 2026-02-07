@@ -2,93 +2,93 @@
 
 import numpy as np
 
-class DummyConfig:
-    def __init__(self):
-        self.domain = {
-            "x_min": 0.0, "x_max": 1.0,
-            "y_min": 0.0, "y_max": 1.0,
-            "z_min": 0.0, "z_max": 1.0,
-            "nx": 2, "ny": 2, "nz": 2
-        }
-        self.fluid = {"density": 1.0, "viscosity": 0.1}
-        self.simulation = {"time_step": 0.1, "total_time": 1.0, "output_interval": 1}
-        self.forces = {"force_vector": [0, 0, 0], "units": "N"}
-        self.boundary_conditions = [
-            {
-                "role": "wall",
-                "type": "dirichlet",
-                "faces": ["x_min"],
-                "apply_to": ["velocity"],
-                "velocity": [0, 0, 0],
-                "pressure": 0.0,
-                "pressure_gradient": 0.0,
-                "no_slip": True
-            }
-        ]
-        self.geometry_definition = {
-            "geometry_mask_flat": [1, 1, 1, 1, 1, 1, 1, 1],
-            "geometry_mask_shape": [2, 2, 2],
-            "mask_encoding": {"fluid": 1, "solid": -1},
-            "flattening_order": "C"
-        }
+class SchemaDummyState(dict):
+    """
+    A Step‑2 test fixture that mimics the *structure* of Step‑1 output
+    but uses NumPy arrays for all numerical fields, because Step‑2 tests
+    and operators require NumPy semantics (.shape, slicing, broadcasting).
 
+    Structure = Step‑1
+    Types     = Step‑2
+    """
 
-class DummyGrid:
-    def __init__(self, nx, ny, nz):
-        self.nx = nx
-        self.ny = ny
-        self.nz = nz
-        self.dx = 1.0
-        self.dy = 1.0
-        self.dz = 1.0
-        self.x_min = 0.0
-        self.y_min = 0.0
-        self.z_min = 0.0
-        self.x_max = nx * 1.0
-        self.y_max = ny * 1.0
-        self.z_max = nz * 1.0
+    def __init__(
+        self,
+        nx,
+        ny,
+        nz,
+        *,
+        dx=1.0,
+        dy=1.0,
+        dz=1.0,
+        dt=0.1,
+        rho=1.0,
+        mu=0.1,
+        mask=None,
+        boundary_table=None,
+        scheme="upwind",
+    ):
+        super().__init__()
 
-
-class DummyFields:
-    def __init__(self, nx, ny, nz):
-        self.P = np.zeros((nx, ny, nz))
-        self.U = np.zeros((nx, ny, nz))
-        self.V = np.zeros((nx, ny, nz))
-        self.W = np.zeros((nx, ny, nz))
-        self.Mask = np.ones((nx, ny, nz), dtype=int)
-
-
-class DummyConstants:
-    def __init__(self):
-        self.rho = 1.0
-        self.mu = 0.1
-        self.dt = 0.1
-        self.dx = 1.0
-        self.dy = 1.0
-        self.dz = 1.0
-        self.inv_dx = 1.0
-        self.inv_dy = 1.0
-        self.inv_dz = 1.0
-        self.inv_dx2 = 1.0
-        self.inv_dy2 = 1.0
-        self.inv_dz2 = 1.0
-
-
-class SchemaDummyState:
-    def __init__(self, nx, ny, nz):
-        self.config = DummyConfig()
-        self.grid = DummyGrid(nx, ny, nz)
-        self.fields = DummyFields(nx, ny, nz)
-        self.mask_3d = np.ones((nx, ny, nz), dtype=int)
-
-        # Updated to match schema: object with face keys
-        self.boundary_table = {
-            "x_min": [],
-            "x_max": [],
-            "y_min": [],
-            "y_max": [],
-            "z_min": [],
-            "z_max": []
+        # -----------------------------
+        # Grid block (Step‑1 structure)
+        # -----------------------------
+        self["grid"] = {
+            "x_min": 0.0,
+            "x_max": dx * nx,
+            "y_min": 0.0,
+            "y_max": dy * ny,
+            "z_min": 0.0,
+            "z_max": dz * nz,
+            "nx": nx,
+            "ny": ny,
+            "nz": nz,
+            "dx": dx,
+            "dy": dy,
+            "dz": dz,
         }
 
-        self.constants = DummyConstants()
+        # -----------------------------
+        # Config block (Step‑1 structure)
+        # -----------------------------
+        self["config"] = {
+            "boundary_conditions": {},
+            "domain": {},
+            "fluid": {
+                "density": rho,
+                "viscosity": mu,
+            },
+            "forces": {},
+            "geometry_definition": {},
+            "simulation": {
+                "dt": dt,
+                "advection_scheme": scheme,
+            },
+        }
+
+        # -----------------------------
+        # Mask (NumPy array for Step‑2)
+        # -----------------------------
+        if mask is None:
+            mask = np.ones((nx, ny, nz), dtype=int)
+
+        # -----------------------------
+        # Fields block
+        # Step‑1 structure, Step‑2 types (NumPy arrays)
+        # -----------------------------
+        self["fields"] = {
+            "P": np.zeros((nx, ny, nz), float),
+            "U": np.zeros((nx + 1, ny, nz), float),
+            "V": np.zeros((nx, ny + 1, nz), float),
+            "W": np.zeros((nx, ny, nz + 1), float),
+            "Mask": mask,
+        }
+
+        # JSON‑friendly version of mask (Step‑1 compatibility)
+        self["mask_3d"] = mask.tolist()
+
+        # Boundary table (Step‑1 structure)
+        self["boundary_table"] = boundary_table or []
+
+        # Step‑2 will compute this
+        self["constants"] = None
