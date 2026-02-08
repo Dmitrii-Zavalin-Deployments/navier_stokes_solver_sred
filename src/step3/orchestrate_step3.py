@@ -54,10 +54,30 @@ def _build_step2_compatible_view(state):
     P = state["P"]
     nx, ny, nz = P.shape
 
-    const = state["Constants"]
-    dx = float(const["dx"])
-    dy = float(const["dy"])
-    dz = float(const["dz"])
+    const_src = state["Constants"]
+
+    # Build a Step‑2‑compatible constants block
+    const = {
+        "dt": float(const_src["dt"]),
+        "dx": float(const_src["dx"]),
+        "dy": float(const_src["dy"]),
+        "dz": float(const_src["dz"]),
+        "rho": float(const_src["rho"]),
+        "mu": float(const_src["mu"]),
+    }
+
+    # Add required inverse spacings
+    const["inv_dx"] = 1.0 / const["dx"]
+    const["inv_dy"] = 1.0 / const["dy"]
+    const["inv_dz"] = 1.0 / const["dz"]
+
+    const["inv_dx2"] = const["inv_dx"] ** 2
+    const["inv_dy2"] = const["inv_dy"] ** 2
+    const["inv_dz2"] = const["inv_dz"] ** 2
+
+    dx = const["dx"]
+    dy = const["dy"]
+    dz = const["dz"]
 
     grid = {
         "nx": nx,
