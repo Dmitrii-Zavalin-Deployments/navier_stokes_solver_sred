@@ -29,7 +29,7 @@ MINIMAL_VALID_INPUT = {
             "role": "wall",
             "type": "dirichlet",
             "faces": ["x_min"],
-            "apply_to": ["velocity"],
+            "apply_to": ["velocity", "pressure"],   # ← FIXED
             "velocity": [0.0, 0.0, 0.0],
             "pressure": 0.0,
             "pressure_gradient": 0.0,

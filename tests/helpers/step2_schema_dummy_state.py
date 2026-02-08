@@ -5,19 +5,9 @@ import numpy as np
 
 class Step2SchemaDummyState(dict):
     """
-    Step‑2 dummy state:
-    - Must satisfy Step‑1 schema (for orchestrator validation)
-    - Must provide Step‑2‑friendly structures (for numerical operators)
+    Fully schema‑compliant Step‑2 output dummy.
+    Matches the Step 2 Output Schema exactly.
     """
-
-    PROTECTED_KEYS = {
-        "grid",
-        "config",
-        "fields",
-        # constants is intentionally NOT protected
-        # boundary_table is protected because Step‑1 schema requires an object
-        # mask_3d is intentionally NOT protected
-    }
 
     def __init__(
         self,
@@ -31,22 +21,19 @@ class Step2SchemaDummyState(dict):
         dt=0.1,
         rho=1.0,
         mu=0.1,
-        mask=None,
-        boundary_table=None,   # Step‑2 list of BC dicts
-        scheme="upwind",
     ):
         super().__init__()
 
         # -----------------------------
-        # Grid block (Step‑1 schema)
+        # grid (required)
         # -----------------------------
         self["grid"] = {
             "x_min": 0.0,
-            "x_max": dx * nx,
+            "x_max": nx * dx,
             "y_min": 0.0,
-            "y_max": dy * ny,
+            "y_max": ny * dy,
             "z_min": 0.0,
-            "z_max": dz * nz,
+            "z_max": nz * dz,
             "nx": nx,
             "ny": ny,
             "nz": nz,
@@ -56,72 +43,107 @@ class Step2SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Config block (Step‑1 schema)
-        # -----------------------------
-        self["config"] = {
-            "boundary_conditions": [],
-            "domain": {},
-            "fluid": {"density": rho, "viscosity": mu},
-            "forces": {},
-            "geometry_definition": {},
-            "simulation": {"dt": dt, "advection_scheme": scheme},
-        }
-
-        # -----------------------------
-        # Mask (NumPy for Step‑2)
-        # -----------------------------
-        if mask is None:
-            mask = np.ones((nx, ny, nz), dtype=int)
-
-        # -----------------------------
-        # Fields (Step‑1 structure, Step‑2 types)
+        # fields (required)
         # -----------------------------
         self["fields"] = {
-            "P": np.zeros((nx, ny, nz), float),
-            "U": np.zeros((nx + 1, ny, nz), float),
-            "V": np.zeros((nx, ny + 1, nz), float),
-            "W": np.zeros((nx, ny, nz + 1), float),
-            "Mask": mask,
-        }
-
-        self["mask_3d"] = mask.tolist()
-
-        # -----------------------------
-        # Boundary table
-        #
-        # Step‑1 schema requires an OBJECT:
-        #   { "x_min": [], ... }
-        #
-        # Step‑2 operators require a LIST of BC dicts:
-        #   [ {"face": ..., "type": ...}, ... ]
-        #
-        # So we store BOTH.
-        # -----------------------------
-        self["boundary_table_list"] = boundary_table if boundary_table is not None else []
-
-        self["boundary_table"] = {
-            "x_min": [],
-            "x_max": [],
-            "y_min": [],
-            "y_max": [],
-            "z_min": [],
-            "z_max": [],
+            "P": np.zeros((nx, ny, nz)),
+            "U": np.zeros((nx + 1, ny, nz)),
+            "V": np.zeros((nx, ny + 1, nz)),
+            "W": np.zeros((nx, ny, nz + 1)),
         }
 
         # -----------------------------
-        # Constants block
-        #
-        # Step‑1 output includes constants as an object.
-        # We initialize it as an EMPTY dict so:
-        # - Step‑1 schema (type: object) is satisfied
-        # - Step‑2 precompute_constants() can detect "empty" and recompute
+        # mask (required)
         # -----------------------------
-        self["constants"] = {}
+        mask = np.ones((nx, ny, nz), dtype=int)
+        self["mask"] = mask
 
-    # -----------------------------
-    # Protect structured blocks
-    # -----------------------------
-    def __setitem__(self, key, value):
-        if key in self.PROTECTED_KEYS and not isinstance(value, dict):
-            raise TypeError(f"Cannot overwrite structured block '{key}' with non-dict value")
-        super().__setitem__(key, value)
+        # -----------------------------
+        # is_fluid (required)
+        # -----------------------------
+        self["is_fluid"] = (mask == 1)
+
+        # -----------------------------
+        # is_boundary_cell (required)
+        # -----------------------------
+        self["is_boundary_cell"] = np.zeros((nx, ny, nz), dtype=bool)
+
+        # -----------------------------
+        # constants (required)
+        # -----------------------------
+        self["constants"] = {
+            "rho": rho,
+            "mu": mu,
+            "dt": dt,
+            "dx": dx,
+            "dy": dy,
+            "dz": dz,
+            "inv_dx": 1.0 / dx,
+            "inv_dy": 1.0 / dy,
+            "inv_dz": 1.0 / dz,
+            "inv_dx2": 1.0 / (dx * dx),
+            "inv_dy2": 1.0 / (dy * dy),
+            "inv_dz2": 1.0 / (dz * dz),
+        }
+
+        # -----------------------------
+        # config (required)
+        # Step‑2 passes Step‑1 input through unchanged.
+        # We provide a minimal valid config.
+        # -----------------------------
+        self["config"] = {
+            "domain": {
+                "x_min": 0.0, "x_max": nx * dx,
+                "y_min": 0.0, "y_max": ny * dy,
+                "z_min": 0.0, "z_max": nz * dz,
+                "nx": nx, "ny": ny, "nz": nz,
+            },
+            "fluid": {"density": rho, "viscosity": mu},
+            "simulation": {"dt": dt},
+            "forces": {"force_vector": [0, 0, 0], "units": "N"},
+            "boundary_conditions": [],
+            "geometry_definition": {
+                "geometry_mask_flat": mask.flatten().tolist(),
+                "geometry_mask_shape": [nx, ny, nz],
+                "mask_encoding": {"fluid": 1, "solid": -1},
+                "flattening_order": "C",
+            },
+        }
+
+        # -----------------------------
+        # operators (required)
+        # Schema requires STRINGS, not callables.
+        # -----------------------------
+        self["operators"] = {
+            "divergence": "divergence_op",
+            "gradient_p_x": "grad_px_op",
+            "gradient_p_y": "grad_py_op",
+            "gradient_p_z": "grad_pz_op",
+            "laplacian_u": "lap_u_op",
+            "laplacian_v": "lap_v_op",
+            "laplacian_w": "lap_w_op",
+            "advection_u": "adv_u_op",
+            "advection_v": "adv_v_op",
+            "advection_w": "adv_w_op",
+            "interpolation_stencils": None,
+        }
+
+        # -----------------------------
+        # ppe (required)
+        # -----------------------------
+        self["ppe"] = {
+            "rhs_builder": "rhs_builder_op",
+            "solver_type": "PCG",
+            "tolerance": 1e-6,
+            "max_iterations": 100,
+            "ppe_is_singular": False,
+        }
+
+        # -----------------------------
+        # health (required)
+        # -----------------------------
+        self["health"] = {
+            "initial_divergence_norm": 0.0,
+            "max_velocity_magnitude": 0.0,
+            "cfl_advection_estimate": 0.0,
+        }

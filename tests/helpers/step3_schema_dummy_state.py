@@ -5,53 +5,68 @@ import numpy as np
 
 class Step3SchemaDummyState(dict):
     """
-    Dummy state for Step 3 tests.
-    Must satisfy the Step 2 output schema.
+    Fully schema‑compliant Step‑3 output dummy.
+    Matches the Step 3 Output Schema exactly.
     """
 
     def __init__(self, nx, ny, nz):
         super().__init__()
 
         # -----------------------------
-        # Grid (required by Step 2 schema)
-        # -----------------------------
-        self["grid"] = {
-            "nx": nx,
-            "ny": ny,
-            "nz": nz,
-            "dx": 1.0,
-            "dy": 1.0,
-            "dz": 1.0,
-            "x_min": 0.0,
-            "x_max": nx * 1.0,
-            "y_min": 0.0,
-            "y_max": ny * 1.0,
-            "z_min": 0.0,
-            "z_max": nz * 1.0,
-        }
-
-        # -----------------------------
-        # Config (required)
+        # config (required)
         # -----------------------------
         self["config"] = {
             "simulation": {"dt": 0.1},
             "fluid": {"density": 1.0, "viscosity": 0.1},
             "boundary_conditions": [],
+            "forces": {"force_vector": [0, 0, 0], "units": "N"},
+            "geometry_definition": {
+                "geometry_mask_flat": [1] * (nx * ny * nz),
+                "geometry_mask_shape": [nx, ny, nz],
+                "mask_encoding": {"fluid": 1, "solid": -1},
+                "flattening_order": "C",
+            },
+            "domain": {
+                "x_min": 0.0, "x_max": nx * 1.0,
+                "y_min": 0.0, "y_max": ny * 1.0,
+                "z_min": 0.0, "z_max": nz * 1.0,
+                "nx": nx, "ny": ny, "nz": nz,
+            },
         }
 
         # -----------------------------
-        # Fields (required)
+        # mask (required)
+        # -----------------------------
+        mask = np.ones((nx, ny, nz), dtype=int)
+        self["mask"] = mask
+
+        # -----------------------------
+        # is_fluid (required)
+        # -----------------------------
+        self["is_fluid"] = (mask == 1)
+
+        # -----------------------------
+        # is_boundary_cell (required)
+        # -----------------------------
+        self["is_boundary_cell"] = np.zeros((nx, ny, nz), dtype=bool)
+
+        # -----------------------------
+        # fields (required)
         # -----------------------------
         self["fields"] = {
             "P": np.zeros((nx, ny, nz)),
             "U": np.zeros((nx + 1, ny, nz)),
             "V": np.zeros((nx, ny + 1, nz)),
             "W": np.zeros((nx, ny, nz + 1)),
-            "Mask": np.ones((nx, ny, nz), dtype=int),
         }
 
         # -----------------------------
-        # Constants (required)
+        # bcs (required)
+        # -----------------------------
+        self["bcs"] = []  # normalized BC table
+
+        # -----------------------------
+        # constants (required)
         # -----------------------------
         self["constants"] = {
             "rho": 1.0,
@@ -69,31 +84,55 @@ class Step3SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # Operators (required)
-        # Step 3 only checks presence, not correctness
+        # operators (required)
+        # Step‑3 schema requires OBJECTS, not callables.
         # -----------------------------
         self["operators"] = {
-            "divergence": lambda U, V, W: np.zeros((nx, ny, nz)),
-            "gradient_p": lambda P: (np.zeros_like(self["fields"]["U"]),
-                                     np.zeros_like(self["fields"]["V"]),
-                                     np.zeros_like(self["fields"]["W"])),
+            "divergence": {},
+            "gradient_p_x": {},
+            "gradient_p_y": {},
+            "gradient_p_z": {},
+            "laplacian_u": {},
+            "laplacian_v": {},
+            "laplacian_w": {},
+            "advection_u": {},
+            "advection_v": {},
+            "advection_w": {},
         }
 
         # -----------------------------
-        # PPE structure (required)
+        # ppe (required)
         # -----------------------------
         self["ppe"] = {
-            "rhs_builder": lambda div: np.zeros((nx, ny, nz)),
+            "rhs_builder": {},
             "solver_type": "PCG",
             "tolerance": 1e-6,
-            "max_iterations": 1000,
-            "ppe_is_singular": True,
+            "max_iterations": 100,
+            "ppe_is_singular": False,
+            # ppe_converged is optional
         }
 
         # -----------------------------
-        # Health (required)
+        # health (required)
         # -----------------------------
         self["health"] = {
-            "divergence_norm": 0.0,
-            "cfl_number": 0.0,
+            "post_correction_divergence_norm": 0.0,
+            "max_velocity_magnitude": 0.0,
+            "cfl_advection_estimate": 0.0,
         }
+
+        # -----------------------------
+        # history (required)
+        # -----------------------------
+        self["history"] = {
+            "times": [],
+            "divergence_norms": [],
+            "max_velocity_history": [],
+            "ppe_iterations_history": [],
+            "energy_history": [],
+        }
+
+        # -----------------------------
+        # advection_meta (optional)
+        # -----------------------------
+        self["advection_meta"] = None
