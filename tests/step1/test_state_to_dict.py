@@ -1,21 +1,25 @@
 # tests/step1/test_state_to_dict.py
 
 import numpy as np
-from src.step1.construct_simulation_state import _state_to_dict
-from tests.helpers.step1_schema_dummy_state import Step1SchemaDummyState
+from src.step1.construct_simulation_state import construct_simulation_state
+from tests.helpers.minimal_step1_input import MINIMAL_VALID_INPUT
 
 
-def test_state_to_dict_conversion():
-    state = Step1SchemaDummyState(2, 2, 2)
-    d = _state_to_dict(state)
+def test_construct_simulation_state_output_serializable():
+    state = construct_simulation_state(MINIMAL_VALID_INPUT.copy())
 
     # Check top-level keys
-    assert "config" in d
-    assert "grid" in d
-    assert "fields" in d
-    assert "mask_3d" in d
-    assert "constants" in d
+    assert "config" in state
+    assert "grid" in state
+    assert "fields" in state
+    assert "mask_3d" in state
+    assert "constants" in state
 
-    # Check arrays converted to lists
-    assert isinstance(d["fields"]["P"], list)
-    assert isinstance(d["mask_3d"], list)
+    # Arrays must be JSON-serializable lists
+    assert isinstance(state["fields"]["P"], list)
+    assert isinstance(state["mask_3d"], list)
+
+    # Nested arrays must also be lists
+    assert isinstance(state["fields"]["U"], list)
+    assert isinstance(state["fields"]["V"], list)
+    assert isinstance(state["fields"]["W"], list)

@@ -11,19 +11,40 @@ def apply_initial_conditions(fields: Fields, initial_conditions: Dict[str, objec
     """
     Populate P, U, V, W with uniform initial values.
     In-place operation.
-    """
-    p0 = float(initial_conditions["initial_pressure"])
-    u0, v0, w0 = [float(x) for x in initial_conditions["initial_velocity"]]
 
-    # NEW: enforce finite velocity components
+    This function assumes that Step 1 input has already been validated
+    against the Step 1 Input Schema. Here we enforce additional
+    numerical safety (finite values, correct vector length).
+    """
+
+    # --- Validate presence of required keys ---
+    if "initial_pressure" not in initial_conditions:
+        raise KeyError("Missing required key: initial_pressure")
+
+    if "initial_velocity" not in initial_conditions:
+        raise KeyError("Missing required key: initial_velocity")
+
+    velocity = initial_conditions["initial_velocity"]
+
+    # --- Validate velocity vector shape ---
+    if not isinstance(velocity, (list, tuple)) or len(velocity) != 3:
+        raise ValueError(
+            f"initial_velocity must be a 3-element list or tuple, got {velocity}"
+        )
+
+    # --- Extract and validate values ---
+    p0 = float(initial_conditions["initial_pressure"])
+    u0, v0, w0 = [float(x) for x in velocity]
+
+    # Finite checks
+    if not math.isfinite(p0):
+        raise ValueError(f"Initial pressure must be finite, got {p0}")
+
     for name, val in zip(["u", "v", "w"], [u0, v0, w0]):
         if not math.isfinite(val):
             raise ValueError(f"Initial velocity must contain finite numbers, got {name}={val}")
 
-    # NEW: enforce finite pressure
-    if not math.isfinite(p0):
-        raise ValueError(f"Initial pressure must be finite, got {p0}")
-
+    # --- Apply initial conditions ---
     fields.P[...] = p0
     fields.U[...] = u0
     fields.V[...] = v0

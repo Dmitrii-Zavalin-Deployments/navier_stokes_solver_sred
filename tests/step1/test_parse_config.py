@@ -1,4 +1,5 @@
 # tests/step1/test_parse_config.py
+
 from src.step1.parse_config import parse_config
 
 
@@ -9,7 +10,12 @@ def test_parse_config_basic():
         "simulation_parameters": {"time_step": 0.1},
         "external_forces": {"gravity": [0, -9.8, 0]},
         "boundary_conditions": [],
-        "geometry_definition": {"geometry_mask_flat": [0], "geometry_mask_shape": [1,1,1], "flattening_order": "i"},
+        "geometry_definition": {
+            "geometry_mask_flat": [0],
+            "geometry_mask_shape": [1, 1, 1],
+            "mask_encoding": {"fluid": 1, "solid": -1},
+            "flattening_order": "i",
+        },
     }
 
     cfg = parse_config(data)

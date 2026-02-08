@@ -1,12 +1,10 @@
 # tests/helpers/step1_schema_dummy_state.py
 
-import numpy as np
-
-
 class Step1SchemaDummyState(dict):
     """
     Fully schema‑compliant Step‑1 output dummy.
     Matches the Step 1 Output Schema exactly.
+    Produces JSON‑serializable lists (no numpy arrays).
     """
 
     def __init__(self, nx, ny, nz):
@@ -17,11 +15,11 @@ class Step1SchemaDummyState(dict):
         # -----------------------------
         self["grid"] = {
             "x_min": 0.0,
-            "x_max": nx * 1.0,
+            "x_max": float(nx),
             "y_min": 0.0,
-            "y_max": ny * 1.0,
+            "y_max": float(ny),
             "z_min": 0.0,
-            "z_max": nz * 1.0,
+            "z_max": float(nz),
             "nx": nx,
             "ny": ny,
             "nz": nz,
@@ -32,19 +30,30 @@ class Step1SchemaDummyState(dict):
 
         # -----------------------------
         # fields (required)
+        # JSON‑serializable lists
         # -----------------------------
+        def zeros(shape):
+            return [[[0.0 for _ in range(shape[2])]
+                     for _ in range(shape[1])]
+                     for _ in range(shape[0])]
+
+        def ones_int(shape):
+            return [[[1 for _ in range(shape[2])]
+                     for _ in range(shape[1])]
+                     for _ in range(shape[0])]
+
         self["fields"] = {
-            "P": np.zeros((nx, ny, nz)),
-            "U": np.zeros((nx, ny, nz)),
-            "V": np.zeros((nx, ny, nz)),
-            "W": np.zeros((nx, ny, nz)),
-            "Mask": np.ones((nx, ny, nz), dtype=int),  # values ∈ {-1,0,1}
+            "P": zeros((nx, ny, nz)),
+            "U": zeros((nx, ny, nz)),
+            "V": zeros((nx, ny, nz)),
+            "W": zeros((nx, ny, nz)),
+            "Mask": ones_int((nx, ny, nz)),  # values ∈ {-1,0,1}
         }
 
         # -----------------------------
         # mask_3d (required)
         # -----------------------------
-        self["mask_3d"] = np.ones((nx, ny, nz), dtype=int)
+        self["mask_3d"] = ones_int((nx, ny, nz))
 
         # -----------------------------
         # boundary_table (required)
@@ -81,9 +90,9 @@ class Step1SchemaDummyState(dict):
         # -----------------------------
         self["config"] = {
             "domain": {
-                "x_min": 0.0, "x_max": 1.0,
-                "y_min": 0.0, "y_max": 1.0,
-                "z_min": 0.0, "z_max": 1.0,
+                "x_min": 0.0, "x_max": float(nx),
+                "y_min": 0.0, "y_max": float(ny),
+                "z_min": 0.0, "z_max": float(nz),
                 "nx": nx, "ny": ny, "nz": nz,
             },
             "fluid": {

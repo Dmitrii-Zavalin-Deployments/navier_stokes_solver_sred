@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-import jsonschema
+from .schema_utils import validate_with_schema
 
 
 def validate_json_schema(data: Dict[str, Any], schema: Dict[str, Any]) -> None:
     """
-    Ensure all required keys exist and have correct types and structures.
-    Structural-only: no physics, no semantics.
+    Thin wrapper around the strict Draft 2020-12 validator.
+
+    This function exists for backward compatibility only.
+    All validation is delegated to schema_utils.validate_with_schema.
     """
-    jsonschema.validate(instance=data, schema=schema)
+    validate_with_schema(data, schema)

@@ -1,5 +1,8 @@
 # tests/step1/test_assemble_simulation_state.py
+
+import pytest
 import numpy as np
+
 from src.step1.assemble_simulation_state import assemble_simulation_state
 from src.step1.types import GridConfig, Fields, Config, DerivedConstants
 
@@ -26,5 +29,5 @@ def test_assemble_simulation_state():
 
     state = assemble_simulation_state(cfg, grid, fields, fields.Mask, {}, constants)
 
-    assert state.grid.nx == 1
-    assert state.fields.P.shape == (1,1,1)
+    assert state["grid"]["nx"] == 1
+    assert state["fields"]["P"].shape == (1,1,1)

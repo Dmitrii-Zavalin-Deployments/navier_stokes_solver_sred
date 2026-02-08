@@ -10,85 +10,36 @@ from .initialize_grid import initialize_grid
 from .map_geometry_mask import map_geometry_mask
 from .parse_boundary_conditions import parse_boundary_conditions
 from .parse_config import parse_config
-from .types import SimulationState
 from .validate_physical_constraints import validate_physical_constraints
 from .verify_staggered_shapes import verify_staggered_shapes
 from .schema_utils import load_schema, validate_with_schema
 
 
-# -------------------------------------------------------------------------
-# Convert SimulationState → JSON‑serializable dict for schema validation
-# -------------------------------------------------------------------------
-def _state_to_dict(state: SimulationState) -> dict:
-    return {
-        "config": {
-            "domain": state.config.domain,
-            "fluid": state.config.fluid,
-            "simulation": state.config.simulation,
-            "forces": state.config.forces,
-            "boundary_conditions": state.config.boundary_conditions,
-            "geometry_definition": state.config.geometry_definition,
-        },
-        "grid": {
-            "nx": state.grid.nx,
-            "ny": state.grid.ny,
-            "nz": state.grid.nz,
-            "dx": state.grid.dx,
-            "dy": state.grid.dy,
-            "dz": state.grid.dz,
-            "x_min": state.grid.x_min,
-            "y_min": state.grid.y_min,
-            "z_min": state.grid.z_min,
-            "x_max": state.grid.x_max,
-            "y_max": state.grid.y_max,
-            "z_max": state.grid.z_max,
-        },
-        "fields": {
-            "P": state.fields.P.tolist(),
-            "U": state.fields.U.tolist(),
-            "V": state.fields.V.tolist(),
-            "W": state.fields.W.tolist(),
-            "Mask": state.fields.Mask.tolist(),
-        },
-        "mask_3d": state.mask_3d.tolist(),
-        "boundary_table": state.boundary_table,
-        "constants": {
-            "rho": state.constants.rho,
-            "mu": state.constants.mu,
-            "dt": state.constants.dt,
-            "dx": state.constants.dx,
-            "dy": state.constants.dy,
-            "dz": state.constants.dz,
-            "inv_dx": state.constants.inv_dx,
-            "inv_dy": state.constants.inv_dy,
-            "inv_dz": state.constants.inv_dz,
-            "inv_dx2": state.constants.inv_dx2,
-            "inv_dy2": state.constants.inv_dy2,
-            "inv_dz2": state.constants.inv_dz2,
-        }
-    }
-
-
-# -------------------------------------------------------------------------
-# Main Step 1 Orchestrator
-# -------------------------------------------------------------------------
 def construct_simulation_state(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
-) -> SimulationState:
+) -> Dict[str, Any]:
     """
-    High‑level orchestrator for Step 1.
+    Step 1 Orchestrator (schema‑aligned).
+
     Performs:
       • Input schema validation
       • Physical validation
-      • Allocation and mapping
+      • Grid construction
+      • Field allocation
+      • Geometry mask mapping
+      • Initial conditions
       • Boundary normalization
       • Derived constants
+      • Output assembly
       • Output schema validation
+
+    Returns:
+        A dict matching the Step 1 Output Schema exactly.
     """
 
     # ---------------------------------------------------------
-    # 1. Validate input JSON against schema/input_schema.json
+    # 1. Validate input JSON against Step 1 Input Schema
     # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
     try:
@@ -102,7 +53,7 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 2. Physical constraints (fatal checks)
+    # 2. Physical constraints
     # ---------------------------------------------------------
     validate_physical_constraints(json_input)
 
@@ -122,7 +73,7 @@ def construct_simulation_state(
     fields = allocate_staggered_fields(grid)
 
     # ---------------------------------------------------------
-    # 6. Map geometry mask (structural only)
+    # 6. Map geometry mask
     # ---------------------------------------------------------
     geom = config.geometry_definition
     mask_flat = geom["geometry_mask_flat"]
@@ -139,7 +90,7 @@ def construct_simulation_state(
     apply_initial_conditions(fields, json_input["initial_conditions"])
 
     # ---------------------------------------------------------
-    # 8. Boundary conditions (structural normalization)
+    # 8. Boundary conditions
     # ---------------------------------------------------------
     bc_table = parse_boundary_conditions(config.boundary_conditions, grid)
 
@@ -153,9 +104,9 @@ def construct_simulation_state(
     )
 
     # ---------------------------------------------------------
-    # 10. Assemble final SimulationState
+    # 10. Assemble final Step 1 state (as a dict)
     # ---------------------------------------------------------
-    state = assemble_simulation_state(
+    state_dict = assemble_simulation_state(
         config=config,
         grid=grid,
         fields=fields,
@@ -167,13 +118,12 @@ def construct_simulation_state(
     # ---------------------------------------------------------
     # 11. Final shape verification
     # ---------------------------------------------------------
-    verify_staggered_shapes(state)
+    verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Validate output schema (schema/step1_output_schema.json)
+    # 12. Validate output schema
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
-    state_dict = _state_to_dict(state)
 
     try:
         validate_with_schema(state_dict, output_schema)
@@ -185,4 +135,4 @@ def construct_simulation_state(
             "Aborting — Step 1 produced an invalid SimulationState.\n"
         ) from exc
 
-    return state
+    return state_dict

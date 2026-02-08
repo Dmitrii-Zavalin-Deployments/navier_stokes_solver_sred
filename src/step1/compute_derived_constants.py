@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Dict
+import math
 
 from .types import DerivedConstants, GridConfig
 
@@ -12,14 +13,50 @@ def compute_derived_constants(
     simulation_parameters: Dict[str, float],
 ) -> DerivedConstants:
     """
-    Precompute physical and numerical constants for fast stencil operations.
+    Compute physical and numerical constants for Step 1.
+
+    This function enforces all constraints required by the
+    Step 1 Output Schema:
+    - positivity of dx, dy, dz, dt, rho
+    - non-negativity of viscosity
+    - finiteness of all values
     """
+
+    # -----------------------------
+    # Validate required keys
+    # -----------------------------
+    for key in ["density", "viscosity"]:
+        if key not in fluid_properties:
+            raise KeyError(f"Missing required fluid property: {key}")
+
+    if "time_step" not in simulation_parameters:
+        raise KeyError("Missing required simulation parameter: time_step")
+
+    # -----------------------------
+    # Extract and validate values
+    # -----------------------------
     rho = float(fluid_properties["density"])
     mu = float(fluid_properties["viscosity"])
     dt = float(simulation_parameters["time_step"])
 
+    if not (math.isfinite(rho) and rho > 0):
+        raise ValueError(f"Density must be a finite positive number, got {rho}")
+
+    if not (math.isfinite(mu) and mu >= 0):
+        raise ValueError(f"Viscosity must be a finite non-negative number, got {mu}")
+
+    if not (math.isfinite(dt) and dt > 0):
+        raise ValueError(f"Time step must be a finite positive number, got {dt}")
+
     dx, dy, dz = grid_config.dx, grid_config.dy, grid_config.dz
 
+    for name, val in [("dx", dx), ("dy", dy), ("dz", dz)]:
+        if not (math.isfinite(val) and val > 0):
+            raise ValueError(f"{name} must be a finite positive number, got {val}")
+
+    # -----------------------------
+    # Compute derived constants
+    # -----------------------------
     inv_dx = 1.0 / dx
     inv_dy = 1.0 / dy
     inv_dz = 1.0 / dz

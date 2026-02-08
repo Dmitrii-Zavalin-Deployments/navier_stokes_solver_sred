@@ -22,7 +22,8 @@ def base_valid_state():
         },
         "geometry_definition": {
             "geometry_mask_shape": (2, 2, 2),
-            "geometry_mask_flat": [0] * 8,
+            "geometry_mask_flat": [1] * 8,  # valid mask values ∈ {-1, 0, 1}
+            "mask_encoding": {"fluid": 1, "solid": -1},
         },
         "simulation_parameters": {
             "time_step": 0.1,
@@ -60,7 +61,7 @@ def test_geometry_shape_mismatch():
 
 def test_geometry_flat_length_mismatch():
     data = base_valid_state()
-    data["geometry_definition"]["geometry_mask_flat"] = [0] * 7
+    data["geometry_definition"]["geometry_mask_flat"] = [1] * 7
     with pytest.raises(ValueError):
         validate_physical_constraints(data)
 
