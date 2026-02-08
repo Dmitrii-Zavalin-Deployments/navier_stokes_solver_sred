@@ -3,14 +3,71 @@
 import numpy as np
 import pytest
 from src.step3.orchestrate_step3 import step3
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
-def test_schema_preservation(minimal_state):
+# ----------------------------------------------------------------------
+# Helper: convert Step‑2 dummy → Step‑3 input shape
+# (This is test‑side only; core code must NOT do this.)
+# ----------------------------------------------------------------------
+def adapt_step2_to_step3(state):
     """
-    Step 3 must not change the structure of SimulationState.
-    Only values may change.
+    Convert Step2SchemaDummyState (lowercase keys, nested fields)
+    into the uppercase, flattened Step‑3 SimulationState shape.
     """
-    state = minimal_state
+
+    return {
+        "Config": state["config"],
+        "Mask": state["fields"]["Mask"],
+        "is_fluid": state["fields"]["Mask"] == 1,
+        "is_boundary_cell": np.zeros_like(state["fields"]["Mask"], bool),
+
+        "P": state["fields"]["P"],
+        "U": state["fields"]["U"],
+        "V": state["fields"]["V"],
+        "W": state["fields"]["W"],
+
+        "BCs": state["boundary_table_list"],
+
+        "Constants": {
+            "rho": state["config"]["fluid"]["density"],
+            "mu": state["config"]["fluid"]["viscosity"],
+            "dt": state["config"]["simulation"]["dt"],
+            "dx": state["grid"]["dx"],
+            "dy": state["grid"]["dy"],
+            "dz": state["grid"]["dz"],
+        },
+
+        "Operators": state["operators"],
+
+        "PPE": {
+            "solver": None,
+            "tolerance": 1e-6,
+            "max_iterations": 100,
+            "ppe_is_singular": False,
+        },
+
+        "Health": {},
+        "History": {},
+    }
+
+
+# ----------------------------------------------------------------------
+# Fixtures
+# ----------------------------------------------------------------------
+@pytest.fixture
+def step3_state():
+    """Provides a fully valid Step‑3 input state."""
+    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
+    return adapt_step2_to_step3(s2)
+
+
+# ----------------------------------------------------------------------
+# Tests
+# ----------------------------------------------------------------------
+
+def test_schema_preservation(step3_state):
+    state = step3_state
     original_keys = set(state.keys())
 
     step3(state, current_time=0.0, step_index=0)
@@ -18,64 +75,45 @@ def test_schema_preservation(minimal_state):
     new_keys = set(state.keys())
     assert original_keys.issubset(new_keys)
 
-    # Check shapes preserved
     assert state["P"].shape == (3, 3, 3)
     assert state["U"].shape == (4, 3, 3)
     assert state["V"].shape == (3, 4, 3)
     assert state["W"].shape == (3, 3, 4)
 
 
-def test_schema_validation_passes(minimal_state):
-    """
-    After adding schema validation to the orchestrator,
-    Step 3 must successfully validate a correct state.
-    """
-    state = minimal_state
-    # Should not raise
-    step3(state, current_time=0.0, step_index=0)
+def test_schema_validation_passes(step3_state):
+    step3(step3_state, current_time=0.0, step_index=0)
 
 
-def test_schema_validation_fails_on_invalid_state(minimal_state):
-    """
-    If Step 3 produces an invalid state (e.g., missing required fields),
-    the orchestrator must raise a RuntimeError.
-    """
-    state = minimal_state
-
-    # Remove a required field that is NOT used during computation
+def test_schema_validation_fails_on_invalid_state(step3_state):
+    state = step3_state
     del state["History"]
 
     with pytest.raises(RuntimeError):
         step3(state, current_time=0.0, step_index=0)
 
 
-def test_divergence_reduction(minimal_state):
-    state = minimal_state
+def test_divergence_reduction(step3_state):
+    state = step3_state
     pattern = np.ones_like(state["P"])
     state["_divergence_pattern"] = pattern
 
-    div_before = np.linalg.norm(pattern)
-
     step3(state, current_time=0.0, step_index=0)
 
-    div_after = state["Health"]["post_correction_divergence_norm"]
-
-    # With dummy operators, they may be equal — but field must exist
-    assert div_after >= 0.0
+    assert state["Health"]["post_correction_divergence_norm"] >= 0.0
 
 
-def test_mask_awareness(minimal_state):
-    state = minimal_state
+def test_mask_awareness(step3_state):
+    state = step3_state
     state["Mask"][1, 1, 1] = 0
 
     step3(state, current_time=0.0, step_index=0)
 
-    # Face-based zeroing: cannot guarantee exact index, but must be zero somewhere
     assert np.any(state["U"] == 0.0)
 
 
-def test_singular_ppe(minimal_state):
-    state = minimal_state
+def test_singular_ppe(step3_state):
+    state = step3_state
     state["PPE"]["ppe_is_singular"] = True
     state["_divergence_pattern"] = np.ones_like(state["P"])
 
@@ -85,14 +123,13 @@ def test_singular_ppe(minimal_state):
     assert abs(state["P"][fluid].mean()) < 1e-12
 
 
-def test_non_singular_ppe(minimal_state):
-    state = minimal_state
+def test_non_singular_ppe(step3_state):
+    state = step3_state
     state["PPE"]["ppe_is_singular"] = False
     state["_divergence_pattern"] = np.ones_like(state["P"])
 
     step3(state, current_time=0.0, step_index=0)
 
-    # Should not subtract mean
     assert np.allclose(state["P"], 0.0)
 
 
@@ -135,11 +172,8 @@ def test_vacuum_all_solids():
     assert np.allclose(state["W"], 0.0)
 
 
-def test_full_round_trip(minimal_state):
-    """
-    Full Step 3 pipeline must run without errors and produce valid diagnostics.
-    """
-    state = minimal_state
+def test_full_round_trip(step3_state):
+    state = step3_state
     step3(state, current_time=0.0, step_index=0)
 
     assert "Health" in state
