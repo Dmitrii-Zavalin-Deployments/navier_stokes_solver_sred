@@ -1,7 +1,7 @@
-# tests/step3/test_bc_handler_hooks.py
-
 import numpy as np
 from src.step3.orchestrate_step3 import step3
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
+
 
 class DummyHandler:
     def __init__(self):
@@ -15,11 +15,17 @@ class DummyHandler:
         self.post_called = True
 
 
-def test_bc_handler_hooks_called(minimal_state):
+def test_bc_handler_hooks_called():
+    # Create a Step‑2‑schema‑valid dummy state
+    state = Step2SchemaDummyState(nx=4, ny=4, nz=4)
+
+    # Attach the handler
     handler = DummyHandler()
-    minimal_state["BC_handler"] = handler
+    state["BC_handler"] = handler
 
-    step3(minimal_state, current_time=0.0, step_index=0)
+    # Run Step 3
+    step3(state, current_time=0.0, step_index=0)
 
+    # Verify hooks were called
     assert handler.pre_called
     assert handler.post_called
