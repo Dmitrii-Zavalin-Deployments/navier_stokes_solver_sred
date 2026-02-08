@@ -41,6 +41,78 @@ def _to_json_safe(obj):
 
 
 # ---------------------------------------------------------------------------
+# Build a Step‑2‑compatible view of the Step‑3 state
+# ---------------------------------------------------------------------------
+
+def _build_step2_compatible_view(state):
+    """
+    Build a Step-2-output-shaped view of the Step-3 state,
+    for schema validation only. Does NOT mutate the original state.
+    """
+    import numpy as np
+
+    # Infer grid from P shape and Constants
+    P = state["P"]
+    nx, ny, nz = P.shape
+
+    const = state["Constants"]
+    dx = float(const["dx"])
+    dy = float(const["dy"])
+    dz = float(const["dz"])
+
+    grid = {
+        "nx": nx,
+        "ny": ny,
+        "nz": nz,
+        "dx": dx,
+        "dy": dy,
+        "dz": dz,
+        "x_min": 0.0,
+        "x_max": nx * dx,
+        "y_min": 0.0,
+        "y_max": ny * dy,
+        "z_min": 0.0,
+        "z_max": nz * dz,
+    }
+
+    fields = {
+        "P": state["P"],
+        "U": state["U"],
+        "V": state["V"],
+        "W": state["W"],
+    }
+
+    # Health must contain required keys
+    health = dict(state.get("Health", {}))
+    health.setdefault("initial_divergence_norm", 0.0)
+    health.setdefault("max_velocity_magnitude", 0.0)
+    health.setdefault("cfl_advection_estimate", 0.0)
+
+    # PPE must match Step‑2 schema
+    ppe_src = state.get("PPE", {})
+    ppe = {
+        "rhs_builder": "placeholder",
+        "solver_type": "placeholder",
+        "tolerance": float(ppe_src.get("tolerance", 1e-6)),
+        "max_iterations": int(ppe_src.get("max_iterations", 1)),
+        "ppe_is_singular": bool(ppe_src.get("ppe_is_singular", False)),
+    }
+
+    return {
+        "grid": grid,
+        "fields": fields,
+        "mask": state["Mask"],
+        "constants": const,
+        "config": state.get("Config", {}),
+        "operators": state.get("Operators", {}),
+        "ppe": ppe,
+        "health": health,
+        "is_fluid": state["is_fluid"],
+        "is_boundary_cell": state["is_boundary_cell"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Load schemas
 # ---------------------------------------------------------------------------
 
@@ -81,7 +153,8 @@ def step3(state, current_time, step_index):
     # 0 — INPUT SCHEMA VALIDATION (hard failure)
     # ----------------------------------------------------------------------
     try:
-        json_safe_input = _to_json_safe(state)
+        step2_view = _build_step2_compatible_view(state)
+        json_safe_input = _to_json_safe(step2_view)
         validate(instance=json_safe_input, schema=STEP2_SCHEMA)
     except ValidationError as exc:
         raise RuntimeError(
