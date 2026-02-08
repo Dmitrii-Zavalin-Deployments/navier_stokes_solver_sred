@@ -146,6 +146,36 @@ def _build_step2_compatible_view(state):
 
 
 # ---------------------------------------------------------------------------
+# Build a Step‑3‑compatible view of the Step‑3 state
+# ---------------------------------------------------------------------------
+
+def _build_step3_compatible_view(state):
+    """
+    Convert internal Step‑3 state (capitalized keys)
+    into the lowercase-key structure required by the Step‑3 schema.
+    Does NOT mutate the original state.
+    """
+    return {
+        "config": state.get("Config", {}),
+        "mask": state["Mask"],
+        "is_fluid": state["is_fluid"],
+        "is_boundary_cell": state["is_boundary_cell"],
+        "fields": {
+            "P": state["P"],
+            "U": state["U"],
+            "V": state["V"],
+            "W": state["W"],
+        },
+        "bcs": state.get("BCs", []),
+        "constants": state["Constants"],
+        "operators": state["Operators"],
+        "ppe": state["PPE"],
+        "health": state["Health"],
+        "history": state["History"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Load schemas
 # ---------------------------------------------------------------------------
 
@@ -229,7 +259,8 @@ def step3(state, current_time, step_index):
     # 9 — OUTPUT SCHEMA VALIDATION (hard failure)
     # ----------------------------------------------------------------------
     try:
-        json_safe_state = _to_json_safe(state)
+        step3_view = _build_step3_compatible_view(state)
+        json_safe_state = _to_json_safe(step3_view)
         validate(instance=json_safe_state, schema=STEP3_SCHEMA)
     except ValidationError as exc:
         raise RuntimeError(
