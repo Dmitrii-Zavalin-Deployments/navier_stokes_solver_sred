@@ -49,7 +49,6 @@ def _build_step2_compatible_view(state):
     Build a Step-2-output-shaped view of the Step-3 state,
     for schema validation only. Does NOT mutate the original state.
     """
-    import numpy as np
 
     # Infer grid from P shape and Constants
     P = state["P"]
