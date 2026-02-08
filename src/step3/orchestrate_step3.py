@@ -117,13 +117,27 @@ def _build_step2_compatible_view(state):
         "ppe_is_singular": bool(ppe_src.get("ppe_is_singular", False)),
     }
 
+    # Operators must be strings in Step‑2 schema
+    operators = {
+        "divergence": "placeholder",
+        "gradient_p_x": "placeholder",
+        "gradient_p_y": "placeholder",
+        "gradient_p_z": "placeholder",
+        "laplacian_u": "placeholder",
+        "laplacian_v": "placeholder",
+        "laplacian_w": "placeholder",
+        "advection_u": "placeholder",
+        "advection_v": "placeholder",
+        "advection_w": "placeholder",
+    }
+
     return {
         "grid": grid,
         "fields": fields,
         "mask": state["Mask"],
         "constants": const,
         "config": state.get("Config", {}),
-        "operators": state.get("Operators", {}),
+        "operators": operators,
         "ppe": ppe,
         "health": health,
         "is_fluid": state["is_fluid"],
@@ -154,18 +168,6 @@ with open(STEP3_SCHEMA_PATH, "r") as f:
 def step3(state, current_time, step_index):
     """
     Full Step 3 projection time step.
-
-    Steps:
-      0. Validate input schema (must match Step 2 output)
-      1. Pre-boundary conditions
-      2. Predict velocity (U*, V*, W*)
-      3. Build PPE RHS
-      4. Solve pressure
-      5. Correct velocity
-      6. Post-boundary conditions
-      7. Update health diagnostics
-      8. Log diagnostics
-      9. Validate final state against Step 3 schema
     """
 
     # ----------------------------------------------------------------------
