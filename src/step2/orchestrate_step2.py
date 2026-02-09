@@ -72,7 +72,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # Normalize gradient operator keys (for consistency / future use)
     _ = _extract_gradients(gradients)
 
-    # 7. PPE structure
+    # 7. PPE structure (schema‑compatible descriptor)
     ppe = prepare_ppe_structure(state)
 
     # 8. Health diagnostics
@@ -89,7 +89,6 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         "is_solid": is_solid.tolist(),
         "is_boundary_cell": mask_semantics["is_boundary_cell"],
         "operators": {
-            # All strings, as required by step2_output_schema.json
             "divergence": "divergence",
             "gradient_p_x": "gradient_p_x",
             "gradient_p_y": "gradient_p_y",
@@ -101,7 +100,10 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
+        # Step‑2 schema expects ppe.rhs_builder : string
         "ppe": ppe,
+        # Step‑3 solve_pressure expects state["ppe_structure"]
+        "ppe_structure": ppe,
         "health": health,
         "meta": {
             "step": 2,
