@@ -16,7 +16,6 @@ load_schema = None
 
 
 def _to_json_compatible(obj):
-    """Convert numpy arrays and callables to JSON‑safe placeholders."""
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     if isinstance(obj, dict):
@@ -29,21 +28,37 @@ def _to_json_compatible(obj):
     return obj
 
 
+def _normalize_laplacians(state):
+    ops = dict(state.get("operators", {}))
+
+    def wrap(op):
+        if callable(op):
+            return op
+        if isinstance(op, dict) and callable(op.get("op")):
+            return op["op"]
+
+        def zero(arr):
+            return np.zeros_like(arr)
+
+        return zero
+
+    for key in ("laplacian_u", "laplacian_v", "laplacian_w"):
+        if key in ops:
+            ops[key] = wrap(ops[key])
+
+    new_state = dict(state)
+    new_state["operators"] = ops
+    return new_state
+
+
 def _ensure_is_solid(state):
-    """
-    Step‑3 schema requires is_solid.
-    Step‑2 provides it, but Step‑3 dummy states do not.
-    Fallback: assume all fluid (no solids).
-    """
     if "is_solid" in state:
         return state
 
-    # Fallback for Step‑3 dummy state
     if "mask" in state:
         mask_arr = np.asarray(state["mask"])
         is_solid = (mask_arr == 0)
     else:
-        # Last‑resort fallback: no solids anywhere
         fields = state.get("fields", {})
         sample = fields.get("U")
         if sample is None:
@@ -56,11 +71,6 @@ def _ensure_is_solid(state):
 
 
 def orchestrate_step3(state, current_time, step_index):
-    """
-    Full Step‑3 projection time step.
-    """
-
-    # 0 — Input schema validation
     if validate_json_schema and load_schema:
         step2_schema = load_schema("step2_output_schema.json")
         validate_json_schema(
@@ -69,81 +79,79 @@ def orchestrate_step3(state, current_time, step_index):
             context_label="[Step 3] Input schema validation",
         )
 
-    # Shallow copy
     base_state = dict(state)
-
-    # Ensure is_solid exists (dummy states do not include it)
+    base_state = _normalize_laplacians(base_state)
     base_state = _ensure_is_solid(base_state)
 
-    # 1 — Pre‑boundary conditions
+    # 1 — Pre‑BC
     fields0 = base_state["fields"]
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
 
     # 2 — Predict velocity
     U_star, V_star, W_star = predict_velocity(base_state, fields_pre)
 
-    # 3 — Build PPE RHS
+    # 3 — PPE RHS
     rhs = build_ppe_rhs(base_state, U_star, V_star, W_star)
 
-    # 4 — Solve pressure (unwrap array, ignore metadata for schema)
-    P_arr, _ppe_meta = solve_pressure(base_state, rhs)
+    # 4 — Solve pressure
+    P_new = solve_pressure(base_state, rhs)
 
     # 5 — Correct velocity
     U_new, V_new, W_new = correct_velocity(
-        base_state, U_star, V_star, W_star, P_arr
+        base_state, U_star, V_star, W_star, P_new
     )
 
-    # 6 — Post‑boundary conditions
+    # 6 — Post‑BC
     fields_post = apply_boundary_conditions_post(
-        base_state, U_new, V_new, W_new, P_arr
+        base_state, U_new, V_new, W_new, P_new
     )
 
     fields_out = dict(fields_post)
-    # Ensure P is just the ndarray, not (array, meta)
-    fields_out["P"] = P_arr
 
-    # 7 — Update health
-    health = update_health(base_state, fields_out, P_arr)
+    # ------------------------------------------------------------
+    # FIX: P must be an array, not (array, metadata)
+    # ------------------------------------------------------------
+    if isinstance(P_new, tuple):
+        fields_out["P"] = P_new[0]
+    else:
+        fields_out["P"] = P_new
 
-    # 8 — Log diagnostics
+    # 7 — Health
+    health = update_health(base_state, fields_out, P_new)
+
+    # 8 — Diagnostics
     diag_record = log_step_diagnostics(
         base_state, fields_out, current_time, step_index
     )
 
-    # 9 — Assemble new Step‑3 state
+    # 9 — Assemble Step‑3 output
     new_state = dict(base_state)
     new_state["fields"] = fields_out
     new_state["health"] = health
 
-    # History must be an object with arrays, not a list
-    history = dict(
-        new_state.get(
-            "history",
-            {
-                "times": [],
-                "divergence_norms": [],
-                "max_velocity_history": [],
-                "ppe_iterations_history": [],
-                "energy_history": [],
-            },
-        )
-    )
+    # ------------------------------------------------------------
+    # FIX: Step‑3 history must be an OBJECT, not a list
+    # ------------------------------------------------------------
+    hist = new_state.get("history") or {}
+    times = list(hist.get("times", []))
+    divs = list(hist.get("divergence_norms", []))
+    vmax = list(hist.get("max_velocity_history", []))
+    iters = list(hist.get("ppe_iterations_history", []))
+    energy = list(hist.get("energy_history", []))
 
-    history.setdefault("times", []).append(diag_record.get("time", current_time))
-    history.setdefault("divergence_norms", []).append(
-        diag_record.get("divergence_norm", 0.0)
-    )
-    history.setdefault("max_velocity_history", []).append(
-        diag_record.get("max_velocity", 0.0)
-    )
-    history.setdefault("ppe_iterations_history", []).append(
-        diag_record.get("ppe_iterations", -1)
-    )
-    history.setdefault("energy_history", []).append(
-        diag_record.get("energy", 0.0)
-    )
+    times.append(diag_record.get("time", float(current_time)))
+    divs.append(diag_record.get("divergence_norm", 0.0))
+    vmax.append(diag_record.get("max_velocity", 0.0))
+    iters.append(diag_record.get("ppe_iterations", -1))
+    energy.append(diag_record.get("energy", 0.0))
 
-    new_state["history"] = history
+    new_state["history"] = {
+        "times": times,
+        "divergence_norms": divs,
+        "max_velocity_history": vmax,
+        "ppe_iterations_history": iters,
+        "energy_history": energy,
+    }
 
     # 10 — Output schema validation
     if validate_json_schema and load_schema:
@@ -158,5 +166,4 @@ def orchestrate_step3(state, current_time, step_index):
 
 
 def step3(state, current_time, step_index):
-    """Compatibility alias."""
     return orchestrate_step3(state, current_time, step_index)
