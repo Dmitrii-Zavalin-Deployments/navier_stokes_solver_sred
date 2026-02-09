@@ -43,7 +43,7 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # fields (required) — lists or ndarrays allowed
+        # fields (required)
         # ------------------------------------------------------------
         self["fields"] = {
             "P": np.zeros((nx, ny, nz)).tolist(),
@@ -69,6 +69,15 @@ class Step2SchemaDummyState(dict):
         self["is_boundary_cell"] = (mask == -1).tolist()
 
         # ------------------------------------------------------------
+        # mask_semantics (required by property‑based tests)
+        # ------------------------------------------------------------
+        self["mask_semantics"] = {
+            "mask": mask.tolist(),
+            "is_fluid": (mask == 1).tolist(),
+            "is_solid": (mask == 0).tolist(),
+        }
+
+        # ------------------------------------------------------------
         # constants (required)
         # ------------------------------------------------------------
         inv_dx = 1.0 / dx
@@ -91,7 +100,7 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # config (required) — Step‑1 config passed through unchanged
+        # config (required)
         # ------------------------------------------------------------
         self["config"] = {
             "fluid": {"density": rho, "viscosity": mu},
@@ -124,7 +133,7 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # ppe (required) — rhs_builder MUST be a string
+        # ppe (required)
         # ------------------------------------------------------------
         self["ppe"] = {
             "rhs_builder": "rhs_builder_op",
