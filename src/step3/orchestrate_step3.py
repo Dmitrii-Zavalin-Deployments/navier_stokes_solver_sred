@@ -29,10 +29,6 @@ def _to_json_compatible(obj):
 
 
 def _normalize_laplacians(state):
-    """
-    Ensure laplacian_u/v/w are callables.
-    If they are dicts (dummy state), replace with zero-operators.
-    """
     ops = dict(state.get("operators", {}))
 
     def wrap(op):
@@ -64,8 +60,6 @@ def orchestrate_step3(state, current_time, step_index):
         )
 
     base_state = dict(state)
-
-    # Ensure operators are callables
     base_state = _normalize_laplacians(base_state)
 
     fields0 = base_state["fields"]

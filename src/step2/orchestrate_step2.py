@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict
+import numpy as np
 
 from .enforce_mask_semantics import enforce_mask_semantics
 from .precompute_constants import precompute_constants
@@ -23,11 +24,6 @@ except Exception:
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Pure Step‑2 orchestrator.
-    Input: Step‑1 output (dict with lists)
-    Output: Step‑2 output (dict with lists)
-    """
 
     # 1. Validate Step‑1 output
     if validate_json_schema and load_schema:
@@ -44,34 +40,36 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     mask_semantics = enforce_mask_semantics(state)
 
     # 4. Fluid mask
-    fluid_mask = create_fluid_mask(state)
+    is_fluid = create_fluid_mask(state)
 
-    # 5. Operators
+    # 5. Compute is_solid (Step‑2 schema requires it)
+    mask_arr = np.asarray(state["mask_3d"])
+    is_solid = (mask_arr == 0)
+
+    # 6. Operators
     divergence = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     laplacians = build_laplacian_operators(state)
     advection = build_advection_structure(state)
 
-    # 6. PPE structure
+    # 7. PPE structure
     ppe = prepare_ppe_structure(state)
 
-    # 7. Health diagnostics
+    # 8. Health diagnostics
     health = compute_initial_health(state)
 
-    # 8. Assemble Step‑2 output (schema‑aligned)
+    # 9. Assemble Step‑2 output (schema‑aligned)
     output = {
         "grid": state["grid"],
         "fields": state["fields"],
         "config": state["config"],
         "constants": constants,
 
-        # REQUIRED Step‑2 mask fields
-        "mask": state["mask_3d"],                         # FIXED
-        "is_fluid": fluid_mask,
-        "is_solid": mask_semantics["is_solid"],           # FIXED
+        "mask": state["mask_3d"],
+        "is_fluid": is_fluid,
+        "is_solid": is_solid.tolist(),  # FIXED
         "is_boundary_cell": mask_semantics["is_boundary_cell"],
 
-        # REQUIRED operator structure
         "operators": {
             "divergence": divergence["divergence"],
             "pressure_gradients": gradients["pressure_gradients"],
@@ -92,7 +90,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         },
     }
 
-    # 9. Validate Step‑2 output
+    # 10. Validate Step‑2 output
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
