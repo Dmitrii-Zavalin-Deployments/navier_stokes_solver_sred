@@ -37,10 +37,14 @@ def predict_velocity(state, fields):
     # ------------------------------------------------------------------
     # Diffusion operators (pure functions)
     # ------------------------------------------------------------------
-    # Step‑3 schema includes only laplacians, not advection
+    # Step‑3 schema: operators.laplacian_u is a callable
     lap_u = state["operators"]["laplacian_u"]
     lap_v = state["operators"]["laplacian_v"]
     lap_w = state["operators"]["laplacian_w"]
+
+    # Ensure they are callables
+    if not callable(lap_u) or not callable(lap_v) or not callable(lap_w):
+        raise TypeError("Laplacian operators must be callable functions")
 
     Du = lap_u(U)
     Dv = lap_v(V)
