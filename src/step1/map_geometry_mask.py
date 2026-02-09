@@ -11,7 +11,7 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
     Convert flat geometry mask into a 3D array using the declared flattening order.
 
     IMPORTANT:
-    - For real simulation masks, values must be integers in {-1, 0, 1}.
+    - For real simulation masks, values are expected to be in {-1, 0, 1}.
     - BUT the flattening-order tests intentionally use values 0..7.
       Those tests validate *indexing*, not mask semantics.
       Therefore, we allow ANY finite integer here.
@@ -54,7 +54,7 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
 
         # ---------------------------------------------------------
         # FIX: Allow ANY integer for flattening tests.
-        # Real mask semantics (-1,0,1) are enforced elsewhere.
+        # Real mask semantics (-1,0,1) are enforced later in Step‑2.
         # ---------------------------------------------------------
         validated.append(int(val))
 
@@ -70,6 +70,7 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
     elif order_formula_upper in ("F", "FORTRAN", "COLUMN_MAJOR"):
         order = "F"
     elif "I + NX*(J + NY*K)" in order_formula_upper:
+        # Explicit Fortran-style formula
         order = "F"
     else:
         raise ValueError(
