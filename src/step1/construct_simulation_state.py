@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+import numpy as np
 
 from .assemble_simulation_state import assemble_simulation_state
 from .allocate_staggered_fields import allocate_staggered_fields
@@ -13,6 +14,17 @@ from .parse_config import parse_config
 from .validate_physical_constraints import validate_physical_constraints
 from .verify_staggered_shapes import verify_staggered_shapes
 from .schema_utils import load_schema, validate_with_schema
+
+
+def _to_json_safe(obj):
+    """Recursively convert NumPy arrays to Python lists for JSON/schema compatibility."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: _to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_json_safe(x) for x in obj]
+    return obj
 
 
 def construct_simulation_state(
@@ -121,7 +133,12 @@ def construct_simulation_state(
     verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Validate output schema
+    # 12. Convert NumPy arrays → lists for JSON/schema compatibility
+    # ---------------------------------------------------------
+    state_dict = _to_json_safe(state_dict)
+
+    # ---------------------------------------------------------
+    # 13. Validate output schema
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
 
