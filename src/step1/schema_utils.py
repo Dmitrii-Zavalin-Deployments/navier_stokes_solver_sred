@@ -3,6 +3,21 @@ import json
 from pathlib import Path
 from functools import lru_cache
 from jsonschema import Draft202012Validator, ValidationError
+import numpy as np
+
+
+# ---------------------------------------------------------
+# Helper: make instances JSON/schema‑safe
+# ---------------------------------------------------------
+def _to_json_safe(obj):
+    """Recursively convert NumPy arrays to Python lists for JSON/schema compatibility."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: _to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_json_safe(x) for x in obj]
+    return obj
 
 
 # ---------------------------------------------------------
@@ -33,9 +48,11 @@ def validate_with_schema(instance: dict, schema: dict) -> None:
             f"Schema validation requires a dict instance, got {type(instance).__name__}"
         )
 
-    validator = Draft202012Validator(schema)
+    # Make a JSON‑safe copy (handles mask_3d, fields, etc.)
+    instance_safe = _to_json_safe(instance)
 
-    errors = sorted(validator.iter_errors(instance), key=lambda e: e.path)
+    validator = Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(instance_safe), key=lambda e: e.path)
 
     if errors:
         err = errors[0]  # show the first, most relevant error
