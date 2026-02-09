@@ -16,7 +16,7 @@ def update_health(state, fields, P_new):
         state  – Step‑2/Step‑3 state dict
         fields – dict with corrected velocity fields:
                  { "U": ndarray, "V": ndarray, "W": ndarray, "P": ndarray }
-        P_new  – corrected pressure field (ndarray)
+        P_new  – corrected pressure field (ndarray or (ndarray, meta))
 
     Returns:
         health – dict:
@@ -27,12 +27,21 @@ def update_health(state, fields, P_new):
         }
     """
 
+    # If P_new is (array, metadata), unwrap it
+    if isinstance(P_new, tuple) and len(P_new) >= 1:
+        P_arr = np.asarray(P_new[0])
+    else:
+        P_arr = np.asarray(P_new)
+
+    # Base shape for fallbacks
+    base_P = np.asarray(state.get("fields", {}).get("P", P_arr))
+
     # ------------------------------------------------------------
-    # Extract velocity fields (fallback to zeros if missing)
+    # Extract velocity fields (fallback to zeros with pressure shape)
     # ------------------------------------------------------------
-    U = np.asarray(fields.get("U", np.zeros_like(P_new)))
-    V = np.asarray(fields.get("V", np.zeros_like(P_new)))
-    W = np.asarray(fields.get("W", np.zeros_like(P_new)))
+    U = np.asarray(fields.get("U", np.zeros_like(base_P)))
+    V = np.asarray(fields.get("V", np.zeros_like(base_P)))
+    W = np.asarray(fields.get("W", np.zeros_like(base_P)))
 
     # ------------------------------------------------------------
     # 1. Divergence operator (may be missing in dummy Step‑3 state)
