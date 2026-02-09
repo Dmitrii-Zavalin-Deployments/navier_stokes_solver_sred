@@ -41,8 +41,10 @@ def _normalize_laplacians(state):
             return op
         if isinstance(op, dict) and callable(op.get("op")):
             return op["op"]
+
         def zero(arr):
             return np.zeros_like(arr)
+
         return zero
 
     for key in ("laplacian_u", "laplacian_v", "laplacian_w"):
@@ -66,7 +68,7 @@ def _ensure_is_solid(state):
     # Fallback for Step‑3 dummy state
     if "mask" in state:
         mask_arr = np.asarray(state["mask"])
-        is_solid = (mask_arr == 0)
+        is_solid = mask_arr == 0
     else:
         # Last‑resort fallback: no solids anywhere
         fields = state.get("fields", {})
@@ -132,7 +134,7 @@ def orchestrate_step3(state, current_time, step_index):
     # 7 — Update health
     health = update_health(base_state, fields_out, P_new)
 
-    # 8 — Log diagnostics
+    # 8 — Log diagnostics (single-step record)
     diag_record = log_step_diagnostics(
         base_state, fields_out, current_time, step_index
     )
@@ -142,9 +144,27 @@ def orchestrate_step3(state, current_time, step_index):
     new_state["fields"] = fields_out
     new_state["health"] = health
 
-    history = list(new_state.get("history", []))
-    history.append(diag_record)
-    new_state["history"] = history
+    # History must be an object with array fields per schema
+    hist = new_state.get("history") or {}
+    times = list(hist.get("times", []))
+    divs = list(hist.get("divergence_norms", []))
+    vmax = list(hist.get("max_velocity_history", []))
+    iters = list(hist.get("ppe_iterations_history", []))
+    energy = list(hist.get("energy_history", []))
+
+    times.append(diag_record.get("time", float(current_time)))
+    divs.append(diag_record.get("divergence_norm", 0.0))
+    vmax.append(diag_record.get("max_velocity", 0.0))
+    iters.append(diag_record.get("ppe_iterations", -1))
+    energy.append(diag_record.get("energy", 0.0))
+
+    new_state["history"] = {
+        "times": times,
+        "divergence_norms": divs,
+        "max_velocity_history": vmax,
+        "ppe_iterations_history": iters,
+        "energy_history": energy,
+    }
 
     # 10 — Output schema validation
     if validate_json_schema and load_schema:
