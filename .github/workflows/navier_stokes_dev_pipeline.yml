@@ -65,7 +65,7 @@ jobs:
   #         )
 
   unit_tests_only:
-    needs: code_quality_check
+    # needs: code_quality_check
     runs-on: ubuntu-latest
 
     env:
