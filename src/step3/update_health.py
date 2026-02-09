@@ -27,27 +27,33 @@ def update_health(state, fields, P_new):
         }
     """
 
-    # If P_new is (array, metadata), unwrap it
-    if isinstance(P_new, tuple) and len(P_new) >= 1:
-        P_arr = np.asarray(P_new[0])
-    else:
-        P_arr = np.asarray(P_new)
-
-    # Base shape for fallbacks
-    base_P = np.asarray(state.get("fields", {}).get("P", P_arr))
+    const = state["constants"]
+    dt = const.get("dt", 1.0)
+    dx = const.get("dx", 1.0)
+    dy = const.get("dy", 1.0)
+    dz = const.get("dz", 1.0)
 
     # ------------------------------------------------------------
-    # Extract velocity fields (fallback to zeros with pressure shape)
+    # If velocities are missing (dummy Step‑3 state), return zeros
     # ------------------------------------------------------------
-    U = np.asarray(fields.get("U", np.zeros_like(base_P)))
-    V = np.asarray(fields.get("V", np.zeros_like(base_P)))
-    W = np.asarray(fields.get("W", np.zeros_like(base_P)))
+    if not all(k in fields for k in ("U", "V", "W")):
+        return {
+            "post_correction_divergence_norm": 0.0,
+            "max_velocity_magnitude": 0.0,
+            "cfl_advection_estimate": 0.0,
+        }
 
     # ------------------------------------------------------------
-    # 1. Divergence operator (may be missing in dummy Step‑3 state)
+    # Extract velocity fields (real run)
+    # ------------------------------------------------------------
+    U = np.asarray(fields["U"])
+    V = np.asarray(fields["V"])
+    W = np.asarray(fields["W"])
+
+    # ------------------------------------------------------------
+    # 1. Divergence operator (may be missing)
     # ------------------------------------------------------------
     div_norm = 0.0
-
     ops = state.get("operators", {})
     div_struct = ops.get("divergence", None)
 
@@ -68,14 +74,8 @@ def update_health(state, fields, P_new):
     max_vel = float(np.max(vel_mag)) if vel_mag.size > 0 else 0.0
 
     # ------------------------------------------------------------
-    # 3. CFL estimate (simple contract‑test version)
+    # 3. CFL estimate
     # ------------------------------------------------------------
-    const = state["constants"]
-    dt = const.get("dt", 1.0)
-    dx = const.get("dx", 1.0)
-    dy = const.get("dy", 1.0)
-    dz = const.get("dz", 1.0)
-
     cfl = float(max_vel * dt / min(dx, dy, dz))
 
     return {
