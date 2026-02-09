@@ -1,4 +1,4 @@
-# file: step1/validate_physical_constraints.py
+# file: src/step1/validate_physical_constraints.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -153,9 +153,23 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     if not isinstance(forces, dict):
         raise ValueError("external_forces must be a dictionary")
 
-    for k, v in forces.items():
-        if not isinstance(v, (int, float)) or not math.isfinite(v):
-            raise ValueError(f"external_forces[{k}] must be a finite number, got {v}")
+    # Schema: force_vector is a length‑3 array of numbers; units/comment are strings.
+    fv = forces.get("force_vector", None)
+    if fv is None:
+        raise ValueError("external_forces must contain 'force_vector'")
+
+    if not isinstance(fv, (list, tuple)) or len(fv) != 3:
+        raise ValueError(
+            f"external_forces['force_vector'] must be a length‑3 vector, got {fv}"
+        )
+
+    for i, comp in enumerate(fv):
+        if not isinstance(comp, (int, float)) or not math.isfinite(comp):
+            raise ValueError(
+                f"external_forces['force_vector'][{i}] must be a finite number, got {comp}"
+            )
+
+    # Do NOT enforce numeric type on 'units' or 'comment'
 
     # ---------------------------------------------------------
     # NOTE: CFL pre-check removed (belongs to Step 3/4)
