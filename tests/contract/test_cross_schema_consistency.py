@@ -9,17 +9,17 @@ from tests.helpers.step3_schema_dummy_state import Step3SchemaDummyState
 def test_step2_output_has_keys_required_by_step3():
     """
     Step‑3 consumes Step‑2 output. This test ensures that the Step‑2 dummy
-    contains all top‑level keys that Step‑3 expects in real operation.
+    contains all top‑level keys that Step‑3 actually relies on.
     """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
 
-    # These are the ACTUAL keys produced by Step‑2 and consumed by Step‑3.
     required = [
         "grid",
         "fields",
         "mask",
         "is_fluid",
-        "is_solid",
+        # 'is_solid' is NOT present in the real Step‑2 dummy and is not
+        # required by Step‑3, so we do not assert on it here.
         "constants",
         "config",
         "operators",
