@@ -33,25 +33,10 @@ def construct_simulation_state(
 ) -> Dict[str, Any]:
     """
     Step 1 Orchestrator (schema‑aligned).
-
-    Performs:
-      • Input schema validation
-      • Physical validation
-      • Grid construction
-      • Field allocation
-      • Geometry mask mapping
-      • Initial conditions
-      • Boundary normalization
-      • Derived constants
-      • Output assembly
-      • Output schema validation
-
-    Returns:
-        A dict matching the Step 1 Output Schema exactly.
     """
 
     # ---------------------------------------------------------
-    # 1. Validate input JSON against Step 1 Input Schema
+    # 1. Validate input JSON
     # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
     try:
@@ -59,9 +44,7 @@ def construct_simulation_state(
     except Exception as exc:
         raise RuntimeError(
             "\n[Step 1] Input schema validation FAILED.\n"
-            "Expected schema: schema/input_schema.json\n"
             f"Validation error: {exc}\n"
-            "Aborting Step 1 — input JSON is malformed.\n"
         ) from exc
 
     # ---------------------------------------------------------
@@ -116,7 +99,7 @@ def construct_simulation_state(
     )
 
     # ---------------------------------------------------------
-    # 10. Assemble final Step 1 state (as a dict)
+    # 10. Assemble final Step 1 state
     # ---------------------------------------------------------
     state_dict = assemble_simulation_state(
         config=config,
@@ -133,10 +116,13 @@ def construct_simulation_state(
     verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Convert only FIELDS to JSON‑safe lists
-    #     (mask_3d must remain ndarray for Step‑1 tests)
+    # 12. Create JSON‑safe copy for schema validation
     # ---------------------------------------------------------
-    state_dict["fields"] = _to_json_safe(state_dict["fields"])
+    json_safe_state = {
+        **state_dict,
+        "fields": _to_json_safe(state_dict["fields"]),
+        "mask_3d": _to_json_safe(state_dict["mask_3d"]),
+    }
 
     # ---------------------------------------------------------
     # 13. Validate output schema
@@ -144,13 +130,15 @@ def construct_simulation_state(
     output_schema = load_schema("schema/step1_output_schema.json")
 
     try:
-        validate_with_schema(state_dict, output_schema)
+        validate_with_schema(json_safe_state, output_schema)
     except Exception as exc:
         raise RuntimeError(
             "\n[Step 1] Output schema validation FAILED.\n"
-            "Expected schema: schema/step1_output_schema.json\n"
             f"Validation error: {exc}\n"
-            "Aborting — Step 1 produced an invalid SimulationState.\n"
         ) from exc
 
+    # ---------------------------------------------------------
+    # 14. Return REAL state (mask_3d stays ndarray)
+    # ---------------------------------------------------------
+    state_dict["fields"] = _to_json_safe(state_dict["fields"])
     return state_dict

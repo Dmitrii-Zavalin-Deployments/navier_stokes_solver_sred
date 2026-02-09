@@ -8,16 +8,16 @@ def predict_velocity(state, fields):
     Pure Step‑3 velocity prediction.
 
     Computes intermediate velocity u* using:
-        • advection
         • diffusion
         • external forces
+        (advection operators are not part of the Step‑3 schema)
 
     Rules enforced:
       • Zero faces adjacent to solid cells (OR logic).
       • Do NOT zero anything when all cells are fluid.
 
     Inputs:
-        state  – Step‑2 output dict
+        state  – Step‑3 state dict
         fields – dict with:
                  { "U": ndarray, "V": ndarray, "W": ndarray, "P": ndarray }
 
@@ -35,26 +35,13 @@ def predict_velocity(state, fields):
     W = np.asarray(fields["W"])
 
     # ------------------------------------------------------------------
-    # Operators (pure functions)
+    # Diffusion operators (pure functions)
     # ------------------------------------------------------------------
-    adv_u = state["advection"]["u"]["op"]
-    adv_v = state["advection"]["v"]["op"]
-    adv_w = state["advection"]["w"]["op"]
+    # Step‑3 schema includes only laplacians, not advection
+    lap_u = state["operators"]["laplacian_u"]
+    lap_v = state["operators"]["laplacian_v"]
+    lap_w = state["operators"]["laplacian_w"]
 
-    lap_u = state["laplacians"]["u"]["op"]
-    lap_v = state["laplacians"]["v"]["op"]
-    lap_w = state["laplacians"]["w"]["op"]
-
-    # ------------------------------------------------------------------
-    # Advection
-    # ------------------------------------------------------------------
-    Au = adv_u(U, V, W)
-    Av = adv_v(U, V, W)
-    Aw = adv_w(U, V, W)
-
-    # ------------------------------------------------------------------
-    # Diffusion
-    # ------------------------------------------------------------------
     Du = lap_u(U)
     Dv = lap_v(V)
     Dw = lap_w(W)
@@ -70,14 +57,14 @@ def predict_velocity(state, fields):
     # ------------------------------------------------------------------
     # Compute U*, V*, W*
     # ------------------------------------------------------------------
-    U_star = U + dt * (-Au + (mu / rho) * Du + fx)
-    V_star = V + dt * (-Av + (mu / rho) * Dv + fy)
-    W_star = W + dt * (-Aw + (mu / rho) * Dw + fz)
+    U_star = U + dt * ((mu / rho) * Du + fx)
+    V_star = V + dt * ((mu / rho) * Dv + fy)
+    W_star = W + dt * ((mu / rho) * Dw + fz)
 
     # ------------------------------------------------------------------
     # Zero faces adjacent to solids (OR logic)
     # ------------------------------------------------------------------
-    is_solid = np.asarray(state["mask_semantics"]["is_solid"], dtype=bool)
+    is_solid = np.asarray(state["is_solid"], dtype=bool)
 
     if np.any(is_solid):
         # U faces
