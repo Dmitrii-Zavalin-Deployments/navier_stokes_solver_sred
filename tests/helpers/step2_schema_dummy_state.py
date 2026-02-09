@@ -53,19 +53,15 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # mask (required) — tristate [-1, 0, 1]
+        # mask (required)
         # ------------------------------------------------------------
         mask = np.ones((nx, ny, nz), dtype=int)
         self["mask"] = mask.tolist()
 
         # ------------------------------------------------------------
-        # is_fluid (required)
+        # is_fluid / is_boundary_cell (required)
         # ------------------------------------------------------------
         self["is_fluid"] = (mask != 0).tolist()
-
-        # ------------------------------------------------------------
-        # is_boundary_cell (required)
-        # ------------------------------------------------------------
         self["is_boundary_cell"] = (mask == -1).tolist()
 
         # ------------------------------------------------------------
@@ -76,6 +72,11 @@ class Step2SchemaDummyState(dict):
             "is_fluid": (mask == 1).tolist(),
             "is_solid": (mask == 0).tolist(),
         }
+
+        # ------------------------------------------------------------
+        # TOP‑LEVEL is_solid (required by Step‑3 kernels)
+        # ------------------------------------------------------------
+        self["is_solid"] = (mask == 0).tolist()
 
         # ------------------------------------------------------------
         # constants (required)
@@ -116,7 +117,7 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # operators (required) — STRINGS ONLY
+        # operators (required)
         # ------------------------------------------------------------
         self["operators"] = {
             "divergence": "divergence_op",
