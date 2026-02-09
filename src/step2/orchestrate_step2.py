@@ -75,18 +75,38 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     health = compute_initial_health(state)
 
     # ------------------------------------------------------------
-    # 8. Assemble pure Step‑2 output
+    # 8. Assemble pure Step‑2 output (schema‑aligned)
     # ------------------------------------------------------------
     output = {
+        "grid": state["grid"],
+        "fields": state["fields"],
+        "config": state["config"],
         "constants": constants,
-        "mask_semantics": mask_semantics,
-        "fluid_mask": fluid_mask,
-        "divergence": divergence,
-        "pressure_gradients": gradients["pressure_gradients"],
-        "laplacians": laplacians["laplacians"],
-        "advection": advection["advection"],
-        "ppe_structure": ppe,
+
+        # Step‑2 mask fields
+        "mask": mask_semantics["mask"],
+        "is_fluid": fluid_mask,
+        "is_boundary_cell": mask_semantics["is_boundary_cell"],
+
+        # Operators (schema requires nested structure)
+        "operators": {
+            "divergence": divergence["divergence"],
+            "pressure_gradients": gradients["pressure_gradients"],
+            "laplacian_u": laplacians["laplacians"]["u"],
+            "laplacian_v": laplacians["laplacians"]["v"],
+            "laplacian_w": laplacians["laplacians"]["w"],
+            "advection_u": advection["advection"]["u"],
+            "advection_v": advection["advection"]["v"],
+            "advection_w": advection["advection"]["w"],
+        },
+
+        # PPE structure
+        "ppe": ppe,
+
+        # Health diagnostics
         "health": health,
+
+        # Metadata
         "meta": {
             "step": 2,
             "description": "Step‑2 numerical preprocessing",

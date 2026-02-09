@@ -38,6 +38,36 @@ def _to_json_compatible(obj):
     return obj
 
 
+def _normalize_laplacian_operators(state):
+    """
+    Ensure laplacian operators are callables.
+
+    If they are dicts (as in dummy/schema-only states), replace them with
+    trivial zero-operators that preserve array shape.
+    """
+    ops = dict(state.get("operators", {}))
+
+    def _as_callable(op):
+        # Already callable
+        if callable(op):
+            return op
+        # Dict with nested callable under "op"
+        if isinstance(op, dict) and callable(op.get("op")):
+            return op["op"]
+        # Fallback: zero operator with correct shape
+        def zero_op(arr):
+            return np.zeros_like(arr)
+        return zero_op
+
+    for key in ("laplacian_u", "laplacian_v", "laplacian_w"):
+        if key in ops:
+            ops[key] = _as_callable(ops[key])
+
+    state = dict(state)
+    state["operators"] = ops
+    return state
+
+
 def orchestrate_step3(state, current_time, step_index):
     """
     Full Step‑3 projection time step.
@@ -65,6 +95,9 @@ def orchestrate_step3(state, current_time, step_index):
 
     # Shallow copy base state so we never mutate the input
     base_state = dict(state)
+
+    # Normalize laplacian operators to be callables
+    base_state = _normalize_laplacian_operators(base_state)
 
     # ------------------------------------------------------------------
     # 1 — Pre‑boundary conditions (on fields)

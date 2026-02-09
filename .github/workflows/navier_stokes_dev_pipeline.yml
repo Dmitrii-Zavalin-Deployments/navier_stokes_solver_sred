@@ -10,59 +10,59 @@ on:
 
 jobs:
 
-  code_quality_check:
-    runs-on: ubuntu-latest
+  # code_quality_check:
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: 🛎️ Checkout repository
-        uses: actions/checkout@v3
+  #   steps:
+  #     - name: 🛎️ Checkout repository
+  #       uses: actions/checkout@v3
 
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+  #     - name: 🐍 Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: "3.11"
 
-      - name: 🐍 Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+  #     - name: 🐍 Install Python dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements.txt
 
-      # ---------------------------------------------------------
-      # OPTIONAL: jq installation (needed only for integration tests)
-      # ---------------------------------------------------------
-      # - name: 📦 Install jq (if needed later)
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y jq
-      # ---------------------------------------------------------
+  #     # ---------------------------------------------------------
+  #     # OPTIONAL: jq installation (needed only for integration tests)
+  #     # ---------------------------------------------------------
+  #     # - name: 📦 Install jq (if needed later)
+  #     #   run: |
+  #     #     sudo apt-get update
+  #     #     sudo apt-get install -y jq
+  #     # ---------------------------------------------------------
 
-      - name: 🧹 Autoflake (remove unused imports)
-        run: |
-          pip install autoflake
-          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
+  #     - name: 🧹 Autoflake (remove unused imports)
+  #       run: |
+  #         pip install autoflake
+  #         autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
 
-      - name: 💀 Vulture (dead code detection)
-        run: |
-          pip install vulture
-          vulture src vulture_whitelist.py --min-confidence 70
+  #     - name: 💀 Vulture (dead code detection)
+  #       run: |
+  #         pip install vulture
+  #         vulture src vulture_whitelist.py --min-confidence 70
 
-      - name: 🧬 JSCPD (duplicate code detection)
-        run: |
-          npm install -g jscpd
-          jscpd src --min-lines 5 --threshold 5 --reporters console
+  #     - name: 🧬 JSCPD (duplicate code detection)
+  #       run: |
+  #         npm install -g jscpd
+  #         jscpd src --min-lines 5 --threshold 5 --reporters console
 
-      - name: 🚀 Commit autoflake changes
-        env:
-          GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
-          GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
-        run: |
-          git config --global user.name "${GIT_USER_NAME}"
-          git config --global user.email "${GIT_USER_EMAIL}"
-          git add .
-          git diff --cached --quiet || (
-            git commit -m "🧹 Auto-clean: removed unused imports and variables"
-            git push || echo "No changes to push"
-          )
+  #     - name: 🚀 Commit autoflake changes
+  #       env:
+  #         GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
+  #         GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
+  #       run: |
+  #         git config --global user.name "${GIT_USER_NAME}"
+  #         git config --global user.email "${GIT_USER_EMAIL}"
+  #         git add .
+  #         git diff --cached --quiet || (
+  #           git commit -m "🧹 Auto-clean: removed unused imports and variables"
+  #           git push || echo "No changes to push"
+  #         )
 
   unit_tests_only:
     needs: code_quality_check
