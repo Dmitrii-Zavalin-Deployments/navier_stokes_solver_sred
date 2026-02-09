@@ -24,8 +24,15 @@ except Exception:
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Pure Step‑2 orchestrator.
+    Input: Step‑1 output (dict with lists)
+    Output: Step‑2 output (dict with lists)
+    """
 
+    # ------------------------------------------------------------
     # 1. Validate Step‑1 output
+    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
@@ -33,49 +40,73 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         schema = load_schema(str(schema_path))
         validate_json_schema(state, schema)
 
+    # ------------------------------------------------------------
     # 2. Precompute constants
+    # ------------------------------------------------------------
     constants = precompute_constants(state)
 
+    # ------------------------------------------------------------
     # 3. Mask semantics
+    # ------------------------------------------------------------
     mask_semantics = enforce_mask_semantics(state)
 
+    # ------------------------------------------------------------
     # 4. Fluid mask
+    # ------------------------------------------------------------
     is_fluid = create_fluid_mask(state)
 
-    # 5. Compute is_solid (Step‑2 schema requires it)
+    # ------------------------------------------------------------
+    # 5. Compute is_solid (required by Step‑2 schema)
+    # ------------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
     is_solid = (mask_arr == 0)
 
-    # 6. Operators
+    # ------------------------------------------------------------
+    # 6. Build operators
+    # ------------------------------------------------------------
     divergence = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     laplacians = build_laplacian_operators(state)
     advection = build_advection_structure(state)
 
+    # ------------------------------------------------------------
     # 7. PPE structure
+    # ------------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
+    # ------------------------------------------------------------
     # 8. Health diagnostics
+    # ------------------------------------------------------------
     health = compute_initial_health(state)
 
+    # ------------------------------------------------------------
     # 9. Assemble Step‑2 output (schema‑aligned)
+    # ------------------------------------------------------------
     output = {
         "grid": state["grid"],
         "fields": state["fields"],
         "config": state["config"],
         "constants": constants,
 
+        # Mask fields required by schema
         "mask": state["mask_3d"],
         "is_fluid": is_fluid,
-        "is_solid": is_solid.tolist(),  # FIXED
+        "is_solid": is_solid.tolist(),
         "is_boundary_cell": mask_semantics["is_boundary_cell"],
 
+        # Operators — schema requires these exact names
         "operators": {
             "divergence": divergence["divergence"],
-            "pressure_gradients": gradients["pressure_gradients"],
+
+            # REQUIRED: split pressure gradients into 3 fields
+            "gradient_p_x": gradients["pressure_gradients"]["x"],
+            "gradient_p_y": gradients["pressure_gradients"]["y"],
+            "gradient_p_z": gradients["pressure_gradients"]["z"],
+
             "laplacian_u": laplacians["laplacians"]["u"],
             "laplacian_v": laplacians["laplacians"]["v"],
             "laplacian_w": laplacians["laplacians"]["w"],
+
             "advection_u": advection["advection"]["u"],
             "advection_v": advection["advection"]["v"],
             "advection_w": advection["advection"]["w"],
@@ -90,7 +121,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         },
     }
 
+    # ------------------------------------------------------------
     # 10. Validate Step‑2 output
+    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
