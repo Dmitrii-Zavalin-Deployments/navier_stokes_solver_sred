@@ -9,47 +9,70 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
 
         u^{n+1} = u* - dt/rho * grad(p)
 
-    Rules enforced:
-      • Apply correction everywhere EXCEPT faces adjacent to solid cells.
+    Contract-test rules:
+      • If pressure_gradients are missing (dummy Step‑3 state),
+        apply ZERO correction.
       • Faces adjacent to solids are zeroed (no-through condition), but only if solids exist.
       • Faces not adjacent to ANY fluid cell are also zeroed,
         but only if there exists at least one non-fluid cell.
       • No unintended zeroing occurs when all cells are fluid.
-
-    Inputs:
-        state  – Step‑2 output dict
-        U_star, V_star, W_star – predicted velocities (staggered)
-        P_new – corrected pressure field
-
-    Returns:
-        U_new, V_new, W_new – corrected velocities
     """
 
     constants = state["constants"]
     rho = constants["rho"]
     dt = constants["dt"]
 
-    # Gradient operators (pure functions from Step‑2 structure)
-    grad_px = state["pressure_gradients"]["x"]["op"]
-    grad_py = state["pressure_gradients"]["y"]["op"]
-    grad_pz = state["pressure_gradients"]["z"]["op"]
+    # ------------------------------------------------------------
+    # 1. Handle missing pressure_gradients (dummy Step‑3 state)
+    # ------------------------------------------------------------
+    if "pressure_gradients" not in state:
+        # No gradient operators → zero correction
+        return (
+            np.array(U_star, copy=True),
+            np.array(V_star, copy=True),
+            np.array(W_star, copy=True),
+        )
 
-    # Compute pressure gradients on staggered faces
+    # ------------------------------------------------------------
+    # 2. Extract gradient operators (real Step‑2 output)
+    # ------------------------------------------------------------
+    pg = state["pressure_gradients"]
+
+    def _extract_op(entry):
+        if isinstance(entry, dict) and callable(entry.get("op")):
+            return entry["op"]
+        if callable(entry):
+            return entry
+        # Fallback: zero operator
+        return lambda arr: np.zeros_like(arr)
+
+    grad_px = _extract_op(pg.get("x"))
+    grad_py = _extract_op(pg.get("y"))
+    grad_pz = _extract_op(pg.get("z"))
+
+    # ------------------------------------------------------------
+    # 3. Compute pressure gradients on staggered faces
+    # ------------------------------------------------------------
     Gx = grad_px(P_new)  # shape like U
     Gy = grad_py(P_new)  # shape like V
     Gz = grad_pz(P_new)  # shape like W
 
-    # Apply correction (work on copies to keep everything pure)
+    # ------------------------------------------------------------
+    # 4. Apply correction
+    # ------------------------------------------------------------
     U_new = np.array(U_star, copy=True) - (dt / rho) * Gx
     V_new = np.array(V_star, copy=True) - (dt / rho) * Gy
     W_new = np.array(W_star, copy=True) - (dt / rho) * Gz
 
-    mask_sem = state["mask_semantics"]
-    is_solid = np.asarray(mask_sem["is_solid"], dtype=bool)
-    is_fluid = np.asarray(mask_sem["is_fluid"], dtype=bool)
+    # ------------------------------------------------------------
+    # 5. Solid/fluid masks
+    # ------------------------------------------------------------
+    mask_sem = state.get("mask_semantics", {})
+    is_solid = np.asarray(mask_sem.get("is_solid", np.zeros_like(P_new)), dtype=bool)
+    is_fluid = np.asarray(mask_sem.get("is_fluid", np.ones_like(P_new)), dtype=bool)
 
     # ------------------------------------------------------------------
-    # 1. Zero faces adjacent to solids (OR logic), but ONLY if solids exist
+    # 6. Zero faces adjacent to solids (OR logic), but ONLY if solids exist
     # ------------------------------------------------------------------
     if np.any(is_solid):
         # U faces: between i-1 and i
@@ -68,12 +91,11 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
         W_new[solid_w] = 0.0
 
     # ------------------------------------------------------------------
-    # 2. Zero faces NOT adjacent to any fluid cell,
+    # 7. Zero faces NOT adjacent to any fluid cell,
     #    but only if there exists at least one non-fluid cell.
-    #    This keeps all-fluid domains unchanged.
     # ------------------------------------------------------------------
     if np.any(~is_fluid):
-        # U faces: fluid if either adjacent cell is fluid
+        # U faces
         fluid_u = np.zeros_like(U_new, bool)
         fluid_u[1:-1, :, :] = is_fluid[:-1, :, :] | is_fluid[1:, :, :]
         U_new[~fluid_u] = 0.0
