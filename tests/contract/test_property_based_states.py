@@ -22,13 +22,14 @@ def random_step3_states(draw):
     Generate a randomized but structurally valid Step‑3 dummy state.
 
     We rely on Step3SchemaDummyState to provide a schema‑correct structure
-    (including operators/advection), and we only perturb mask semantics in
-    a controlled way.
+    (including operators), then:
+      • perturb mask semantics slightly
+      • add an 'advection' view that predict_velocity/build_ppe_rhs expect
     """
     nx, ny, nz = draw(grid_sizes())
     s3 = Step3SchemaDummyState(nx=nx, ny=ny, nz=nz)
 
-    # Randomly flip a cell to solid in the mask
+    # --- Mask semantics: mask, is_fluid, is_solid --------------------
     mask = np.array(s3["mask"], copy=True)
     if draw(st.booleans()):
         mask[0, 0, 0] = 0
@@ -36,6 +37,14 @@ def random_step3_states(draw):
     s3["mask"] = mask
     s3["is_fluid"] = (mask == 1)
     s3["is_solid"] = (mask != 1)
+
+    # --- Advection view expected by Step‑3 kernels -------------------
+    ops = s3.get("operators", {})
+    s3["advection"] = {
+        "u": ops.get("advection_u"),
+        "v": ops.get("advection_v"),
+        "w": ops.get("advection_w"),
+    }
 
     return s3
 
