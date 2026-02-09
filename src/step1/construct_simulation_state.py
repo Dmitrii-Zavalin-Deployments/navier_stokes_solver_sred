@@ -138,7 +138,14 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 14. Return REAL state (mask_3d stays ndarray)
+    # 14. Return REAL state (fields MUST be NumPy arrays)
     # ---------------------------------------------------------
-    state_dict["fields"] = _to_json_safe(state_dict["fields"])
+    f = state_dict["fields"]
+    state_dict["fields"] = {
+        "P": np.asarray(f["P"]),
+        "U": np.asarray(f["U"]),
+        "V": np.asarray(f["V"]),
+        "W": np.asarray(f["W"]),
+    }
+
     return state_dict
