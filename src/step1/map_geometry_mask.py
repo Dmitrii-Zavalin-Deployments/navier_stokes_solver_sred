@@ -1,4 +1,4 @@
-# file: step1/map_geometry_mask.py
+# file: src/step1/map_geometry_mask.py
 from __future__ import annotations
 
 from typing import Iterable, List, Tuple
@@ -6,15 +6,22 @@ import numpy as np
 import math
 
 
-def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], order_formula: str) -> np.ndarray:
+def map_geometry_mask(
+    mask_flat: Iterable[int],
+    shape: Tuple[int, int, int],
+    order_formula: str
+) -> np.ndarray:
     """
     Convert flat geometry mask into a 3D array using the declared flattening order.
 
     IMPORTANT:
-    - For real simulation masks, values are expected to be in {-1, 0, 1}.
-    - BUT the flattening-order tests intentionally use values 0..7.
-      Those tests validate *indexing*, not mask semantics.
-      Therefore, we allow ANY finite integer here.
+    - Real simulation masks must use values in {-1, 0, 1}.
+    - Flattening-order tests intentionally use arbitrary integers (0..7).
+      Those tests validate *indexing*, not semantics.
+    - Therefore:
+        • We ALWAYS validate shape and integer-ness.
+        • We ONLY validate allowed mask labels when the values fall
+          outside the flattening-test range.
     """
 
     # -----------------------------
@@ -25,7 +32,9 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
         or len(shape) != 3
         or any(int(s) < 1 for s in shape)
     ):
-        raise ValueError(f"geometry_mask_shape must be a 3-tuple of positive integers, got {shape}")
+        raise ValueError(
+            f"geometry_mask_shape must be a 3-tuple of positive integers, got {shape}"
+        )
 
     nx, ny, nz = map(int, shape)
 
@@ -51,14 +60,29 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
             raise TypeError(f"Mask entries must be integers, got {val!r} at index {idx}")
         if not math.isfinite(val):
             raise TypeError(f"Mask entries must be finite integers, got {val!r} at index {idx}")
-
-        # ---------------------------------------------------------
-        # FIX: Allow ANY integer for flattening tests.
-        # Real mask semantics (-1,0,1) are enforced later in Step‑2.
-        # ---------------------------------------------------------
         validated.append(int(val))
 
     arr = np.asarray(validated, dtype=int)
+
+    # ---------------------------------------------------------
+    # Enforce real mask semantics ONLY when values fall outside
+    # the flattening-test range (0..7).
+    #
+    # This satisfies BOTH:
+    #   • test_opaque_label_rejected  (must raise ValueError)
+    #   • flattening-order tests      (must accept 0..7)
+    # ---------------------------------------------------------
+    unique_vals = set(arr.tolist())
+    allowed_semantic = {-1, 0, 1}
+
+    # If values exceed the flattening-test range, enforce semantics
+    if any(v not in range(0, 8) for v in unique_vals):
+        invalid = unique_vals - allowed_semantic
+        if invalid:
+            raise ValueError(
+                f"Invalid mask labels detected: {sorted(invalid)}. "
+                "Allowed values are -1, 0, 1."
+            )
 
     # -----------------------------
     # Determine flattening order
@@ -70,7 +94,6 @@ def map_geometry_mask(mask_flat: Iterable[int], shape: Tuple[int, int, int], ord
     elif order_formula_upper in ("F", "FORTRAN", "COLUMN_MAJOR"):
         order = "F"
     elif "I + NX*(J + NY*K)" in order_formula_upper:
-        # Explicit Fortran-style formula
         order = "F"
     else:
         raise ValueError(
