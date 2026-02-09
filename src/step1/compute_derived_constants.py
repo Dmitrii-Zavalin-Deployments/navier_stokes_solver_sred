@@ -1,4 +1,5 @@
 # file: step1/compute_derived_constants.py
+
 from __future__ import annotations
 
 from typing import Dict
@@ -68,7 +69,7 @@ def compute_derived_constants(
     return DerivedConstants(
         rho=rho,
         mu=mu,
-        dt=dt,
+        dt=dt,          # <-- REQUIRED BY STEP‑2 SCHEMA
         dx=dx,
         dy=dy,
         dz=dz,
