@@ -1,4 +1,4 @@
-# file: step1/parse_config.py
+# file: src/step1/parse_config.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -22,7 +22,7 @@ def parse_config(data: Dict[str, Any]) -> Config:
       • no unknown top-level keys
       • geometry_definition contains required keys
       • boundary_conditions is a list
-      • external_forces values are finite numbers
+      • external_forces.force_vector is a finite 3‑vector
     """
 
     # ---------------------------------------------------------
@@ -75,9 +75,23 @@ def parse_config(data: Dict[str, Any]) -> Config:
     forces_raw = data.get("external_forces", {})
     forces = _ensure_dict("external_forces", forces_raw)
 
-    for k, v in forces.items():
-        if not isinstance(v, (int, float)) or not math.isfinite(v):
-            raise ValueError(f"external_forces[{k!r}] must be a finite number, got {v}")
+    # Schema: force_vector is a length‑3 array of numbers; units/comment are strings.
+    fv = forces.get("force_vector", None)
+    if fv is None:
+        raise KeyError("external_forces must contain 'force_vector'")
+
+    if not isinstance(fv, (list, tuple)) or len(fv) != 3:
+        raise ValueError(
+            f"external_forces['force_vector'] must be a length‑3 vector, got {fv}"
+        )
+
+    for x in fv:
+        if not isinstance(x, (int, float)) or not math.isfinite(x):
+            raise ValueError(
+                f"external_forces['force_vector'] entries must be finite numbers, got {fv}"
+            )
+
+    # Do NOT enforce numeric type on other keys (e.g. 'units', 'comment')
 
     # ---------------------------------------------------------
     # Construct Config object
