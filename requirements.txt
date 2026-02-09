@@ -19,6 +19,7 @@ dropbox
 pytest
 pytest-mock
 pytest-cov>=4.1.0
+hypothesis==6.103.1
 
 # Code quality tools
 autoflake>=2.2.1
