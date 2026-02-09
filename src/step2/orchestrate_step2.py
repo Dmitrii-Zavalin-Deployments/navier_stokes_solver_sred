@@ -34,8 +34,12 @@ def _extract_gradients(gradients):
         return pg["px"], pg["py"], pg["pz"]
     if "dpdx" in pg:
         return pg["dpdx"], pg["dpdy"], pg["dpdz"]
+    if "gx" in pg:                     # <-- FIXED: support gx/gy/gz
+        return pg["gx"], pg["gy"], pg["gz"]
 
-    raise KeyError("pressure_gradients must contain x/y/z or px/py/pz or dpdx/dpdy/dpdz")
+    raise KeyError(
+        "pressure_gradients must contain x/y/z, px/py/pz, dpdx/dpdy/dpdz, or gx/gy/gz"
+    )
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
