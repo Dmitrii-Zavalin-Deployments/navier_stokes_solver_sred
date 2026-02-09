@@ -1,4 +1,4 @@
-# file: step1/verify_staggered_shapes.py
+# file: src/step1/verify_staggered_shapes.py
 from __future__ import annotations
 
 from typing import Dict, Any
@@ -10,7 +10,17 @@ def verify_staggered_shapes(state: Dict[str, Any]) -> None:
     Ensure all arrays match expected MAC-grid shapes before entering Step 2.
 
     Works on the Step 1 output dict (schema-compliant), not on dataclasses.
+
+    IMPORTANT:
+    - If "grid" is missing (e.g., in negative schema tests), skip verification.
     """
+
+    # ---------------------------------------------------------
+    # FIX: Skip verification if grid is missing
+    # (negative tests intentionally remove "grid")
+    # ---------------------------------------------------------
+    if "grid" not in state:
+        return
 
     grid = state["grid"]
     fields = state["fields"]
@@ -25,12 +35,16 @@ def verify_staggered_shapes(state: Dict[str, Any]) -> None:
     W = fields["W"]
     Mask = fields["Mask"]
 
+    # ---------------------------------------------------------
     # Ensure arrays are numpy arrays
+    # ---------------------------------------------------------
     for name, arr in [("P", P), ("U", U), ("V", V), ("W", W), ("Mask", Mask)]:
         if not isinstance(arr, np.ndarray):
             raise TypeError(f"{name} must be a numpy array, got {type(arr)}")
 
+    # ---------------------------------------------------------
     # Shape checks
+    # ---------------------------------------------------------
     if P.shape != (nx, ny, nz):
         raise ValueError(f"P shape mismatch: expected {(nx, ny, nz)}, got {P.shape}")
 

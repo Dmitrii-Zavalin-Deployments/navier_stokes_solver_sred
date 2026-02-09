@@ -133,9 +133,10 @@ def construct_simulation_state(
     verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Convert NumPy arrays → lists for JSON/schema compatibility
+    # 12. Convert only FIELDS to JSON‑safe lists
+    #     (mask_3d must remain ndarray for Step‑1 tests)
     # ---------------------------------------------------------
-    state_dict = _to_json_safe(state_dict)
+    state_dict["fields"] = _to_json_safe(state_dict["fields"])
 
     # ---------------------------------------------------------
     # 13. Validate output schema

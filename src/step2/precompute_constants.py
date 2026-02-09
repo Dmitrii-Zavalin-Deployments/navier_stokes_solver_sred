@@ -17,12 +17,14 @@ def precompute_constants(state: Dict[str, Any]) -> Dict[str, float]:
 
     # Step‑1 schema fields
     fluid = cfg["fluid"]
-    sim = cfg["simulation"]
 
     rho = float(fluid["density"])
     mu = float(fluid["viscosity"])
 
-    dt = float(sim["dt"])
+    # ---------------------------------------------------------
+    # FIX: dt must come from Step‑1 constants, not config
+    # ---------------------------------------------------------
+    dt = float(state["constants"]["dt"])
     if dt <= 0:
         raise ValueError("dt must be positive")
 

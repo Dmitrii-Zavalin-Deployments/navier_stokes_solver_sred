@@ -8,7 +8,7 @@ def apply_boundary_conditions_pre(state, fields):
     Pure Step‑3 boundary‑condition application BEFORE prediction.
 
     Inputs:
-        state  – Step‑2 output dict (contains mask_semantics + fluid_mask)
+        state  – Step‑3 state dict (contains mask, is_fluid, is_solid)
         fields – dict with:
                  {
                      "U": ndarray,
@@ -21,7 +21,10 @@ def apply_boundary_conditions_pre(state, fields):
         new_fields – dict with the same keys, BCs applied, no mutation.
     """
 
-    mask = np.asarray(state["mask_semantics"]["mask"], dtype=int)
+    # ------------------------------------------------------------
+    # FIX: Step‑3 schema uses "mask", not "mask_semantics"
+    # ------------------------------------------------------------
+    mask = np.asarray(state["mask"], dtype=int)
     is_solid = (mask == 0)
 
     U = np.array(fields["U"], copy=True)
