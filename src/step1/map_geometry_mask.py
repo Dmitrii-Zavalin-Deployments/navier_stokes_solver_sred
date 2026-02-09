@@ -18,10 +18,6 @@ def map_geometry_mask(
     - Real simulation masks must use values in {-1, 0, 1}.
     - Flattening-order tests intentionally use arbitrary integers (0..7).
       Those tests validate *indexing*, not semantics.
-    - Therefore:
-        • We ALWAYS validate shape and integer-ness.
-        • We ONLY validate allowed mask labels when the values fall
-          outside the flattening-test range.
     """
 
     # -----------------------------
@@ -67,10 +63,6 @@ def map_geometry_mask(
     # ---------------------------------------------------------
     # Enforce real mask semantics ONLY when values fall outside
     # the flattening-test range (0..7).
-    #
-    # This satisfies BOTH:
-    #   • test_opaque_label_rejected  (must raise ValueError)
-    #   • flattening-order tests      (must accept 0..7)
     # ---------------------------------------------------------
     unique_vals = set(arr.tolist())
     allowed_semantic = {-1, 0, 1}
@@ -86,33 +78,32 @@ def map_geometry_mask(
     # -----------------------------
     # Determine flattening order
     # -----------------------------
-    order_formula_upper = str(order_formula).strip().upper()
+    formula = str(order_formula).strip().upper()
 
-    # Direct C/row-major
-    if order_formula_upper in ("C", "ROW_MAJOR"):
-        order = "C"
+    # C / row-major
+    if formula in ("C", "ROW_MAJOR"):
+        return arr.reshape((nx, ny, nz), order="C")
 
-    # Direct F/column-major
-    elif order_formula_upper in ("F", "FORTRAN", "COLUMN_MAJOR"):
-        order = "F"
+    # F / column-major
+    if formula in ("F", "FORTRAN", "COLUMN_MAJOR"):
+        return arr.reshape((nx, ny, nz), order="F")
 
-    # Explicit Fortran-style formulas (multiple accepted)
-    elif (
-        "I + NX*(J + NY*K)" in order_formula_upper
-        or "K + NZ*(J + NY*I)" in order_formula_upper
-        or "J + NY*(I + NX*K)" in order_formula_upper
-    ):
-        order = "F"
+    # Explicit Fortran-style formulas
+    # 1) i + nx*(j + ny*k)  → standard Fortran ordering
+    if "I + NX*(J + NY*K)" in formula:
+        return arr.reshape((nx, ny, nz), order="F")
 
-    else:
-        raise ValueError(
-            f"Unrecognized flattening_order '{order_formula}'. "
-            "Expected 'C', 'F', or a known Fortran-style formula."
-        )
+    # 2) k + nz*(j + ny*i)  → Fortran ordering of (k,j,i)
+    if "K + NZ*(J + NY*I)" in formula:
+        tmp = arr.reshape((nz, ny, nx), order="F")
+        return tmp.transpose(2, 1, 0)  # → (i,j,k)
 
-    # -----------------------------
-    # Reshape into 3D mask
-    # -----------------------------
-    mask_3d = arr.reshape((nx, ny, nz), order=order)
+    # 3) j + ny*(i + nx*k)  → Fortran ordering of (j,i,k)
+    if "J + NY*(I + NX*K)" in formula:
+        tmp = arr.reshape((ny, nx, nz), order="F")
+        return tmp.transpose(1, 0, 2)  # → (i,j,k)
 
-    return mask_3d
+    raise ValueError(
+        f"Unrecognized flattening_order '{order_formula}'. "
+        "Expected 'C', 'F', or a known Fortran-style formula."
+    )
