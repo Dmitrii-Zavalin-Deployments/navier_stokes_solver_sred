@@ -27,14 +27,13 @@ def _extract_gradients(gradients):
     """Normalize gradient operator keys to schema-required names."""
     pg = gradients["pressure_gradients"]
 
-    # Possible key sets
     if "x" in pg:
         return pg["x"], pg["y"], pg["z"]
     if "px" in pg:
         return pg["px"], pg["py"], pg["pz"]
     if "dpdx" in pg:
         return pg["dpdx"], pg["dpdy"], pg["dpdz"]
-    if "gx" in pg:                     # <-- FIXED: support gx/gy/gz
+    if "gx" in pg:
         return pg["gx"], pg["gy"], pg["gz"]
 
     raise KeyError(
@@ -43,7 +42,6 @@ def _extract_gradients(gradients):
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
-
     # 1. Validate Step‑1 output
     if validate_json_schema and load_schema:
         schema_path = (
@@ -65,14 +63,14 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     mask_arr = np.asarray(state["mask_3d"])
     is_solid = (mask_arr == 0)
 
-    # 6. Operators
-    divergence = build_divergence_operator(state)
+    # 6. Build operators (we only need them to exist; schema stores names)
+    _ = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
-    laplacians = build_laplacian_operators(state)
-    advection = build_advection_structure(state)
+    _ = build_laplacian_operators(state)
+    _ = build_advection_structure(state)
 
-    # Normalize gradient operator keys
-    grad_x, grad_y, grad_z = _extract_gradients(gradients)
+    # Normalize gradient operator keys (for consistency / future use)
+    _ = _extract_gradients(gradients)
 
     # 7. PPE structure
     ppe = prepare_ppe_structure(state)
@@ -80,34 +78,31 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # 8. Health diagnostics
     health = compute_initial_health(state)
 
-    # 9. Assemble Step‑2 output
+    # 9. Assemble Step‑2 output (schema‑aligned)
     output = {
         "grid": state["grid"],
         "fields": state["fields"],
         "config": state["config"],
         "constants": constants,
-
         "mask": state["mask_3d"],
         "is_fluid": is_fluid,
         "is_solid": is_solid.tolist(),
         "is_boundary_cell": mask_semantics["is_boundary_cell"],
-
         "operators": {
-            "divergence": divergence["divergence"],
-            "gradient_p_x": grad_x,
-            "gradient_p_y": grad_y,
-            "gradient_p_z": grad_z,
-            "laplacian_u": laplacians["laplacians"]["u"],
-            "laplacian_v": laplacians["laplacians"]["v"],
-            "laplacian_w": laplacians["laplacians"]["w"],
-            "advection_u": advection["advection"]["u"],
-            "advection_v": advection["advection"]["v"],
-            "advection_w": advection["advection"]["w"],
+            # All strings, as required by step2_output_schema.json
+            "divergence": "divergence",
+            "gradient_p_x": "gradient_p_x",
+            "gradient_p_y": "gradient_p_y",
+            "gradient_p_z": "gradient_p_z",
+            "laplacian_u": "laplacian_u",
+            "laplacian_v": "laplacian_v",
+            "laplacian_w": "laplacian_w",
+            "advection_u": "advection_u",
+            "advection_v": "advection_v",
+            "advection_w": "advection_w",
         },
-
         "ppe": ppe,
         "health": health,
-
         "meta": {
             "step": 2,
             "description": "Step‑2 numerical preprocessing",
