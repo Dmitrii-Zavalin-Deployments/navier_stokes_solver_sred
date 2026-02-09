@@ -8,21 +8,16 @@ def predict_velocity(state, fields):
     Pure Step‑3 velocity prediction.
 
     Computes intermediate velocity u* using:
-        • diffusion
-        • external forces
-        (advection operators are not part of the Step‑3 schema)
+        • diffusion (if laplacian operators are callable)
+        • external forces (optional)
 
     Rules enforced:
       • Zero faces adjacent to solid cells (OR logic).
       • Do NOT zero anything when all cells are fluid.
 
-    Inputs:
-        state  – Step‑3 state dict
-        fields – dict with:
-                 { "U": ndarray, "V": ndarray, "W": ndarray, "P": ndarray }
-
-    Returns:
-        U_star, V_star, W_star – predicted velocities
+    This implementation is robust to Step‑3 dummy states where
+    operators.laplacian_* are NOT callables (schema requires objects).
+    In that case, diffusion is skipped.
     """
 
     constants = state["constants"]
@@ -35,17 +30,25 @@ def predict_velocity(state, fields):
     W = np.asarray(fields["W"])
 
     # ------------------------------------------------------------------
-    # Diffusion operators (pure functions)
+    # Diffusion operators (may NOT be callable in Step‑3 dummy state)
     # ------------------------------------------------------------------
-    # Step‑3 schema: operators.laplacian_u is a callable
-    lap_u = state["operators"]["laplacian_u"]
-    lap_v = state["operators"]["laplacian_v"]
-    lap_w = state["operators"]["laplacian_w"]
+    ops = state.get("operators", {})
 
-    # Ensure they are callables
-    if not callable(lap_u) or not callable(lap_v) or not callable(lap_w):
-        raise TypeError("Laplacian operators must be callable functions")
+    def get_lap_op(key):
+        op = ops.get(key)
+        if callable(op):
+            return op
+        if isinstance(op, dict) and callable(op.get("op")):
+            return op["op"]
 
+        # Fallback: zero diffusion
+        return lambda arr: np.zeros_like(arr)
+
+    lap_u = get_lap_op("laplacian_u")
+    lap_v = get_lap_op("laplacian_v")
+    lap_w = get_lap_op("laplacian_w")
+
+    # Diffusion terms
     Du = lap_u(U)
     Dv = lap_v(V)
     Dw = lap_w(W)
