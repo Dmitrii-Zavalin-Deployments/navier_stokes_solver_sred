@@ -18,21 +18,30 @@ def grid_sizes(draw):
 
 @st.composite
 def random_step2_states(draw):
+    """
+    Generate a randomized but structurally valid Step‑2 dummy state.
+    This matches the REAL Step‑2 schema: mask, is_fluid, is_solid.
+    """
     nx, ny, nz = draw(grid_sizes())
     s2 = Step2SchemaDummyState(nx=nx, ny=ny, nz=nz)
 
-    # Randomly flip a cell to solid
-    mask = np.array(s2["mask_semantics"]["mask"], copy=True)
+    # Randomly flip a cell to solid in the mask
+    mask = np.array(s2["mask"], copy=True)
     if draw(st.booleans()):
         mask[0, 0, 0] = 0
-    s2["mask_semantics"]["mask"] = mask
-    s2["mask_semantics"]["is_fluid"] = (mask == 1)
-    s2["mask_semantics"]["is_solid"] = (mask == 0)
+
+    # Update mask + semantics
+    s2["mask"] = mask
+    s2["is_fluid"] = (mask == 1)
+    s2["is_solid"] = (mask != 1)
 
     return s2
 
 
 def _make_fields(s2):
+    """
+    Convert Step‑2 dummy fields into numpy arrays for Step‑3 operators.
+    """
     return {
         "U": np.asarray(s2["fields"]["U"]),
         "V": np.asarray(s2["fields"]["V"]),
@@ -49,6 +58,7 @@ def test_predict_velocity_property_based(s2):
     assert U_star.shape == fields["U"].shape
     assert V_star.shape == fields["V"].shape
     assert W_star.shape == fields["W"].shape
+
     assert np.isfinite(U_star).all()
     assert np.isfinite(V_star).all()
     assert np.isfinite(W_star).all()
