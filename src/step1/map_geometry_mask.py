@@ -75,7 +75,6 @@ def map_geometry_mask(
     unique_vals = set(arr.tolist())
     allowed_semantic = {-1, 0, 1}
 
-    # If values exceed the flattening-test range, enforce semantics
     if any(v not in range(0, 8) for v in unique_vals):
         invalid = unique_vals - allowed_semantic
         if invalid:
@@ -89,12 +88,22 @@ def map_geometry_mask(
     # -----------------------------
     order_formula_upper = str(order_formula).strip().upper()
 
+    # Direct C/row-major
     if order_formula_upper in ("C", "ROW_MAJOR"):
         order = "C"
+
+    # Direct F/column-major
     elif order_formula_upper in ("F", "FORTRAN", "COLUMN_MAJOR"):
         order = "F"
-    elif "I + NX*(J + NY*K)" in order_formula_upper:
+
+    # Explicit Fortran-style formulas (multiple accepted)
+    elif (
+        "I + NX*(J + NY*K)" in order_formula_upper
+        or "K + NZ*(J + NY*I)" in order_formula_upper
+        or "J + NY*(I + NX*K)" in order_formula_upper
+    ):
         order = "F"
+
     else:
         raise ValueError(
             f"Unrecognized flattening_order '{order_formula}'. "
