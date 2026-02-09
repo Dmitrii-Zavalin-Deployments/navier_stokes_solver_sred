@@ -116,7 +116,12 @@ def construct_simulation_state(
     verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Create JSON‑safe copy for schema validation
+    # 12. Insert Mask into fields (required by Step‑1 schema)
+    # ---------------------------------------------------------
+    state_dict["fields"]["Mask"] = state_dict["mask_3d"]
+
+    # ---------------------------------------------------------
+    # 13. Create JSON‑safe copy for schema validation
     # ---------------------------------------------------------
     json_safe_state = {
         **state_dict,
@@ -125,7 +130,7 @@ def construct_simulation_state(
     }
 
     # ---------------------------------------------------------
-    # 13. Validate output schema
+    # 14. Validate output schema
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
 
@@ -138,7 +143,7 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 14. Return REAL state (fields MUST be NumPy arrays)
+    # 15. Return REAL state (fields MUST be NumPy arrays)
     # ---------------------------------------------------------
     f = state_dict["fields"]
     state_dict["fields"] = {
@@ -146,6 +151,7 @@ def construct_simulation_state(
         "U": np.asarray(f["U"]),
         "V": np.asarray(f["V"]),
         "W": np.asarray(f["W"]),
+        "Mask": np.asarray(f["Mask"]),
     }
 
     return state_dict
