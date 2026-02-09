@@ -27,7 +27,7 @@ def parse_boundary_conditions(
       • velocity BC must have 3 finite components
       • pressure BC must have a finite scalar
       • pressure_gradient BC must have a finite scalar
-      • no unknown keys
+      • allows optional 'comment' field (schema‑approved)
     """
 
     table: Dict[str, List[Dict[str, Any]]] = {f: [] for f in _VALID_FACES}
@@ -96,13 +96,15 @@ def parse_boundary_conditions(
                 raise ValueError("pressure_gradient must be a finite scalar")
 
         # ---------------------------------------------------------
-        # Validate no unknown keys
+        # Validate allowed keys (now includes 'comment')
         # ---------------------------------------------------------
         allowed_keys = {
             "role", "faces", "apply_to",
             "velocity", "pressure", "pressure_gradient",
-            "no_slip", "type"
+            "no_slip", "type",
+            "comment",   # <-- added to match schema
         }
+
         for key in bc.keys():
             if key not in allowed_keys:
                 raise ValueError(f"Unknown BC key: {key!r}")

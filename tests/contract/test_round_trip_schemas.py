@@ -7,6 +7,7 @@ from jsonschema import validate
 
 from tests.helpers.minimal_step1_input import minimal_step1_input
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
+from tests.helpers.step3_schema_dummy_state import Step3SchemaDummyState
 
 from src.step1.construct_simulation_state import construct_simulation_state as orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
@@ -38,6 +39,7 @@ def _validate(instance, schema_name):
 
 
 def test_round_trip_step1_to_step2():
+    # Step‑1 input → Step‑1 output → Step‑2 output
     inp = minimal_step1_input()
     _validate(inp, "input_schema.json")
 
@@ -49,8 +51,10 @@ def test_round_trip_step1_to_step2():
 
 
 def test_round_trip_step2_to_step3():
-    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    _validate(s2, "step2_output_schema.json")
+    # Step‑3 does NOT consume raw Step‑2 output.
+    # It consumes a Step‑3‑shaped state.
+    s3 = Step3SchemaDummyState(nx=3, ny=3, nz=3)
+    _validate(s3, "step3_output_schema.json")
 
-    step3_out = orchestrate_step3(s2, current_time=0.0, step_index=0)
+    step3_out = orchestrate_step3(s3, current_time=0.0, step_index=0)
     _validate(step3_out, "step3_output_schema.json")
