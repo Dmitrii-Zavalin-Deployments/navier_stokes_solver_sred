@@ -1,30 +1,17 @@
 # src/step2/precompute_constants.py
 from __future__ import annotations
-
 from typing import Any, Dict
 
 
-def precompute_constants(state: Any) -> Dict[str, float]:
+def precompute_constants(state: Dict[str, Any]) -> Dict[str, float]:
     """
-    Expose / (lightly) recompute constants for fast operator access.
+    Compute physical and geometric constants for Step‑2 numerical operators.
 
-    This function assumes Step 1 has already validated physical parameters and
-    grid extents. It either returns the existing constants or constructs them
-    from the state.
+    Pure function:
+    - Does NOT mutate the input state.
+    - Always recomputes constants from Step‑1 schema.
     """
 
-    # ------------------------------------------------------------
-    # If constants already exist AND are a non-empty dict, reuse them.
-    # (Empty dict means "not yet computed" and will be recomputed.)
-    # ------------------------------------------------------------
-    const = state.get("constants")
-    if isinstance(const, dict) and const:
-        return const
-
-    # ------------------------------------------------------------
-    # Otherwise compute constants from config + grid
-    # (using the REAL Step‑1 schema)
-    # ------------------------------------------------------------
     cfg = state["config"]
     grid = state["grid"]
 
@@ -51,7 +38,7 @@ def precompute_constants(state: Any) -> Dict[str, float]:
     inv_dy2 = inv_dy * inv_dy
     inv_dz2 = inv_dz * inv_dz
 
-    constants = {
+    return {
         "rho": rho,
         "mu": mu,
         "dt": dt,
@@ -65,8 +52,3 @@ def precompute_constants(state: Any) -> Dict[str, float]:
         "inv_dy2": inv_dy2,
         "inv_dz2": inv_dz2,
     }
-
-    # Store back into state (schema‑correct)
-    state["constants"] = constants
-
-    return constants

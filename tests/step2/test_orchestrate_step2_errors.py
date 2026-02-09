@@ -1,94 +1,110 @@
 # tests/step2/test_orchestrate_step2_errors.py
 
-import numpy as np
 import pytest
+import numpy as np
+
+from src.step2.orchestrate_step2 import orchestrate_step2
 
 
-# ------------------------------------------------------------
-# Test 1 — _to_json_compatible converts functions AND callables
-# (covers line 33)
-# ------------------------------------------------------------
-def test_json_compatible_converts_functions_and_callables():
-    from src.step2.orchestrate_step2 import _to_json_compatible
-
-    def dummy():
-        pass
-
-    class CallableObj:
-        def __call__(self):
-            return 42
-
-    obj = CallableObj()
-    obj.__name__ = "callable_obj"   # ensures line 33 is hit
-
-    converted = _to_json_compatible({"f": dummy, "c": obj})
-
-    assert "<function dummy>" in converted["f"]
-    assert "<function callable_obj>" in converted["c"]
-
-
-# ------------------------------------------------------------
-# Test 2 — Step‑1 schema validation failure (covers lines 49–50)
-# ------------------------------------------------------------
-def test_orchestrate_step2_step1_schema_validation_failure():
-    from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
-    from src.step2.orchestrate_step2 import orchestrate_step2
-
-    state = Step2SchemaDummyState(4, 4, 4)
-    state.pop("boundary_table")   # required by Step‑1 schema
-
-    with pytest.raises(RuntimeError) as excinfo:
-        orchestrate_step2(state)
-
-    assert "Input schema validation FAILED" in str(excinfo.value)
-
-
-# ------------------------------------------------------------
-# Test 3 — Step‑2 schema validation failure (covers lines 90–91)
-# ------------------------------------------------------------
-def test_orchestrate_step2_step2_schema_validation_failure(monkeypatch):
-    from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
-    import src.step2.orchestrate_step2 as orch
-
-    state = Step2SchemaDummyState(4, 4, 4)
-
-    real_json = orch._to_json_compatible
-
-    # Break ONLY Step‑2 schema validation by removing "mask"
-    def break_json(obj):
-        out = real_json(obj)
-        if isinstance(out, dict) and "mask" in out:
-            out = dict(out)
-            out.pop("mask")   # required by Step‑2 schema, NOT Step‑1
-        return out
-
-    monkeypatch.setattr(orch, "_to_json_compatible", break_json)
-
-    with pytest.raises(RuntimeError) as excinfo:
-        orch.orchestrate_step2(state)
-
-    assert "Output schema validation FAILED" in str(excinfo.value)
-
-
-# ------------------------------------------------------------
-# Test 4 — _to_json_compatible handles arrays, functions, nested structures
-# ------------------------------------------------------------
-def test_json_compatible_full_conversion():
-    from src.step2.orchestrate_step2 import _to_json_compatible
-
-    def f():
-        pass
-
-    obj = {
-        "arr": np.zeros((2, 2)),
-        "func": f,
-        "nested": {"x": np.array([1, 2])},
-        "list": [np.array([3, 4])]
+def make_minimal_step1_state():
+    return {
+        "grid": {
+            "nx": 4, "ny": 4, "nz": 4,
+            "dx": 1.0, "dy": 1.0, "dz": 1.0,
+        },
+        "config": {
+            "fluid": {"density": 1.0, "viscosity": 0.1},
+            "simulation": {"dt": 0.1, "advection_scheme": "central"},
+        },
+        "fields": {
+            "U": np.zeros((5, 4, 4)).tolist(),
+            "V": np.zeros((4, 5, 4)).tolist(),
+            "W": np.zeros((4, 4, 5)).tolist(),
+            "P": np.zeros((4, 4, 4)).tolist(),
+        },
+        "mask_3d": np.ones((4, 4, 4), int).tolist(),
+        "boundary_table_list": [],
     }
 
-    converted = _to_json_compatible(obj)
 
-    assert converted["arr"] == [[0.0, 0.0], [0.0, 0.0]]
-    assert "<function f>" in converted["func"]
-    assert converted["nested"]["x"] == [1, 2]
-    assert converted["list"] == [[3, 4]]
+# ------------------------------------------------------------
+# Test 1 — orchestrator rejects malformed Step‑1 input
+# ------------------------------------------------------------
+def test_orchestrate_step2_rejects_missing_grid():
+    state = make_minimal_step1_state()
+    state.pop("grid")
+
+    with pytest.raises(KeyError):
+        orchestrate_step2(state)
+
+
+def test_orchestrate_step2_rejects_missing_config():
+    state = make_minimal_step1_state()
+    state.pop("config")
+
+    with pytest.raises(KeyError):
+        orchestrate_step2(state)
+
+
+def test_orchestrate_step2_rejects_missing_fields():
+    state = make_minimal_step1_state()
+    state.pop("fields")
+
+    with pytest.raises(KeyError):
+        orchestrate_step2(state)
+
+
+def test_orchestrate_step2_rejects_missing_mask():
+    state = make_minimal_step1_state()
+    state.pop("mask_3d")
+
+    with pytest.raises(KeyError):
+        orchestrate_step2(state)
+
+
+# ------------------------------------------------------------
+# Test 2 — orchestrator returns a valid Step‑2 output dict
+# ------------------------------------------------------------
+def test_orchestrate_step2_output_structure():
+    state = make_minimal_step1_state()
+    out = orchestrate_step2(state)
+
+    required_keys = {
+        "constants",
+        "mask_semantics",
+        "fluid_mask",
+        "divergence",
+        "pressure_gradients",
+        "laplacians",
+        "advection",
+        "ppe_structure",
+        "health",
+        "meta",
+    }
+
+    assert required_keys.issubset(out.keys())
+
+
+# ------------------------------------------------------------
+# Test 3 — orchestrator does not mutate input state
+# ------------------------------------------------------------
+def test_orchestrate_step2_does_not_mutate_input():
+    state = make_minimal_step1_state()
+    original = repr(state)
+
+    orchestrate_step2(state)
+
+    assert repr(state) == original
+
+
+# ------------------------------------------------------------
+# Test 4 — orchestrator handles empty boundary table
+# ------------------------------------------------------------
+def test_orchestrate_step2_empty_boundary_table():
+    state = make_minimal_step1_state()
+    state["boundary_table_list"] = []
+
+    out = orchestrate_step2(state)
+
+    assert "ppe_structure" in out
+    assert out["ppe_structure"]["ppe_is_singular"] is True

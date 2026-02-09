@@ -1,72 +1,79 @@
 # src/step2/prepare_ppe_structure.py
 from __future__ import annotations
-
 from typing import Any, Dict
 import numpy as np
 
 
-def prepare_ppe_structure(state: Any) -> Dict[str, Any]:
+def _to_numpy(arr):
+    return np.array(arr, dtype=float)
+
+
+def _to_list(arr):
+    return arr.tolist()
+
+
+def prepare_ppe_structure(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Prepare the structure and metadata for the Pressure Poisson Equation (PPE).
 
-    This does NOT build the full sparse matrix A. Instead, it prepares:
-    - rhs_builder: how to map divergence to RHS
-    - solver_type, tolerance, max_iterations
-    - ppe_is_singular: whether the PPE is structurally singular (no pressure Dirichlet)
+    Pure Step‑2 function:
+    - Does NOT mutate the input state.
+    - Returns JSON‑serializable data.
+    - Uses canonical Step‑1 mask (mask_3d).
     """
 
-    # ------------------------------------------------------------------
-    # Physical constants (schema-correct)
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
+    # Physical constants
+    # ------------------------------------------------------------
     const = state["constants"]
     rho = float(const["rho"])
     dt = float(const["dt"])
 
-    # ------------------------------------------------------------------
-    # Mask (schema-correct)
-    # ------------------------------------------------------------------
-    mask = np.asarray(state["fields"]["Mask"])
+    # ------------------------------------------------------------
+    # Canonical mask (Step‑1 schema)
+    # ------------------------------------------------------------
+    mask = _to_numpy(state["mask_3d"])
     is_fluid = (mask != 0)  # treat -1 as fluid
 
-    # ------------------------------------------------------------------
-    # Boundary table for Step 2 operators
-    #
-    # Step 1 schema uses a dict-of-faces (boundary_table)
-    # Step 2 operators use a list of BC dicts (boundary_table_list)
-    #
-    # So we read the Step 2 representation here.
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
+    # Boundary table (Step‑2 schema)
+    # ------------------------------------------------------------
     boundary_table = state.get("boundary_table_list", [])
 
-    # ------------------------------------------------------------------
-    # RHS builder: apply -rho/dt * divergence on fluid cells only
-    # ------------------------------------------------------------------
-    def rhs_builder(divergence: np.ndarray) -> np.ndarray:
+    # ------------------------------------------------------------
+    # RHS = -rho/dt * divergence, masked to fluid cells
+    # ------------------------------------------------------------
+    def rhs_builder_numpy(divergence: np.ndarray) -> np.ndarray:
         rhs = -rho / dt * divergence
-        rhs = np.where(is_fluid, rhs, 0.0)
-        return rhs
+        return np.where(is_fluid, rhs, 0.0)
 
-    # ------------------------------------------------------------------
-    # Singularity detection:
-    # PPE is non-singular if ANY boundary has type "pressure_outlet"
-    # ------------------------------------------------------------------
+    # JSON‑serializable wrapper
+    def rhs_builder(divergence_list):
+        div_np = _to_numpy(divergence_list)
+        rhs_np = rhs_builder_numpy(div_np)
+        return _to_list(rhs_np)
+
+    # ------------------------------------------------------------
+    # Singularity detection
+    # PPE is non‑singular if ANY boundary has type "pressure_outlet"
+    # ------------------------------------------------------------
     has_pressure_outlet = any(
         bc.get("type") == "pressure_outlet" for bc in boundary_table
     )
-
     ppe_is_singular = not has_pressure_outlet
 
-    # ------------------------------------------------------------------
-    # Package PPE structure
-    # ------------------------------------------------------------------
-    ppe = {
-        "rhs_builder": rhs_builder,
+    # ------------------------------------------------------------
+    # Return pure JSON‑serializable PPE structure
+    # ------------------------------------------------------------
+    return {
+        "rhs_builder": rhs_builder,  # JSON‑safe wrapper
         "solver_type": "PCG",
         "tolerance": 1e-6,
         "max_iterations": 1000,
         "ppe_is_singular": ppe_is_singular,
+        "meta": {
+            "rho": rho,
+            "dt": dt,
+            "masking": "solid=0, fluid=1, boundary-fluid=-1",
+        },
     }
-
-    # Store in schema-correct location
-    state["ppe"] = ppe
-    return ppe

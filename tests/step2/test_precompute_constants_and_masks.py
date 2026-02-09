@@ -3,32 +3,45 @@
 import numpy as np
 import pytest
 
-from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
-
 from src.step2.precompute_constants import precompute_constants
 from src.step2.create_fluid_mask import create_fluid_mask
+
+
+def make_minimal_step1_state(nx=1, ny=1, nz=1, *, dx=1.0, dy=1.0, dz=1.0, dt=0.1):
+    return {
+        "grid": {
+            "nx": nx, "ny": ny, "nz": nz,
+            "dx": dx, "dy": dy, "dz": dz,
+        },
+        "config": {
+            "fluid": {"density": 1.0, "viscosity": 0.1},
+            "simulation": {"dt": dt},
+        },
+        "mask_3d": np.ones((nx, ny, nz), int).tolist(),
+    }
 
 
 def make_minimal_mask_state(mask: np.ndarray) -> dict:
     """
     Build the minimal Step‑1‑schema‑compliant state required by create_fluid_mask.
-    Only the 'fields.Mask' entry is needed.
     """
+    nx, ny, nz = mask.shape
     return {
-        "fields": {
-            "Mask": np.asarray(mask)
-        }
+        "grid": {
+            "nx": nx, "ny": ny, "nz": nz,
+            "dx": 1.0, "dy": 1.0, "dz": 1.0,
+        },
+        "mask_3d": mask.tolist(),
     }
 
 
 # ----------------------------------------------------------------------
-# precompute_constants tests (now using Step2SchemaDummyState)
+# precompute_constants tests (pure function)
 # ----------------------------------------------------------------------
 
 def test_precompute_constants_normal():
-    state = Step2SchemaDummyState(2, 2, 2, dx=0.1, dy=0.2, dz=0.3, dt=0.01)
-    precompute_constants(state)
-    constants = state["constants"]
+    state = make_minimal_step1_state(dx=0.1, dy=0.2, dz=0.3, dt=0.01)
+    constants = precompute_constants(state)
 
     assert constants["dx"] == pytest.approx(0.1)
     assert constants["inv_dx"] == pytest.approx(10.0)
@@ -36,32 +49,30 @@ def test_precompute_constants_normal():
 
 
 def test_precompute_constants_very_small_dx():
-    state = Step2SchemaDummyState(1, 1, 1, dx=1e-12, dy=1e-12, dz=1e-12, dt=0.01)
-    precompute_constants(state)
-    constants = state["constants"]
+    state = make_minimal_step1_state(dx=1e-12, dy=1e-12, dz=1e-12)
+    constants = precompute_constants(state)
 
     assert np.isfinite(constants["inv_dx"])
     assert np.isfinite(constants["inv_dx2"])
 
 
 def test_precompute_constants_dt_zero_rejected():
-    state = Step2SchemaDummyState(1, 1, 1, dt=0.0)
+    state = make_minimal_step1_state(dt=0.0)
     with pytest.raises(ValueError):
         precompute_constants(state)
 
 
 def test_precompute_constants_existing_constants_passthrough():
-    state = Step2SchemaDummyState(1, 1, 1)
-    original = {"dx": 0.1}
-    state["constants"] = original
+    state = make_minimal_step1_state()
+    state["constants"] = {"dx": 0.1}  # non‑empty dict → passthrough
 
-    precompute_constants(state)
+    constants = precompute_constants(state)
 
-    assert state["constants"] is original
+    assert constants is state["constants"]
 
 
 # ----------------------------------------------------------------------
-# create_fluid_mask tests (minimal Step‑1 schema)
+# create_fluid_mask tests (pure function)
 # ----------------------------------------------------------------------
 
 def test_create_fluid_mask_mixed():

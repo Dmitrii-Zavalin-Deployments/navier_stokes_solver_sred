@@ -1,78 +1,68 @@
 # src/step2/build_divergence_operator.py
-from __future__ import annotations
 
-from typing import Any, Callable
+from __future__ import annotations
+from typing import Any, Dict
 import numpy as np
 
 
-def build_divergence_operator(state: Any) -> Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray]:
+def _to_numpy(arr):
+    return np.array(arr, dtype=float)
+
+
+def _to_list(arr):
+    return arr.tolist()
+
+
+def build_divergence_operator(state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Construct the discrete divergence operator for staggered velocities.
-
-    Uses a standard MAC-grid finite difference:
-        div = dU/dx + dV/dy + dW/dz   at cell centers.
-
-    Mask-aware:
-    - Fluid cells (1) and boundary-fluid cells (-1) compute divergence normally.
-    - Solid cells (0) are forced to zero.
+    Build the discrete divergence field for staggered velocities.
+    Input: Step‑1 state (dict with lists)
+    Output: dict with divergence field (lists) and metadata.
     """
 
-    # ------------------------------------------------------------------
-    # Grid geometry
-    # ------------------------------------------------------------------
     grid = state["grid"]
     nx = int(grid["nx"])
     ny = int(grid["ny"])
     nz = int(grid["nz"])
 
-    # ------------------------------------------------------------------
-    # Physical spacing (Step‑1 schema: constants.*)
-    # ------------------------------------------------------------------
     const = state["constants"]
     dx = float(const["dx"])
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    # ------------------------------------------------------------------
-    # Mask: treat -1 (boundary-fluid) as fluid
-    # ------------------------------------------------------------------
-    mask = np.asarray(state["fields"]["Mask"])
+    # Use canonical mask from Step‑1
+    mask = _to_numpy(state["mask_3d"])
     is_fluid = (mask != 0)
 
-    # ------------------------------------------------------------------
-    # Divergence operator
-    # ------------------------------------------------------------------
-    def divergence(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
-        """
-        Compute ∇·u at cell centers.
+    # Convert staggered fields to numpy
+    U = _to_numpy(state["fields"]["U"])
+    V = _to_numpy(state["fields"]["V"])
+    W = _to_numpy(state["fields"]["W"])
 
-        U: (nx+1, ny,   nz)
-        V: (nx,   ny+1, nz)
-        W: (nx,   ny,   nz+1)
-        """
-        div = np.zeros((nx, ny, nz), dtype=float)
+    # Validate shapes
+    if U.shape != (nx + 1, ny, nz):
+        raise ValueError(f"U must have shape {(nx+1, ny, nz)}, got {U.shape}")
 
-        # dU/dx
-        if nx > 0:
-            div += (U[1:, :, :] - U[:-1, :, :]) / dx
+    if V.shape != (nx, ny + 1, nz):
+        raise ValueError(f"V must have shape {(nx, ny+1, nz)}, got {V.shape}")
 
-        # dV/dy
-        if ny > 0:
-            div += (V[:, 1:, :] - V[:, :-1, :]) / dy
+    if W.shape != (nx, ny, nz + 1):
+        raise ValueError(f"W must have shape {(nx, ny, nz+1)}, got {W.shape}")
 
-        # dW/dz
-        if nz > 0:
-            div += (W[:, :, 1:] - W[:, :, :-1]) / dz
+    # Compute divergence
+    div = np.zeros((nx, ny, nz), dtype=float)
 
-        # Zero out solid cells
-        div = np.where(is_fluid, div, 0.0)
-        return div
+    div += (U[1:, :, :] - U[:-1, :, :]) / dx
+    div += (V[:, 1:, :] - V[:, :-1, :]) / dy
+    div += (W[:, :, 1:] - W[:, :, :-1]) / dz
 
-    # ------------------------------------------------------------------
-    # Store operator in schema‑correct location
-    # ------------------------------------------------------------------
-    if "operators" not in state:
-        state["operators"] = {}
-    state["operators"]["divergence"] = divergence
+    # Zero out solid cells
+    div = np.where(is_fluid, div, 0.0)
 
-    return divergence
+    return {
+        "divergence": _to_list(div),
+        "divergence_meta": {
+            "stencil": "MAC",
+            "masking": "solid=0, fluid=1, boundary-fluid=-1",
+        },
+    }

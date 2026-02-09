@@ -9,19 +9,30 @@ from src.step2.enforce_mask_semantics import enforce_mask_semantics
 def make_minimal_state(mask: np.ndarray) -> dict:
     """
     Build a minimal Step‑1‑schema‑compliant state for mask semantics tests.
-    Only the 'fields' block is required by enforce_mask_semantics.
+    Must include:
+      - grid (for shape validation)
+      - mask_3d (canonical Step‑1 mask)
     """
+    nx, ny, nz = mask.shape
     return {
-        "fields": {
-            "Mask": np.asarray(mask)
-        }
+        "grid": {
+            "nx": nx,
+            "ny": ny,
+            "nz": nz,
+            "dx": 1.0,
+            "dy": 1.0,
+            "dz": 1.0,
+        },
+        "mask_3d": mask.tolist(),
     }
 
 
 def test_enforce_mask_semantics_valid_tristate():
     mask = np.array([[[1, 0, -1]]], dtype=int)
     state = make_minimal_state(mask)
-    enforce_mask_semantics(state)  # should not raise
+    result = enforce_mask_semantics(state)
+    assert "is_fluid" in result
+    assert "is_boundary_cell" in result
 
 
 def test_enforce_mask_semantics_invalid_positive():

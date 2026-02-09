@@ -3,14 +3,43 @@
 import numpy as np
 import pytest
 
-from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 from src.step2.build_advection_structure import build_advection_structure
 from src.step2.precompute_constants import precompute_constants
 
 
+def make_state(nx, ny, nz, scheme="central"):
+    return {
+        "grid": {
+            "nx": nx, "ny": ny, "nz": nz,
+            "dx": 1.0, "dy": 1.0, "dz": 1.0,
+        },
+        "config": {
+            "fluid": {"density": 1.0, "viscosity": 0.1},
+            "simulation": {"dt": 0.1, "advection_scheme": scheme},
+        },
+        "constants": precompute_constants({
+            "grid": {
+                "nx": nx, "ny": ny, "nz": nz,
+                "dx": 1.0, "dy": 1.0, "dz": 1.0,
+            },
+            "config": {
+                "fluid": {"density": 1.0, "viscosity": 0.1},
+                "simulation": {"dt": 0.1},
+            },
+        }),
+        "fields": {
+            "U": None,
+            "V": None,
+            "W": None,
+            "P": np.zeros((nx, ny, nz)).tolist(),
+        },
+        "mask_3d": np.ones((nx, ny, nz), dtype=int).tolist(),
+        "boundary_table_list": [],
+    }
+
+
 def test_central_advection_linear_field_u():
-    state = Step2SchemaDummyState(3, 3, 3, scheme="central")
-    precompute_constants(state)
+    state = make_state(3, 3, 3, scheme="central")
 
     U = np.zeros((4, 3, 3))
     for i in range(4):
@@ -19,10 +48,13 @@ def test_central_advection_linear_field_u():
     V = np.zeros((3, 4, 3))
     W = np.zeros((3, 3, 4))
 
-    ops = build_advection_structure(state)
-    adv_u = ops["advection_u"](U, V, W)
+    state["fields"]["U"] = U.tolist()
+    state["fields"]["V"] = V.tolist()
+    state["fields"]["W"] = W.tolist()
 
-    # Expected: adv_u[i] = i
+    result = build_advection_structure(state)
+    adv_u = np.array(result["advection"]["u"])
+
     expected = np.zeros_like(U)
     for i in range(4):
         expected[i] = i
@@ -31,8 +63,7 @@ def test_central_advection_linear_field_u():
 
 
 def test_central_advection_linear_field_v():
-    state = Step2SchemaDummyState(3, 3, 3, scheme="central")
-    precompute_constants(state)
+    state = make_state(3, 3, 3, scheme="central")
 
     V = np.zeros((3, 4, 3))
     for j in range(4):
@@ -41,8 +72,12 @@ def test_central_advection_linear_field_v():
     U = np.zeros((4, 3, 3))
     W = np.zeros((3, 3, 4))
 
-    ops = build_advection_structure(state)
-    adv_v = ops["advection_v"](U, V, W)
+    state["fields"]["U"] = U.tolist()
+    state["fields"]["V"] = V.tolist()
+    state["fields"]["W"] = W.tolist()
+
+    result = build_advection_structure(state)
+    adv_v = np.array(result["advection"]["v"])
 
     expected = np.zeros_like(V)
     for j in range(4):
@@ -52,8 +87,7 @@ def test_central_advection_linear_field_v():
 
 
 def test_central_advection_linear_field_w():
-    state = Step2SchemaDummyState(3, 3, 3, scheme="central")
-    precompute_constants(state)
+    state = make_state(3, 3, 3, scheme="central")
 
     W = np.zeros((3, 3, 4))
     for k in range(4):
@@ -62,8 +96,12 @@ def test_central_advection_linear_field_w():
     U = np.zeros((4, 3, 3))
     V = np.zeros((3, 4, 3))
 
-    ops = build_advection_structure(state)
-    adv_w = ops["advection_w"](U, V, W)
+    state["fields"]["U"] = U.tolist()
+    state["fields"]["V"] = V.tolist()
+    state["fields"]["W"] = W.tolist()
+
+    result = build_advection_structure(state)
+    adv_w = np.array(result["advection"]["w"])
 
     expected = np.zeros_like(W)
     for k in range(4):

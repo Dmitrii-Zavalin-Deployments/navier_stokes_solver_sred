@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-import numpy as np
+from typing import Any, Dict
 
 # Import all Step 2 functions
 from .enforce_mask_semantics import enforce_mask_semantics
@@ -21,135 +20,87 @@ try:  # pragma: no cover
     from ..step1.validate_json_schema import validate_json_schema
     from ..step1.schema_utils import load_schema
 except Exception:  # pragma: no cover
-    validate_json_schema = None  # type: ignore
-    load_schema = None  # type: ignore
+    validate_json_schema = None
+    load_schema = None
 
 
-def _convert_fields_to_numpy(state: Any) -> None:
-    """Convert Step‑1 Python lists into NumPy arrays for Step‑2 numerical code."""
-    fields = state.get("fields", {})
-    for key, value in fields.items():
-        if not isinstance(value, np.ndarray):
-            fields[key] = np.asarray(value)
-
-
-def _to_json_compatible(obj: Any) -> Any:
+def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Recursively convert NumPy arrays and Python functions into JSON‑compatible
-    structures so JSON Schema validation sees only standard JSON types.
-    """
-    # NumPy arrays → lists
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-
-    # Python functions → string placeholders
-    if callable(obj):
-        try:
-            name = obj.__name__
-        except Exception:
-            name = str(obj)
-        return f"<function {name}>"
-
-    # Dict → recurse
-    if isinstance(obj, dict):
-        return {k: _to_json_compatible(v) for k, v in obj.items()}
-
-    # List / tuple → recurse
-    if isinstance(obj, (list, tuple)):
-        return [_to_json_compatible(v) for v in obj]
-
-    # Everything else stays as-is
-    return obj
-
-
-def orchestrate_step2(state: Any) -> Any:
-    """
-    High-level orchestrator for Step 2.
-
-    Step 1 → lists (JSON)
-    Step 2 → arrays (numerical)
+    Pure Step‑2 orchestrator.
+    Input: Step‑1 output (dict with lists)
+    Output: Step‑2 output (dict with lists)
     """
 
     # ------------------------------------------------------------
-    # 0. Precompute constants BEFORE Step‑1 validation
-    #    (Step‑1 dummy state sets constants=None)
+    # 1. Validate Step‑1 output BEFORE doing any computation
     # ------------------------------------------------------------
-    precompute_constants(state)
-
-    # ------------------------------------------------------------
-    # 1. Validate Step‑1 output (using JSON‑compatible view)
-    # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
+    if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
         )
-        try:
-            schema = load_schema(str(schema_path))
-            json_view = _to_json_compatible(state)
-            validate_json_schema(json_view, schema)
-        except Exception as exc:
-            raise RuntimeError(
-                f"\n[Step 2] Input schema validation FAILED.\n"
-                f"Expected schema: {schema_path}\n"
-                f"Validation error: {exc}\n"
-                f"Aborting Step 2 — upstream Step 1 output is malformed.\n"
-            ) from exc
+        schema = load_schema(str(schema_path))
+        validate_json_schema(state, schema)
 
     # ------------------------------------------------------------
-    # 2. Convert lists → NumPy arrays (Step‑2 numerical world)
+    # 2. Precompute constants (pure)
     # ------------------------------------------------------------
-    _convert_fields_to_numpy(state)
+    constants = precompute_constants(state)
 
     # ------------------------------------------------------------
     # 3. Enforce CFD mask semantics
     # ------------------------------------------------------------
-    enforce_mask_semantics(state)
+    mask_semantics = enforce_mask_semantics(state)
 
     # ------------------------------------------------------------
     # 4. Create boolean fluid masks
     # ------------------------------------------------------------
-    create_fluid_mask(state)
+    fluid_mask = create_fluid_mask(state)
 
     # ------------------------------------------------------------
-    # 5. Provide top-level mask required by Step‑2 schema
+    # 5. Build discrete operators (pure)
     # ------------------------------------------------------------
-    state["mask"] = state["fields"]["Mask"]
+    divergence = build_divergence_operator(state)
+    gradients = build_gradient_operators(state)
+    laplacians = build_laplacian_operators(state)
+    advection = build_advection_structure(state)
 
     # ------------------------------------------------------------
-    # 6. Build discrete operators
+    # 6. Prepare PPE structure
     # ------------------------------------------------------------
-    build_divergence_operator(state)
-    build_gradient_operators(state)
-    build_laplacian_operators(state)
-    build_advection_structure(state)
+    ppe = prepare_ppe_structure(state)
 
     # ------------------------------------------------------------
-    # 7. Prepare PPE structure
+    # 7. Compute initial solver health diagnostics
     # ------------------------------------------------------------
-    prepare_ppe_structure(state)
+    health = compute_initial_health(state)
 
     # ------------------------------------------------------------
-    # 8. Compute initial solver health diagnostics
+    # 8. Assemble pure Step‑2 output
     # ------------------------------------------------------------
-    compute_initial_health(state)
+    output = {
+        "constants": constants,
+        "mask_semantics": mask_semantics,
+        "fluid_mask": fluid_mask,
+        "divergence": divergence,
+        "pressure_gradients": gradients["pressure_gradients"],
+        "laplacians": laplacians["laplacians"],
+        "advection": advection["advection"],
+        "ppe_structure": ppe,
+        "health": health,
+        "meta": {
+            "step": 2,
+            "description": "Step‑2 numerical preprocessing",
+        },
+    }
 
     # ------------------------------------------------------------
-    # 9. Validate Step‑2 output (using JSON‑compatible view)
+    # 9. Validate Step‑2 output (optional)
     # ------------------------------------------------------------
-    if isinstance(state, dict) and validate_json_schema is not None and load_schema is not None:
+    if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
         )
-        try:
-            schema = load_schema(str(schema_path))
-            json_view = _to_json_compatible(state)
-            validate_json_schema(json_view, schema)
-        except Exception as exc:
-            raise RuntimeError(
-                f"\n[Step 2] Output schema validation FAILED.\n"
-                f"Expected schema: {schema_path}\n"
-                f"Validation error: {exc}\n"
-                f"Aborting — Step 2 produced an invalid SimulationState.\n"
-            ) from exc
+        schema = load_schema(str(schema_path))
+        validate_json_schema(output, schema)
 
-    return state
+    return output

@@ -1,13 +1,23 @@
 # src/step2/build_advection_structure.py
-from __future__ import annotations
 
+from __future__ import annotations
 from typing import Any, Dict
 import numpy as np
 
 
-def build_advection_structure(state: Any) -> Dict[str, Any]:
+def _to_numpy(arr):
+    return np.array(arr, dtype=float)
+
+
+def _to_list(arr):
+    return arr.tolist()
+
+
+def build_advection_structure(state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Build advection operators for U, V, W using either central or upwind scheme.
+    Build advection contributions for U, V, W using either central or upwind scheme.
+    Input: Step‑1 state (dict with lists)
+    Output: dict with advection_u, advection_v, advection_w (lists)
     """
 
     const = state["constants"]
@@ -15,13 +25,17 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
     dy = float(const["dy"])
     dz = float(const["dz"])
 
-    # UPDATED: use Step‑1 schema: config.simulation.advection_scheme
-    scheme = state["config"]["simulation"].get("advection_scheme", "central")
+    scheme = state["config"].get("simulation", {}).get("advection_scheme", "central")
+
+    # Convert fields to numpy
+    U = _to_numpy(state["fields"]["U"])
+    V = _to_numpy(state["fields"]["V"])
+    W = _to_numpy(state["fields"]["W"])
 
     # ------------------------------------------------------------------
     # Central differences
     # ------------------------------------------------------------------
-    def _central_x(F: np.ndarray) -> np.ndarray:
+    def _central_x(F):
         d = np.zeros_like(F)
         if F.shape[0] > 1:
             d[1:-1] = (F[2:] - F[:-2]) / (2 * dx)
@@ -29,7 +43,7 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
             d[-1] = (F[-1] - F[-2]) / dx
         return d
 
-    def _central_y(F: np.ndarray) -> np.ndarray:
+    def _central_y(F):
         d = np.zeros_like(F)
         if F.shape[1] > 1:
             d[:, 1:-1] = (F[:, 2:] - F[:, :-2]) / (2 * dy)
@@ -37,7 +51,7 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
             d[:, -1] = (F[:, -1] - F[:, -2]) / dy
         return d
 
-    def _central_z(F: np.ndarray) -> np.ndarray:
+    def _central_z(F):
         d = np.zeros_like(F)
         if F.shape[2] > 1:
             d[:, :, 1:-1] = (F[:, :, 2:] - F[:, :, :-2]) / (2 * dz)
@@ -46,73 +60,64 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
         return d
 
     # ------------------------------------------------------------------
-    # Upwind advection in flux form (shape-safe, 1D loops)
+    # Upwind flux form
     # ------------------------------------------------------------------
-    def _upwind_flux_x(U: np.ndarray) -> np.ndarray:
-        """
-        Compute (u · ∂u/∂x) in a simple first-order upwind flux form:
-            a_u[i] ≈ (F_i - F_{i-1}) / dx,  F = u^2 / 2
-        using the sign of u to pick the upstream side.
-        """
-        nx = U.shape[0]
-        a = np.zeros_like(U)
+    def _upwind_flux_x(F):
+        nx = F.shape[0]
+        a = np.zeros_like(F)
         if nx <= 1:
             return a
 
-        F = 0.5 * U**2
-
+        flux = 0.5 * F**2
         for i in range(1, nx):
-            ui_mean = U[i].mean()
-            if ui_mean > 0:
-                a[i] = (F[i] - F[i - 1]) / dx
+            mean_u = F[i].mean()
+            if mean_u > 0:
+                a[i] = (flux[i] - flux[i - 1]) / dx
             else:
                 if i + 1 < nx:
-                    a[i] = (F[i + 1] - F[i]) / dx
+                    a[i] = (flux[i + 1] - flux[i]) / dx
                 else:
-                    a[i] = (F[i] - F[i - 1]) / dx
+                    a[i] = (flux[i] - flux[i - 1]) / dx
 
         a[0] = a[1]
         return a
 
-    # For now, keep y/z upwind contributions simple and symmetric with x
-    def _upwind_flux_y(V: np.ndarray) -> np.ndarray:
-        ny = V.shape[1]
-        a = np.zeros_like(V)
+    def _upwind_flux_y(F):
+        ny = F.shape[1]
+        a = np.zeros_like(F)
         if ny <= 1:
             return a
 
-        F = 0.5 * V**2
-
+        flux = 0.5 * F**2
         for j in range(1, ny):
-            vj_mean = V[:, j].mean()
-            if vj_mean > 0:
-                a[:, j] = (F[:, j] - F[:, j - 1]) / dy
+            mean_v = F[:, j].mean()
+            if mean_v > 0:
+                a[:, j] = (flux[:, j] - flux[:, j - 1]) / dy
             else:
                 if j + 1 < ny:
-                    a[:, j] = (F[:, j + 1] - F[:, j]) / dy
+                    a[:, j] = (flux[:, j + 1] - flux[:, j]) / dy
                 else:
-                    a[:, j] = (F[:, j] - F[:, j - 1]) / dy
+                    a[:, j] = (flux[:, j] - flux[:, j - 1]) / dy
 
         a[:, 0] = a[:, 1]
         return a
 
-    def _upwind_flux_z(W: np.ndarray) -> np.ndarray:
-        nz = W.shape[2]
-        a = np.zeros_like(W)
+    def _upwind_flux_z(F):
+        nz = F.shape[2]
+        a = np.zeros_like(F)
         if nz <= 1:
             return a
 
-        F = 0.5 * W**2
-
+        flux = 0.5 * F**2
         for k in range(1, nz):
-            wk_mean = W[:, :, k].mean()
-            if wk_mean > 0:
-                a[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+            mean_w = F[:, :, k].mean()
+            if mean_w > 0:
+                a[:, :, k] = (flux[:, :, k] - flux[:, :, k - 1]) / dz
             else:
                 if k + 1 < nz:
-                    a[:, :, k] = (F[:, :, k + 1] - F[:, :, k]) / dz
+                    a[:, :, k] = (flux[:, :, k + 1] - flux[:, :, k]) / dz
                 else:
-                    a[:, :, k] = (F[:, :, k] - F[:, :, k - 1]) / dz
+                    a[:, :, k] = (flux[:, :, k] - flux[:, :, k - 1]) / dz
 
         a[:, :, 0] = a[:, :, 1]
         return a
@@ -120,61 +125,31 @@ def build_advection_structure(state: Any) -> Dict[str, Any]:
     # ------------------------------------------------------------------
     # Advection operators
     # ------------------------------------------------------------------
-    def advection_u(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
+    def adv_u():
         if scheme == "upwind":
-            # Flux-form upwind in x, plus simple contributions in y/z
-            ax = _upwind_flux_x(U)
-            ay = _upwind_flux_y(U)
-            az = _upwind_flux_z(U)
-            return ax + 0.5 * (ay + az)
-        else:
-            du_dx = _central_x(U)
-            du_dy = _central_y(U)
-            du_dz = _central_z(U)
-            return U * du_dx + 0.5 * (du_dy + du_dz)
+            return _upwind_flux_x(U) + 0.5 * (_upwind_flux_y(U) + _upwind_flux_z(U))
+        return U * _central_x(U) + 0.5 * (_central_y(U) + _central_z(U))
 
-    def advection_v(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
+    def adv_v():
         if scheme == "upwind":
-            ax = _upwind_flux_x(V)
-            ay = _upwind_flux_y(V)
-            az = _upwind_flux_z(V)
-            return ax + 0.5 * (ay + az)
-        else:
-            dv_dx = _central_x(V)
-            dv_dy = _central_y(V)
-            dv_dz = _central_z(V)
-            return V * dv_dy + 0.5 * (dv_dx + dv_dz)
+            return _upwind_flux_x(V) + 0.5 * (_upwind_flux_y(V) + _upwind_flux_z(V))
+        return V * _central_y(V) + 0.5 * (_central_x(V) + _central_z(V))
 
-    def advection_w(U: np.ndarray, V: np.ndarray, W: np.ndarray) -> np.ndarray:
+    def adv_w():
         if scheme == "upwind":
-            ax = _upwind_flux_x(W)
-            ay = _upwind_flux_y(W)
-            az = _upwind_flux_z(W)
-            return ax + 0.5 * (ay + az)
-        else:
-            dw_dx = _central_x(W)
-            dw_dy = _central_y(W)
-            dw_dz = _central_z(W)
-            return W * dw_dz + 0.5 * (dw_dx + dw_dy)
+            return _upwind_flux_x(W) + 0.5 * (_upwind_flux_y(W) + _upwind_flux_z(W))
+        return W * _central_z(W) + 0.5 * (_central_x(W) + _central_y(W))
 
     # ------------------------------------------------------------------
-    # Package operators
+    # Return JSON‑serializable output
     # ------------------------------------------------------------------
-    ops: Dict[str, Any] = {
-        "advection_u": advection_u,
-        "advection_v": advection_v,
-        "advection_w": advection_w,
-        "interpolation_scheme": scheme,
-        "interpolation_stencils": None,
+    return {
+        "advection": {
+            "u": _to_list(adv_u()),
+            "v": _to_list(adv_v()),
+            "w": _to_list(adv_w()),
+        },
+        "advection_meta": {
+            "interpolation_scheme": scheme,
+        },
     }
-
-    if "operators" not in state:
-        state["operators"] = {}
-    state["operators"].update({k: v for k, v in ops.items() if k.startswith("advection_")})
-
-    state["advection_meta"] = {
-        "interpolation_scheme": scheme,
-        "interpolation_stencils": None,
-    }
-
-    return ops
