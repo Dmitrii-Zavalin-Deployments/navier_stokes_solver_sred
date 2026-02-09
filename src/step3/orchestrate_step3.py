@@ -40,7 +40,7 @@ def _to_json_compatible(obj):
 
 def orchestrate_step3(state, current_time, step_index):
     """
-    Full Step 3 projection time step.
+    Full Step‑3 projection time step.
 
     Inputs:
         state        – Step‑2 output dict (schema‑validated upstream)
@@ -67,7 +67,7 @@ def orchestrate_step3(state, current_time, step_index):
     base_state = dict(state)
 
     # ------------------------------------------------------------------
-    # 1 — Pre-BCs (on fields)
+    # 1 — Pre‑boundary conditions (on fields)
     # ------------------------------------------------------------------
     fields0 = base_state["fields"]
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
@@ -90,10 +90,12 @@ def orchestrate_step3(state, current_time, step_index):
     # ------------------------------------------------------------------
     # 5 — Correct velocity
     # ------------------------------------------------------------------
-    U_new, V_new, W_new = correct_velocity(base_state, U_star, V_star, W_star, P_new)
+    U_new, V_new, W_new = correct_velocity(
+        base_state, U_star, V_star, W_star, P_new
+    )
 
     # ------------------------------------------------------------------
-    # 6 — Post-BCs
+    # 6 — Post‑boundary conditions
     # ------------------------------------------------------------------
     fields_post = apply_boundary_conditions_post(
         base_state,
@@ -115,7 +117,9 @@ def orchestrate_step3(state, current_time, step_index):
     # ------------------------------------------------------------------
     # 8 — Log diagnostics (pure)
     # ------------------------------------------------------------------
-    diag_record = log_step_diagnostics(base_state, fields_out, current_time, step_index)
+    diag_record = log_step_diagnostics(
+        base_state, fields_out, current_time, step_index
+    )
 
     # ------------------------------------------------------------------
     # 9 — Assemble new Step‑3 state
@@ -142,3 +146,15 @@ def orchestrate_step3(state, current_time, step_index):
         )
 
     return new_state
+
+
+# ----------------------------------------------------------------------
+# Backwards‑compatible alias required by test suite
+# ----------------------------------------------------------------------
+def step3(state, current_time, step_index):
+    """
+    Alias for orchestrate_step3, matching the naming convention used
+    in Step‑1 and Step‑2 tests and ensuring compatibility with
+    test_step3_integration.py and contract tests.
+    """
+    return orchestrate_step3(state, current_time, step_index)
