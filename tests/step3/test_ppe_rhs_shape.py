@@ -6,60 +6,71 @@ from src.step3.predict_velocity import predict_velocity
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
-# ----------------------------------------------------------------------
-# Helper: convert Step‑2 dummy → Step‑3 input shape
-# ----------------------------------------------------------------------
-def adapt_step2_to_step3(state):
+def _wire_zero_ops(state):
+    """
+    Wire advection, diffusion, and divergence operators that return zero.
+    """
+    def adv_u(U, V, W):
+        return np.zeros_like(U)
+
+    def adv_v(U, V, W):
+        return np.zeros_like(V)
+
+    def adv_w(U, V, W):
+        return np.zeros_like(W)
+
+    def lap_u(U):
+        return np.zeros_like(U)
+
+    def lap_v(V):
+        return np.zeros_like(V)
+
+    def lap_w(W):
+        return np.zeros_like(W)
+
+    def div(U, V, W):
+        return np.zeros_like(state["fields"]["P"])
+
+    state["advection"] = {
+        "u": {"op": adv_u},
+        "v": {"op": adv_v},
+        "w": {"op": adv_w},
+    }
+
+    state["laplacians"] = {
+        "u": {"op": lap_u},
+        "v": {"op": lap_v},
+        "w": {"op": lap_w},
+    }
+
+    state["divergence"] = {"op": div}
+
+
+def _make_fields(s2):
     return {
-        "Config": state["config"],
-        "Mask": state["fields"]["Mask"],
-        "is_fluid": state["fields"]["Mask"] == 1,
-        "is_boundary_cell": np.zeros_like(state["fields"]["Mask"], bool),
-
-        "P": state["fields"]["P"],
-        "U": state["fields"]["U"],
-        "V": state["fields"]["V"],
-        "W": state["fields"]["W"],
-
-        "BCs": state["boundary_table_list"],
-
-        "Constants": {
-            "rho": state["config"]["fluid"]["density"],
-            "mu": state["config"]["fluid"]["viscosity"],
-            "dt": state["config"]["simulation"]["dt"],
-            "dx": state["grid"]["dx"],
-            "dy": state["grid"]["dy"],
-            "dz": state["grid"]["dz"],
-        },
-
-        "Operators": state["operators"],
-
-        "PPE": {
-            "solver": None,
-            "tolerance": 1e-6,
-            "max_iterations": 100,
-            "ppe_is_singular": False,
-        },
-
-        "Health": {},
-        "History": {},
+        "U": np.asarray(s2["fields"]["U"]),
+        "V": np.asarray(s2["fields"]["V"]),
+        "W": np.asarray(s2["fields"]["W"]),
+        "P": np.asarray(s2["fields"]["P"]),
     }
 
 
-# ----------------------------------------------------------------------
-# Test
-# ----------------------------------------------------------------------
-
 def test_ppe_rhs_shape():
-    # Step‑2‑schema‑valid dummy
+    """
+    RHS of PPE must have the same shape as the pressure field.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
+
+    # Wire zero operators so only shape matters
+    _wire_zero_ops(s2)
+
+    fields = _make_fields(s2)
 
     # Predict velocity
-    U_star, V_star, W_star = predict_velocity(state)
+    U_star, V_star, W_star = predict_velocity(s2, fields)
 
     # Build RHS
-    rhs = build_ppe_rhs(state, U_star, V_star, W_star)
+    rhs = build_ppe_rhs(s2, U_star, V_star, W_star)
 
     # Shape must match pressure field
-    assert rhs.shape == state["P"].shape
+    assert rhs.shape == fields["P"].shape

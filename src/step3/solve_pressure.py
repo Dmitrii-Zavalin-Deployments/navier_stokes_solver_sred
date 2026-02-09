@@ -2,27 +2,58 @@
 
 import numpy as np
 
+
 def solve_pressure(state, rhs_ppe):
     """
-    Solve ∇²p = rhs using PPE metadata.
-    Handles singularity by subtracting mean over fluid cells.
+    Pure Step‑3 pressure solve.
+
+    Solves:
+        ∇² p = rhs
+
+    Handles singularity by subtracting the mean over fluid cells.
+
+    Inputs:
+        state    – Step‑2 output dict
+        rhs_ppe  – ndarray, RHS of PPE
+
+    Returns:
+        P_new          – pressure field
+        ppe_metadata   – dict with solver diagnostics:
+                         {
+                             "converged": bool,
+                             "last_iterations": int
+                         }
     """
 
-    ppe = state["PPE"]
+    ppe = state["ppe_structure"]
     solver = ppe.get("solver", None)
     is_singular = ppe.get("ppe_is_singular", False)
 
+    # ------------------------------------------------------------
+    # 1. Solve PPE
+    # ------------------------------------------------------------
     if solver is None:
+        # No solver provided → zero pressure
         P_new = np.zeros_like(rhs_ppe)
-        ppe["ppe_converged"] = True
+        metadata = {
+            "converged": True,
+            "last_iterations": 0,
+        }
     else:
+        # Solver returns (pressure, info_dict)
         P_new, info = solver(rhs_ppe)
-        ppe["ppe_converged"] = info.get("converged", True)
-        ppe["last_iterations"] = info.get("iterations", -1)
+        metadata = {
+            "converged": info.get("converged", True),
+            "last_iterations": info.get("iterations", -1),
+        }
 
+    # ------------------------------------------------------------
+    # 2. Handle singularity (subtract mean over fluid cells)
+    # ------------------------------------------------------------
     if is_singular:
-        fluid = state["is_fluid"]
-        if np.any(fluid):
-            P_new[fluid] -= P_new[fluid].mean()
+        is_fluid = np.asarray(state["mask_semantics"]["is_fluid"], dtype=bool)
+        if np.any(is_fluid):
+            P_new = np.array(P_new, copy=True)
+            P_new[is_fluid] -= P_new[is_fluid].mean()
 
-    return P_new
+    return P_new, metadata

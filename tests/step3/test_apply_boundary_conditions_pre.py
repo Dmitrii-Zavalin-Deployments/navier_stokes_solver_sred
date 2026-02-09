@@ -5,110 +5,115 @@ from src.step3.apply_boundary_conditions_pre import apply_boundary_conditions_pr
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
-# ----------------------------------------------------------------------
-# Helper: convert Step‑2 dummy → Step‑3 input shape
-# ----------------------------------------------------------------------
-def adapt_step2_to_step3(state):
-    return {
-        "Config": state["config"],
-        "Mask": state["fields"]["Mask"],
-        "is_fluid": state["fields"]["Mask"] == 1,
-        "is_boundary_cell": np.zeros_like(state["fields"]["Mask"], bool),
-
-        "P": state["fields"]["P"],
-        "U": state["fields"]["U"],
-        "V": state["fields"]["V"],
-        "W": state["fields"]["W"],
-
-        "BCs": state["boundary_table_list"],
-
-        "Constants": {
-            "rho": state["config"]["fluid"]["density"],
-            "mu": state["config"]["fluid"]["viscosity"],
-            "dt": state["config"]["simulation"]["dt"],
-            "dx": state["grid"]["dx"],
-            "dy": state["grid"]["dy"],
-            "dz": state["grid"]["dz"],
-        },
-
-        "Operators": state["operators"],
-
-        "PPE": {
-            "solver": None,
-            "tolerance": 1e-6,
-            "max_iterations": 100,
-            "ppe_is_singular": False,
-        },
-
-        "Health": {},
-        "History": {},
-    }
-
-
-# ----------------------------------------------------------------------
-# Tests
-# ----------------------------------------------------------------------
-
 def test_solid_zeroing():
+    """
+    Faces adjacent to solids must be zeroed (OR logic),
+    but only based on the mask semantics.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
 
-    state["Mask"][1, 1, 1] = 0
-    state["U"].fill(1.0)
+    # Use the underlying mask from mask_semantics
+    mask = np.array(s2["mask_semantics"]["mask"], copy=True)
+    mask[1, 1, 1] = 0  # make a solid cell
+    s2["mask_semantics"]["mask"] = mask
 
-    apply_boundary_conditions_pre(state)
+    U = np.ones_like(s2["fields"]["U"])
+    V = np.ones_like(s2["fields"]["V"])
+    W = np.ones_like(s2["fields"]["W"])
+    P = np.array(s2["fields"]["P"], copy=True)
 
-    assert np.any(state["U"] == 0.0)
+    fields_in = {"U": U, "V": V, "W": W, "P": P}
+    fields_out = apply_boundary_conditions_pre(s2, fields_in)
+
+    assert np.any(fields_out["U"] == 0.0)
 
 
-def test_bc_handler_invocation():
+def test_bc_hook_invocation():
+    """
+    If state["boundary_conditions_pre"] is callable,
+    it must be invoked and its returned fields used.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
 
-    class Handler:
-        def __init__(self):
-            self.called = False
-        def apply_pre(self, state):
-            self.called = True
+    calls = {}
 
-    handler = Handler()
-    state["BC_handler"] = handler
+    def bc_pre(state, fields):
+        calls["called"] = True
+        out = dict(fields)
+        out["V"] = fields["V"] + 1.0
+        return out
 
-    apply_boundary_conditions_pre(state)
-    assert handler.called
+    s2["boundary_conditions_pre"] = bc_pre
+
+    U = np.zeros_like(s2["fields"]["U"])
+    V = np.zeros_like(s2["fields"]["V"])
+    W = np.zeros_like(s2["fields"]["W"])
+    P = np.array(s2["fields"]["P"], copy=True)
+
+    fields_in = {"U": U, "V": V, "W": W, "P": P}
+    fields_out = apply_boundary_conditions_pre(s2, fields_in)
+
+    assert calls.get("called", False)
+    assert np.allclose(fields_out["V"], V + 1.0)
 
 
 def test_pressure_shape_preserved():
-    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
-
-    P_before = state["P"].copy()
-    apply_boundary_conditions_pre(state)
-
-    assert state["P"].shape == P_before.shape
-
-
-def test_no_bc_handler():
-    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
-
-    apply_boundary_conditions_pre(state)  # should not crash
-
-
-def test_minimal_grid():
     """
-    This test intentionally bypasses Step‑2 schema validation.
-    It only checks that the function does not crash on a 1×1×1 grid.
+    Pressure must pass through unchanged in shape.
+    """
+    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
+
+    U = np.zeros_like(s2["fields"]["U"])
+    V = np.zeros_like(s2["fields"]["V"])
+    W = np.zeros_like(s2["fields"]["W"])
+    P = np.array(s2["fields"]["P"], copy=True)
+
+    fields_in = {"U": U, "V": V, "W": W, "P": P}
+    fields_out = apply_boundary_conditions_pre(s2, fields_in)
+
+    assert fields_out["P"].shape == P.shape
+
+
+def test_no_bc_hook():
+    """
+    Absence of boundary_conditions_pre must not crash.
+    """
+    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
+
+    U = np.zeros_like(s2["fields"]["U"])
+    V = np.zeros_like(s2["fields"]["V"])
+    W = np.zeros_like(s2["fields"]["W"])
+    P = np.array(s2["fields"]["P"], copy=True)
+
+    fields_in = {"U": U, "V": V, "W": W, "P": P}
+    fields_out = apply_boundary_conditions_pre(s2, fields_in)
+
+    assert fields_out["U"].shape == U.shape
+    assert fields_out["V"].shape == V.shape
+    assert fields_out["W"].shape == W.shape
+    assert fields_out["P"].shape == P.shape
+
+
+def test_minimal_grid_no_crash():
+    """
+    Minimal 1×1×1 grid: only checks that the function does not crash.
     """
     state = {
-        "Mask": np.ones((1,1,1), int),
-        "U": np.zeros((2,1,1)),
-        "V": np.zeros((1,2,1)),
-        "W": np.zeros((1,1,2)),
-        "P": np.zeros((1,1,1)),
-        "is_fluid": np.ones((1,1,1), bool),
-        "is_boundary_cell": np.zeros((1,1,1), bool),
-        "BCs": [],
+        "mask_semantics": {
+            "mask": np.ones((1, 1, 1), int),
+        },
+        "boundary_conditions_pre": None,
     }
 
-    apply_boundary_conditions_pre(state)
+    U = np.zeros((2, 1, 1))
+    V = np.zeros((1, 2, 1))
+    W = np.zeros((1, 1, 2))
+    P = np.zeros((1, 1, 1))
+
+    fields_in = {"U": U, "V": V, "W": W, "P": P}
+    fields_out = apply_boundary_conditions_pre(state, fields_in)
+
+    assert fields_out["U"].shape == U.shape
+    assert fields_out["V"].shape == V.shape
+    assert fields_out["W"].shape == W.shape
+    assert fields_out["P"].shape == P.shape

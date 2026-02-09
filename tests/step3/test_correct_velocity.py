@@ -5,114 +5,146 @@ from src.step3.correct_velocity import correct_velocity
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
-# ----------------------------------------------------------------------
-# Helper: convert Step‑2 dummy → Step‑3 input shape
-# ----------------------------------------------------------------------
-def adapt_step2_to_step3(state):
-    return {
-        "Config": state["config"],
-        "Mask": state["fields"]["Mask"],
-        "is_fluid": state["fields"]["Mask"] == 1,
-        "is_boundary_cell": np.zeros_like(state["fields"]["Mask"], bool),
+def _wire_zero_gradients(state):
+    """
+    Wire pressure gradient operators that return zero everywhere.
+    Shapes must match staggered U/V/W.
+    """
+    P = state["fields"]["P"]
 
-        "P": state["fields"]["P"],
-        "U": state["fields"]["U"],
-        "V": state["fields"]["V"],
-        "W": state["fields"]["W"],
+    def gx(P_in):
+        return np.zeros_like(state["fields"]["U"])
 
-        "BCs": state["boundary_table_list"],
+    def gy(P_in):
+        return np.zeros_like(state["fields"]["V"])
 
-        "Constants": {
-            "rho": state["config"]["fluid"]["density"],
-            "mu": state["config"]["fluid"]["viscosity"],
-            "dt": state["config"]["simulation"]["dt"],
-            "dx": state["grid"]["dx"],
-            "dy": state["grid"]["dy"],
-            "dz": state["grid"]["dz"],
-        },
+    def gz(P_in):
+        return np.zeros_like(state["fields"]["W"])
 
-        "Operators": state["operators"],
-
-        "PPE": {
-            "solver": None,
-            "tolerance": 1e-6,
-            "max_iterations": 100,
-            "ppe_is_singular": False,
-        },
-
-        "Health": {},
-        "History": {},
+    state["pressure_gradients"] = {
+        "x": {"op": gx},
+        "y": {"op": gy},
+        "z": {"op": gz},
     }
 
 
-# ----------------------------------------------------------------------
-# Tests
-# ----------------------------------------------------------------------
+def _wire_unit_gradients(state):
+    """
+    Wire pressure gradient operators that return ones everywhere.
+    """
+    def gx(P_in):
+        return np.ones_like(state["fields"]["U"])
+
+    def gy(P_in):
+        return np.ones_like(state["fields"]["V"])
+
+    def gz(P_in):
+        return np.ones_like(state["fields"]["W"])
+
+    state["pressure_gradients"] = {
+        "x": {"op": gx},
+        "y": {"op": gy},
+        "z": {"op": gz},
+    }
+
 
 def test_zero_gradient():
+    """
+    With zero pressure gradient, velocities must remain unchanged.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
+    _wire_zero_gradients(s2)
 
-    U_star = np.ones_like(state["U"])
-    V_star = np.ones_like(state["V"])
-    W_star = np.ones_like(state["W"])
-    P_new = np.zeros_like(state["P"])
+    U_star = np.ones_like(s2["fields"]["U"])
+    V_star = np.ones_like(s2["fields"]["V"])
+    W_star = np.ones_like(s2["fields"]["W"])
+    P_new = np.zeros_like(s2["fields"]["P"])
 
-    U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
+    U_new, V_new, W_new = correct_velocity(s2, U_star, V_star, W_star, P_new)
 
     assert np.allclose(U_new, U_star)
     assert np.allclose(V_new, V_star)
     assert np.allclose(W_new, W_star)
 
 
-def test_solid_mask():
+def test_solid_mask_zero_faces():
+    """
+    Faces adjacent to solid cells must be zeroed.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
+    _wire_zero_gradients(s2)
 
-    state["Mask"][1, 1, 1] = 0
+    # Mark a solid cell
+    mask = np.array(s2["mask_semantics"]["mask"], copy=True)
+    mask[1, 1, 1] = 0
+    s2["mask_semantics"]["mask"] = mask
+    s2["mask_semantics"]["is_solid"] = (mask == 0)
 
-    U_star = np.ones_like(state["U"])
-    V_star = np.ones_like(state["V"])
-    W_star = np.ones_like(state["W"])
-    P_new = np.zeros_like(state["P"])
+    U_star = np.ones_like(s2["fields"]["U"])
+    V_star = np.ones_like(s2["fields"]["V"])
+    W_star = np.ones_like(s2["fields"]["W"])
+    P_new = np.zeros_like(s2["fields"]["P"])
 
-    U_new, _, _ = correct_velocity(state, U_star, V_star, W_star, P_new)
+    U_new, _, _ = correct_velocity(s2, U_star, V_star, W_star, P_new)
 
     assert np.any(U_new == 0.0)
 
 
-def test_fluid_adjacent_faces():
+def test_fluid_adjacent_faces_zero_when_isolated():
+    """
+    Faces not adjacent to any fluid cell must be zeroed
+    when at least one non-fluid cell exists.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
+    _wire_zero_gradients(s2)
 
-    state["is_fluid"][1, 1, 1] = False
+    is_fluid = np.array(s2["mask_semantics"]["is_fluid"], copy=True)
+    is_fluid[1, 1, 1] = False
+    s2["mask_semantics"]["is_fluid"] = is_fluid
 
-    U_star = np.ones_like(state["U"])
-    P_new = np.zeros_like(state["P"])
+    U_star = np.ones_like(s2["fields"]["U"])
+    V_star = np.ones_like(s2["fields"]["V"])
+    W_star = np.ones_like(s2["fields"]["W"])
+    P_new = np.zeros_like(s2["fields"]["P"])
 
-    U_new, _, _ = correct_velocity(state, U_star, state["V"], state["W"], P_new)
+    U_new, _, _ = correct_velocity(s2, U_star, V_star, W_star, P_new)
 
     assert np.any(U_new == 0.0)
 
 
-def test_minimal_grid():
+def test_minimal_grid_no_crash():
     """
-    This test intentionally bypasses Step‑2 schema validation.
-    It only checks that the function does not crash on a 1×1×1 grid.
+    Minimal 1×1×1 grid: only checks that the function does not crash.
     """
+    def gx(P):
+        return np.zeros((2, 1, 1))
+
+    def gy(P):
+        return np.zeros((1, 2, 1))
+
+    def gz(P):
+        return np.zeros((1, 1, 2))
+
     state = {
-        "Mask": np.ones((1,1,1), int),
-        "is_fluid": np.ones((1,1,1), bool),
-        "U": np.zeros((2,1,1)),
-        "V": np.zeros((1,2,1)),
-        "W": np.zeros((1,1,2)),
-        "P": np.zeros((1,1,1)),
-        "Constants": {"rho": 1, "dt": 0.1},
-        "Operators": {
-            "gradient_p_x": lambda P, s: np.zeros((2,1,1)),
-            "gradient_p_y": lambda P, s: np.zeros((1,2,1)),
-            "gradient_p_z": lambda P, s: np.zeros((1,1,2)),
+        "constants": {"rho": 1.0, "dt": 0.1},
+        "pressure_gradients": {
+            "x": {"op": gx},
+            "y": {"op": gy},
+            "z": {"op": gz},
+        },
+        "mask_semantics": {
+            "is_solid": np.zeros((1, 1, 1), bool),
+            "is_fluid": np.ones((1, 1, 1), bool),
         },
     }
 
-    correct_velocity(state, state["U"], state["V"], state["W"], state["P"])
+    U_star = np.zeros((2, 1, 1))
+    V_star = np.zeros((1, 2, 1))
+    W_star = np.zeros((1, 1, 2))
+    P_new = np.zeros((1, 1, 1))
+
+    U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
+
+    assert U_new.shape == U_star.shape
+    assert V_new.shape == V_star.shape
+    assert W_new.shape == W_star.shape

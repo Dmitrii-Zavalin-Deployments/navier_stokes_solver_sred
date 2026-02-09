@@ -5,61 +5,63 @@ from src.step3.predict_velocity import predict_velocity
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
-# ----------------------------------------------------------------------
-# Helper: convert Step‑2 dummy → Step‑3 input shape
-# ----------------------------------------------------------------------
-def adapt_step2_to_step3(state):
-    return {
-        "Config": state["config"],
-        "Mask": state["fields"]["Mask"],
-        "is_fluid": state["fields"]["Mask"] == 1,
-        "is_boundary_cell": np.zeros_like(state["fields"]["Mask"], bool),
+def _wire_zero_ops(state):
+    """
+    Wire advection and diffusion operators that return zero everywhere.
+    """
+    def adv_u(U, V, W):
+        return np.zeros_like(U)
 
-        "P": state["fields"]["P"],
-        "U": state["fields"]["U"],
-        "V": state["fields"]["V"],
-        "W": state["fields"]["W"],
+    def adv_v(U, V, W):
+        return np.zeros_like(V)
 
-        "BCs": state["boundary_table_list"],
+    def adv_w(U, V, W):
+        return np.zeros_like(W)
 
-        "Constants": {
-            "rho": state["config"]["fluid"]["density"],
-            "mu": state["config"]["fluid"]["viscosity"],
-            "dt": state["config"]["simulation"]["dt"],
-            "dx": state["grid"]["dx"],
-            "dy": state["grid"]["dy"],
-            "dz": state["grid"]["dz"],
-        },
+    def lap_u(U):
+        return np.zeros_like(U)
 
-        "Operators": state["operators"],
+    def lap_v(V):
+        return np.zeros_like(V)
 
-        "PPE": {
-            "solver": None,
-            "tolerance": 1e-6,
-            "max_iterations": 100,
-            "ppe_is_singular": False,
-        },
+    def lap_w(W):
+        return np.zeros_like(W)
 
-        "Health": {},
-        "History": {},
+    state["advection"] = {
+        "u": {"op": adv_u},
+        "v": {"op": adv_v},
+        "w": {"op": adv_w},
+    }
+
+    state["laplacians"] = {
+        "u": {"op": lap_u},
+        "v": {"op": lap_v},
+        "w": {"op": lap_w},
     }
 
 
-# ----------------------------------------------------------------------
-# Test
-# ----------------------------------------------------------------------
-
 def test_external_forces_modify_velocity():
-    # Step‑2‑schema‑valid dummy
+    """
+    External forces must modify predicted velocity.
+    """
     s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
-    state = adapt_step2_to_step3(s2)
+
+    # Wire zero advection/diffusion so only forces act
+    _wire_zero_ops(s2)
 
     # Apply a simple force in x-direction
-    state["Config"]["external_forces"] = {"fx": 1.0, "fy": 0.0, "fz": 0.0}
+    s2["config"]["external_forces"] = {"fx": 1.0, "fy": 0.0, "fz": 0.0}
 
-    U0 = state["U"].copy()
+    fields = {
+        "U": np.asarray(s2["fields"]["U"]),
+        "V": np.asarray(s2["fields"]["V"]),
+        "W": np.asarray(s2["fields"]["W"]),
+        "P": np.asarray(s2["fields"]["P"]),
+    }
 
-    U_star, V_star, W_star = predict_velocity(state)
+    U0 = fields["U"].copy()
+
+    U_star, V_star, W_star = predict_velocity(s2, fields)
 
     # U* must increase due to fx
     assert np.any(U_star > U0)
