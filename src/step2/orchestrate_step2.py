@@ -100,9 +100,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
-        # Step‑2 schema expects ppe.rhs_builder : string
+        # Step‑2 schema: ppe.rhs_builder is a string
         "ppe": ppe,
-        # Step‑3 solve_pressure expects state["ppe_structure"]
+        # Step‑3: solve_pressure expects this key
         "ppe_structure": ppe,
         "health": health,
         "meta": {
