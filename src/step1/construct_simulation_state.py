@@ -121,7 +121,7 @@ def construct_simulation_state(
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
     # ---------------------------------------------------------
-    # 13. Create JSON‑safe copy for schema validation
+    # 13. Create JSON‑safe copy for serialization + schema validation
     # ---------------------------------------------------------
     json_safe_state = {
         **state_dict,
@@ -130,10 +130,9 @@ def construct_simulation_state(
     }
 
     # ---------------------------------------------------------
-    # 14. Validate output schema
+    # 14. Validate output schema using JSON‑safe version
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
-
     try:
         validate_with_schema(json_safe_state, output_schema)
     except Exception as exc:
@@ -143,7 +142,7 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Attach JSON‑safe mirror for serialization tests
+    # 15. Attach JSON‑safe mirror for tests expecting lists
     # ---------------------------------------------------------
     state_dict["state_as_dict"] = json_safe_state
 
