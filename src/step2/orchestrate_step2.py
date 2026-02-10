@@ -23,20 +23,20 @@ except Exception:
     load_schema = None
 
 
-def _extract_gradients(gradients: Any):
-    """
-    Normalize gradient operator container to a canonical (gx, gy, gz) tuple.
+REQUIRED_KEYS = [
+    "grid",
+    "fields",
+    "mask_3d",
+    "boundary_table",
+    "constants",
+    "config",
+]
 
-    Supports:
-    - New Step‑2 API: tuple of callables (gx, gy, gz)
-    - Legacy dict format with "pressure_gradients" and keys:
-      x/y/z, px/py/pz, dpdx/dpdy/dpdz, gx/gy/gz
-    """
-    # New API: tuple of callables
+
+def _extract_gradients(gradients: Any):
     if isinstance(gradients, tuple) and len(gradients) == 3:
         return gradients
 
-    # Legacy dict API
     pg = gradients["pressure_gradients"]
 
     if "x" in pg:
@@ -55,7 +55,14 @@ def _extract_gradients(gradients: Any):
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # ---------------------------------------------------------
-    # 1. Validate Step‑1 output
+    # 0. Explicit required-key check (tests expect KeyError)
+    # ---------------------------------------------------------
+    for key in REQUIRED_KEYS:
+        if key not in state:
+            raise KeyError(f"Missing required Step‑1 field: '{key}'")
+
+    # ---------------------------------------------------------
+    # 1. Validate Step‑1 output (production safety)
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -93,14 +100,13 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence only; schema stores names)
+    # 6. Build operators (existence only)
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
     _ = build_advection_structure(state)
 
-    # Normalize gradient operator container
     _ = _extract_gradients(gradients)
 
     # ---------------------------------------------------------
@@ -114,7 +120,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     health = compute_initial_health(state)
 
     # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output (schema‑aligned)
+    # 9. Assemble Step‑2 output
     # ---------------------------------------------------------
     output = {
         "grid": state["grid"],
@@ -138,7 +144,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_w": "advection_w",
         },
         "ppe": ppe,
-        "ppe_structure": ppe,  # Step‑3 expects this
+        "ppe_structure": ppe,
         "health": health,
         "meta": {
             "step": 2,
@@ -147,14 +153,14 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # ---------------------------------------------------------
-    # 10. JSON‑safe PPE: replace callable with string
+    # 10. JSON‑safe PPE
     # ---------------------------------------------------------
     ppe_out = output.get("ppe", {})
     if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
         ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
 
     # ---------------------------------------------------------
-    # 11. Validate Step‑2 output
+    # 11. Validate Step‑2 output (production safety)
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
