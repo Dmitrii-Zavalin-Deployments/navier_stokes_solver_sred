@@ -24,40 +24,23 @@ except Exception:
     load_schema = None
 
 
-REQUIRED_KEYS = ["grid", "fields", "mask_3d", "constants", "config"]
-
-
-def _extract_gradients(gradients: Dict[str, Any]):
-    """Normalize gradient operator keys to schema-required names."""
-    pg = gradients["pressure_gradients"]
-
-    if "x" in pg:
-        return pg["x"], pg["y"], pg["z"]
-    if "px" in pg:
-        return pg["px"], pg["py"], pg["pz"]
-    if "dpdx" in pg:
-        return pg["dpdx"], pg["dpdy"], pg["dpdz"]
-    if "gx" in pg:
-        return pg["gx"], pg["gy"], pg["gz"]
-
-    raise KeyError(
-        "pressure_gradients must contain x/y/z, px/py/pz, dpdx/dpdy/dpdz, or gx/gy/gz"
-    )
-
-
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
-    # Work on a defensive copy to avoid mutating caller state
+    # ---------------------------------------------------------
+    # Defensive copy — Step‑2 must not mutate caller state
+    # ---------------------------------------------------------
     state = deepcopy(state)
 
     # ---------------------------------------------------------
-    # 0. Explicit required-key check (tests expect KeyError)
+    # Ensure required Step‑1 fields exist (but DO NOT KeyError)
+    # Step‑2 must *repair* missing fields, not reject them.
     # ---------------------------------------------------------
-    for key in REQUIRED_KEYS:
-        if key not in state:
-            raise KeyError(f"Missing required Step‑1 field: '{key}'")
+    if "constants" not in state:
+        state["constants"] = precompute_constants(state)
+    if "boundary_table" not in state:
+        state["boundary_table"] = {}
 
     # ---------------------------------------------------------
-    # 1. Validate Step‑1 output
+    # 1. Validate Step‑1 output (production safety)
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -74,9 +57,10 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             ) from exc
 
     # ---------------------------------------------------------
-    # 2. Precompute constants
+    # 2. Precompute constants (overwrite repaired version)
     # ---------------------------------------------------------
     constants = precompute_constants(state)
+    state["constants"] = constants
 
     # ---------------------------------------------------------
     # 3. Mask semantics
@@ -92,21 +76,18 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # 5. Compute is_solid
     # ---------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
-    is_solid = mask_arr == 0
+    is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence + side‑effects only)
+    # 6. Build operators (existence only; schema stores names)
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
-    gradients = build_gradient_operators(state)
+    _ = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
     _ = build_advection_structure(state)
 
-    # Normalize gradient operator keys (for consistency / future use)
-    _ = _extract_gradients(gradients)
-
     # ---------------------------------------------------------
-    # 7. PPE structure (internal representation)
+    # 7. PPE structure
     # ---------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
@@ -139,7 +120,6 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
-        # Internal + schema-safe PPE structure
         "ppe": ppe,
         "ppe_structure": ppe,  # Step‑3 expects this
         "health": health,
@@ -157,7 +137,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
 
     # ---------------------------------------------------------
-    # 11. Validate Step‑2 output
+    # 11. Validate Step‑2 output (production safety)
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
