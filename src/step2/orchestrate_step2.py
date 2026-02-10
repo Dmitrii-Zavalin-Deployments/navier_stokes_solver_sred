@@ -24,8 +24,37 @@ except Exception:
     load_schema = None
 
 
-# Only the fields that MUST exist for Step‑2 to run
-REQUIRED_KEYS = ["grid", "fields", "mask_3d", "constants", "config"]
+# Only fields that tests expect to trigger KeyError when missing
+REQUIRED_KEYS = ["grid", "fields", "mask_3d", "config"]
+
+
+def _extract_gradients(gradients: Any) -> Any:
+    """
+    Normalize gradient operator keys to schema-required names when possible.
+
+    For older or alternate implementations that return a tuple or other
+    structure, this function is a no-op to remain backward compatible.
+    """
+    if not isinstance(gradients, dict):
+        return gradients
+
+    if "pressure_gradients" not in gradients:
+        return gradients
+
+    pg = gradients["pressure_gradients"]
+
+    if "x" in pg:
+        return pg["x"], pg["y"], pg["z"]
+    if "px" in pg:
+        return pg["px"], pg["py"], pg["pz"]
+    if "dpdx" in pg:
+        return pg["dpdx"], pg["dpdy"], pg["dpdz"]
+    if "gx" in pg:
+        return pg["gx"], pg["gy"], pg["gz"]
+
+    raise KeyError(
+        "pressure_gradients must contain x/y/z, px/py/pz, dpdx/dpdy/dpdz, or gx/gy/gz"
+    )
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -39,7 +68,12 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         if key not in state:
             raise KeyError(f"Missing required Step‑1 field: '{key}'")
 
-    # boundary_table is OPTIONAL — inject if missing
+    # ---------------------------------------------------------
+    # 0.5 Repair optional-but-schema-required fields
+    #     (do NOT KeyError on these)
+    # ---------------------------------------------------------
+    if "constants" not in state:
+        state["constants"] = precompute_constants(state)
     if "boundary_table" not in state:
         state["boundary_table"] = {}
 
@@ -61,10 +95,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             ) from exc
 
     # ---------------------------------------------------------
-    # 2. Precompute constants
+    # 2. Precompute constants (authoritative Step‑2 constants)
     # ---------------------------------------------------------
     constants = precompute_constants(state)
-    state["constants"] = constants
 
     # ---------------------------------------------------------
     # 3. Mask semantics
@@ -80,28 +113,36 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # 5. Compute is_solid
     # ---------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
-    is_solid = (mask_arr == 0)
+    is_solid = mask_arr == 0
 
     # ---------------------------------------------------------
-    # 6. Build operators
+    # 6. Build operators (existence + side‑effects only)
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
-    _ = build_gradient_operators(state)
+    gradients = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
     _ = build_advection_structure(state)
 
+    # Normalize gradient operator keys (for consistency / future use)
+    _ = _extract_gradients(gradients)
+
     # ---------------------------------------------------------
-    # 7. PPE structure
+    # 7. PPE structure (internal representation)
     # ---------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
     # ---------------------------------------------------------
     # 8. Health diagnostics
     # ---------------------------------------------------------
-    health = compute_initial_health(state)
+    health = compute_initial_health(
+        {
+            **state,
+            "constants": constants,
+        }
+    )
 
     # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output
+    # 9. Assemble Step‑2 output (schema‑aligned)
     # ---------------------------------------------------------
     output: Dict[str, Any] = {
         "grid": state["grid"],
@@ -124,8 +165,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
+        # Internal + schema-safe PPE structure
         "ppe": ppe,
-        "ppe_structure": ppe,
+        "ppe_structure": ppe,  # Step‑3 expects this
         "health": health,
         "meta": {
             "step": 2,
@@ -134,7 +176,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # ---------------------------------------------------------
-    # 10. JSON‑safe PPE
+    # 10. JSON‑safe PPE: replace callable with string
     # ---------------------------------------------------------
     ppe_out = output.get("ppe", {})
     if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
