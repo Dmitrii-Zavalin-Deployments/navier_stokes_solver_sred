@@ -72,7 +72,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # Normalize gradient operator keys (for consistency / future use)
     _ = _extract_gradients(gradients)
 
-    # 7. PPE structure (schema‑compatible descriptor)
+    # 7. PPE structure (internal representation)
     ppe = prepare_ppe_structure(state)
 
     # 8. Health diagnostics
@@ -100,10 +100,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
-        # Step‑2 schema: ppe.rhs_builder is a string
+        # Internal + schema-safe PPE structure
         "ppe": ppe,
-        # Step‑3: solve_pressure expects this key
-        "ppe_structure": ppe,
+        "ppe_structure": ppe,  # Step‑3 expects this
         "health": health,
         "meta": {
             "step": 2,
@@ -111,7 +110,14 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         },
     }
 
-    # 10. Validate Step‑2 output
+    # ---------------------------------------------------------
+    # 10. JSON‑safe PPE: replace callable with string
+    # ---------------------------------------------------------
+    ppe_out = output.get("ppe", {})
+    if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
+        ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
+
+    # 11. Validate Step‑2 output
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
