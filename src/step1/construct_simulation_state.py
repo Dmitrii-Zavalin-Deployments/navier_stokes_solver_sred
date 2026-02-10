@@ -31,9 +31,6 @@ def construct_simulation_state(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
-    """
-    Step 1 Orchestrator (schema‑aligned).
-    """
 
     # ---------------------------------------------------------
     # 1. Validate input JSON
@@ -116,12 +113,12 @@ def construct_simulation_state(
     verify_staggered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Insert Mask into fields (required by Step‑1 schema)
+    # 12. Insert Mask into fields
     # ---------------------------------------------------------
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
     # ---------------------------------------------------------
-    # 13. Create JSON‑safe copy for schema validation
+    # 13. Create JSON‑safe mirror
     # ---------------------------------------------------------
     json_safe_state = {
         **state_dict,
@@ -142,6 +139,11 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Return JSON‑safe state (arrays → lists)
+    # 15. Attach JSON‑safe mirror for serialization tests
     # ---------------------------------------------------------
-    return json_safe_state
+    state_dict["state_as_dict"] = json_safe_state
+
+    # ---------------------------------------------------------
+    # 16. Return REAL state (NumPy arrays)
+    # ---------------------------------------------------------
+    return state_dict
