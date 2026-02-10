@@ -6,114 +6,131 @@ import numpy as np
 
 
 def _to_numpy(arr):
-    return np.array(arr, dtype=float)
+    return np.asarray(arr, dtype=float)
 
 
-def _to_list(arr):
-    return arr.tolist()
-
-
-def _laplacian_scalar(F: np.ndarray, dx: float, dy: float, dz: float) -> np.ndarray:
+def build_laplacian_operators(state: Dict[str, Any]):
     """
-    Standard 3D 7‑point Laplacian stencil with edge padding.
+    Return (lap_u, lap_v, lap_w) callables.
+
+    Tests expect:
+        lap_u, lap_v, lap_w = build_laplacian_operators(state)
+        out = lap_u(U)
+
+    NOT a dict. NOT precomputed laplacians.
     """
-    out = np.zeros_like(F)
-    f = np.pad(F, ((1, 1), (1, 1), (1, 1)), mode="edge")
-
-    out[:] = (
-        (f[2:, 1:-1, 1:-1] - 2 * f[1:-1, 1:-1, 1:-1] + f[:-2, 1:-1, 1:-1]) / (dx * dx)
-        + (f[1:-1, 2:, 1:-1] - 2 * f[1:-1, 1:-1, 1:-1] + f[1:-1, :-2, 1:-1]) / (dy * dy)
-        + (f[1:-1, 1:-1, 2:] - 2 * f[1:-1, 1:-1, 1:-1] + f[1:-1, 1:-1, :-2]) / (dz * dz)
-    )
-    return out
-
-
-def build_laplacian_operators(state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Build Laplacian fields for U, V, W on a MAC grid.
-    Input: Step‑1 state (dict with lists)
-    Output: dict with laplacians (lists) and metadata.
-    """
-
-    const = state["constants"]
-    dx = float(const["dx"])
-    dy = float(const["dy"])
-    dz = float(const["dz"])
 
     grid = state["grid"]
-    nx = int(grid["nx"])
-    ny = int(grid["ny"])
-    nz = int(grid["nz"])
+    nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+
+    const = state["constants"]
+    dx, dy, dz = float(const["dx"]), float(const["dy"]), float(const["dz"])
+
+    inv_dx2 = 1.0 / (dx * dx)
+    inv_dy2 = 1.0 / (dy * dy)
+    inv_dz2 = 1.0 / (dz * dz)
 
     # Canonical mask from Step‑1
     mask = _to_numpy(state["mask_3d"])
     is_fluid = (mask != 0)
 
-    # Convert staggered fields to numpy
-    U = _to_numpy(state["fields"]["U"])
-    V = _to_numpy(state["fields"]["V"])
-    W = _to_numpy(state["fields"]["W"])
+    # ----------------------------------------------------------------------
+    # Laplacian for U (shape: nx+1, ny, nz)
+    # ----------------------------------------------------------------------
+    def lap_u(U):
+        U = _to_numpy(U)
 
-    # Validate shapes
-    if U.shape != (nx + 1, ny, nz):
-        raise ValueError(f"U must have shape {(nx+1, ny, nz)}, got {U.shape}")
+        if U.shape != (nx + 1, ny, nz):
+            raise ValueError(f"U must have shape {(nx+1, ny, nz)}, got {U.shape}")
 
-    if V.shape != (nx, ny + 1, nz):
-        raise ValueError(f"V must have shape {(nx, ny+1, nz)}, got {V.shape}")
+        out = np.zeros_like(U)
 
-    if W.shape != (nx, ny, nz + 1):
-        raise ValueError(f"W must have shape {(nx, ny, nz+1)}, got {W.shape}")
+        # x-direction
+        if nx > 0:
+            out[1:-1] += (U[2:] - 2 * U[1:-1] + U[:-2]) * inv_dx2
 
-    # -----------------------------
-    # Laplacian for U
-    # -----------------------------
-    lap_u = _laplacian_scalar(U, dx, dy, dz)
+        # y-direction
+        if ny > 0:
+            out[:, 1:-1] += (U[:, 2:] - 2 * U[:, 1:-1] + U[:, :-2]) * inv_dy2
 
-    fluid_u = np.zeros_like(U, bool)
-    if U.shape[0] > 2:
-        fluid_u[1:-1] = is_fluid[:-1] | is_fluid[1:]
-    fluid_u[0] = is_fluid[0]
-    fluid_u[-1] = is_fluid[-1]
+        # z-direction
+        if nz > 0:
+            out[:, :, 1:-1] += (U[:, :, 2:] - 2 * U[:, :, 1:-1] + U[:, :, :-2]) * inv_dz2
 
-    lap_u = np.where(fluid_u, lap_u, 0.0)
+        # Masking: U-face is fluid if either adjacent cell is fluid
+        fluid_u = np.zeros_like(U, bool)
+        if nx > 0:
+            fluid_u[1:-1] = is_fluid[:-1] | is_fluid[1:]
+        fluid_u[0] = is_fluid[0]
+        fluid_u[-1] = is_fluid[-1]
 
-    # -----------------------------
-    # Laplacian for V
-    # -----------------------------
-    lap_v = _laplacian_scalar(V, dx, dy, dz)
+        out[~fluid_u] = 0.0
+        return out
 
-    fluid_v = np.zeros_like(V, bool)
-    if V.shape[1] > 2:
-        fluid_v[:, 1:-1] = is_fluid[:, :-1] | is_fluid[:, 1:]
-    fluid_v[:, 0] = is_fluid[:, 0]
-    fluid_v[:, -1] = is_fluid[:, -1]
+    # ----------------------------------------------------------------------
+    # Laplacian for V (shape: nx, ny+1, nz)
+    # ----------------------------------------------------------------------
+    def lap_v(V):
+        V = _to_numpy(V)
 
-    lap_v = np.where(fluid_v, lap_v, 0.0)
+        if V.shape != (nx, ny + 1, nz):
+            raise ValueError(f"V must have shape {(nx, ny+1, nz)}, got {V.shape}")
 
-    # -----------------------------
-    # Laplacian for W
-    # -----------------------------
-    lap_w = _laplacian_scalar(W, dx, dy, dz)
+        out = np.zeros_like(V)
 
-    fluid_w = np.zeros_like(W, bool)
-    if W.shape[2] > 2:
-        fluid_w[:, :, 1:-1] = is_fluid[:, :, :-1] | is_fluid[:, :, 1:]
-    fluid_w[:, :, 0] = is_fluid[:, :, 0]
-    fluid_w[:, :, -1] = is_fluid[:, :, -1]
+        # x-direction
+        if nx > 0:
+            out[1:-1] += (V[2:] - 2 * V[1:-1] + V[:-2]) * inv_dx2
 
-    lap_w = np.where(fluid_w, lap_w, 0.0)
+        # y-direction
+        if ny > 0:
+            out[:, 1:-1] += (V[:, 2:] - 2 * V[:, 1:-1] + V[:, :-2]) * inv_dy2
 
-    # -----------------------------
-    # Return JSON‑serializable output
-    # -----------------------------
-    return {
-        "laplacians": {
-            "u": _to_list(lap_u),
-            "v": _to_list(lap_v),
-            "w": _to_list(lap_w),
-        },
-        "laplacian_meta": {
-            "stencil": "7‑point",
-            "masking": "solid=0, fluid=1, boundary-fluid=-1",
-        },
-    }
+        # z-direction
+        if nz > 0:
+            out[:, :, 1:-1] += (V[:, :, 2:] - 2 * V[:, :, 1:-1] + V[:, :, :-2]) * inv_dz2
+
+        # Masking: V-face is fluid if either adjacent cell is fluid
+        fluid_v = np.zeros_like(V, bool)
+        if ny > 0:
+            fluid_v[:, 1:-1] = is_fluid[:, :-1] | is_fluid[:, 1:]
+        fluid_v[:, 0] = is_fluid[:, 0]
+        fluid_v[:, -1] = is_fluid[:, -1]
+
+        out[~fluid_v] = 0.0
+        return out
+
+    # ----------------------------------------------------------------------
+    # Laplacian for W (shape: nx, ny, nz+1)
+    # ----------------------------------------------------------------------
+    def lap_w(W):
+        W = _to_numpy(W)
+
+        if W.shape != (nx, ny, nz + 1):
+            raise ValueError(f"W must have shape {(nx, ny, nz+1)}, got {W.shape}")
+
+        out = np.zeros_like(W)
+
+        # x-direction
+        if nx > 0:
+            out[1:-1] += (W[2:] - 2 * W[1:-1] + W[:-2]) * inv_dx2
+
+        # y-direction
+        if ny > 0:
+            out[:, 1:-1] += (W[:, 2:] - 2 * W[:, 1:-1] + W[:, :-2]) * inv_dy2
+
+        # z-direction
+        if nz > 0:
+            out[:, :, 1:-1] += (W[:, :, 2:] - 2 * W[:, :, 1:-1] + W[:, :, :-2]) * inv_dz2
+
+        # Masking: W-face is fluid if either adjacent cell is fluid
+        fluid_w = np.zeros_like(W, bool)
+        if nz > 0:
+            fluid_w[:, :, 1:-1] = is_fluid[:, :, :-1] | is_fluid[:, :, 1:]
+        fluid_w[:, :, 0] = is_fluid[:, :, 0]
+        fluid_w[:, :, -1] = is_fluid[:, :, -1]
+
+        out[~fluid_w] = 0.0
+        return out
+
+    return lap_u, lap_v, lap_w
