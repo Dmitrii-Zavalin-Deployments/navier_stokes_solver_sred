@@ -24,10 +24,6 @@ except Exception:
     load_schema = None
 
 
-# Only fields that tests expect to trigger KeyError when missing
-REQUIRED_KEYS = ["grid", "fields", "mask_3d", "config"]
-
-
 def _extract_gradients(gradients: Any) -> Any:
     """
     Normalize gradient operator keys to schema-required names when possible.
@@ -58,27 +54,23 @@ def _extract_gradients(gradients: Any) -> Any:
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
-    # Defensive copy
+    """
+    Step 2 — Numerical preprocessing.
+
+    Strict contract:
+      • Step 2 does NOT repair Step 1 output.
+      • Step 2 validates Step 1 output immediately.
+      • If Step 1 output violates its schema, Step 1 is broken.
+      • Step 2 must not mutate caller state.
+    """
+
+    # Defensive copy — Step 2 must not mutate caller state
     state = deepcopy(state)
 
     # ---------------------------------------------------------
-    # 0. Required‑key check (tests expect KeyError)
-    # ---------------------------------------------------------
-    for key in REQUIRED_KEYS:
-        if key not in state:
-            raise KeyError(f"Missing required Step‑1 field: '{key}'")
-
-    # ---------------------------------------------------------
-    # 0.5 Repair optional-but-schema-required fields
-    #     (do NOT KeyError on these)
-    # ---------------------------------------------------------
-    if "constants" not in state:
-        state["constants"] = precompute_constants(state)
-    if "boundary_table" not in state:
-        state["boundary_table"] = {}
-
-    # ---------------------------------------------------------
     # 1. Validate Step‑1 output (production safety)
+    #    Step 2 does NOT repair Step 1 output.
+    #    If the schema is violated, Step 1 is broken.
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -113,7 +105,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # 5. Compute is_solid
     # ---------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
-    is_solid = mask_arr == 0
+    is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
     # 6. Build operators (existence + side‑effects only)
@@ -165,9 +157,8 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
-        # Internal + schema-safe PPE structure
         "ppe": ppe,
-        "ppe_structure": ppe,  # Step‑3 expects this
+        "ppe_structure": ppe,
         "health": health,
         "meta": {
             "step": 2,
