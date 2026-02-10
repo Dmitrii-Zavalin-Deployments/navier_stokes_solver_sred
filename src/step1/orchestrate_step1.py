@@ -1,4 +1,4 @@
-# file: src/step1/construct_simulation_state.py
+# file: src/step1/orchestrate_step1.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -27,7 +27,7 @@ def _to_json_safe(obj):
     return obj
 
 
-def construct_simulation_state(
+def orchestrate_step1(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
 ) -> Dict[str, Any]:

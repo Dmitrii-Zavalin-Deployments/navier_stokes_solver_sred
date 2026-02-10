@@ -1,14 +1,14 @@
 # tests/step1/test_state_to_dict.py
 
 import numpy as np
-from src.step1.construct_simulation_state import construct_simulation_state
+from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step1.state_to_dict import state_to_dict
 from tests.helpers.minimal_step1_input import MINIMAL_VALID_INPUT
 
 
-def test_construct_simulation_state_output_serializable():
+def test_orchestrate_step1_output_serializable():
     # Step‑1 returns NumPy arrays (runtime state)
-    state = construct_simulation_state(MINIMAL_VALID_INPUT.copy())
+    state = orchestrate_step1(MINIMAL_VALID_INPUT.copy())
 
     # Convert to JSON‑safe lists for serialization tests
     state_dict = state_to_dict(state)

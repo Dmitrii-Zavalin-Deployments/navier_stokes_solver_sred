@@ -9,7 +9,7 @@ from tests.helpers.minimal_step1_input import minimal_step1_input
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 from tests.helpers.step3_schema_dummy_state import Step3SchemaDummyState
 
-from src.step1.construct_simulation_state import construct_simulation_state as orchestrate_step1
+from src.step1.orchestrate_step1 import orchestrate_step1 as orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import step3 as orchestrate_step3
 
