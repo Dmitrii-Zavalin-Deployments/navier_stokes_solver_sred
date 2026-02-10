@@ -15,6 +15,9 @@ validate_json_schema = None
 load_schema = None
 
 
+# ------------------------------------------------------------
+# Utility: JSON‑safe conversion (same as Step 2)
+# ------------------------------------------------------------
 def _to_json_compatible(obj):
     if isinstance(obj, np.ndarray):
         return obj.tolist()
@@ -28,6 +31,11 @@ def _to_json_compatible(obj):
     return obj
 
 
+# ------------------------------------------------------------
+# Utility: Step‑3 does NOT repair Step‑2 output.
+# But dummy test states may omit is_solid.
+# This helper adds it only when missing.
+# ------------------------------------------------------------
 def _ensure_is_solid(state):
     if "is_solid" in state:
         return state
@@ -47,8 +55,23 @@ def _ensure_is_solid(state):
     return new_state
 
 
+# ------------------------------------------------------------
+# Step 3 Orchestrator — Contract‑Driven Architecture
+# ------------------------------------------------------------
 def orchestrate_step3(state, current_time, step_index):
-    # 0 — Input schema validation
+    """
+    Step 3 — Pressure projection and velocity correction.
+
+    Strict contract:
+      • Step 3 does NOT repair Step 2 output.
+      • Step 3 validates Step 2 output immediately.
+      • If Step 2 output violates its schema, Step 2 is broken.
+      • Step 3 must not mutate caller state.
+    """
+
+    # ---------------------------------------------------------
+    # 0 — Validate Step‑2 output (production safety)
+    # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         step2_schema = load_schema("step2_output_schema.json")
         validate_json_schema(
@@ -57,54 +80,73 @@ def orchestrate_step3(state, current_time, step_index):
             context_label="[Step 3] Input schema validation",
         )
 
-    # Shallow copy
+    # Defensive shallow copy — Step 3 must not mutate caller state
     base_state = dict(state)
 
-    # Ensure is_solid exists (dummy states do not include it)
+    # Ensure is_solid exists (dummy states may omit it)
     base_state = _ensure_is_solid(base_state)
 
-    # 1 — Pre‑BC
+    # ---------------------------------------------------------
+    # 1 — Apply pre‑boundary conditions
+    # ---------------------------------------------------------
     fields0 = base_state["fields"]
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
 
-    # 2 — Predict velocity (now robust to missing laplacians)
+    # ---------------------------------------------------------
+    # 2 — Predict velocity (robust to missing laplacians)
+    # ---------------------------------------------------------
     U_star, V_star, W_star = predict_velocity(base_state, fields_pre)
 
-    # 3 — PPE RHS
+    # ---------------------------------------------------------
+    # 3 — Build PPE RHS
+    # ---------------------------------------------------------
     rhs = build_ppe_rhs(base_state, U_star, V_star, W_star)
 
-    # 4 — Solve pressure (unwrap array)
+    # ---------------------------------------------------------
+    # 4 — Solve pressure
+    # ---------------------------------------------------------
     P_arr, _ppe_meta = solve_pressure(base_state, rhs)
 
+    # ---------------------------------------------------------
     # 5 — Correct velocity
+    # ---------------------------------------------------------
     U_new, V_new, W_new = correct_velocity(
         base_state, U_star, V_star, W_star, P_arr
     )
 
-    # 6 — Post‑BC
+    # ---------------------------------------------------------
+    # 6 — Apply post‑boundary conditions
+    # ---------------------------------------------------------
     fields_post = apply_boundary_conditions_post(
         base_state, U_new, V_new, W_new, P_arr
     )
 
+    # Assemble final fields
     fields_out = dict(fields_post)
     fields_out["P"] = P_arr  # must be array only
 
-    # 7 — Health
+    # ---------------------------------------------------------
+    # 7 — Health diagnostics
+    # ---------------------------------------------------------
     health = update_health(base_state, fields_out, P_arr)
 
-    # 8 — Diagnostics
+    # ---------------------------------------------------------
+    # 8 — Step‑3 diagnostics record
+    # ---------------------------------------------------------
     diag_record = log_step_diagnostics(
         base_state, fields_out, current_time, step_index
     )
 
+    # ---------------------------------------------------------
     # 9 — Assemble Step‑3 output
+    # ---------------------------------------------------------
     new_state = dict(base_state)
     new_state["fields"] = fields_out
     new_state["health"] = health
 
-    # ------------------------------------------------------------
-    # FIX: Step‑3 history must be an OBJECT, not a list
-    # ------------------------------------------------------------
+    # ---------------------------------------------------------
+    # 10 — History (must be an OBJECT, not a list)
+    # ---------------------------------------------------------
     hist = dict(
         new_state.get(
             "history",
@@ -126,7 +168,9 @@ def orchestrate_step3(state, current_time, step_index):
 
     new_state["history"] = hist
 
-    # 10 — Output schema validation
+    # ---------------------------------------------------------
+    # 11 — Validate Step‑3 output (production safety)
+    # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         step3_schema = load_schema("step3_output_schema.json")
         validate_json_schema(
