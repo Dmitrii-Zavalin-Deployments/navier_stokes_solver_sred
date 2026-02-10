@@ -143,6 +143,6 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Return JSON‑safe state (arrays → lists)
+    # 15. Return REAL state (NumPy arrays, not lists)
     # ---------------------------------------------------------
-    return json_safe_state
+    return state_dict
