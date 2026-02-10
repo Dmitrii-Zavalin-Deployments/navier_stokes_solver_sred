@@ -29,6 +29,8 @@ def make_state(nx, ny, nz, dx=1.0, dy=1.0, dz=1.0, mask=None):
         "fields": {
             "Mask": mask,
         },
+        # Step‑2 operators expect the canonical 3D mask here
+        "mask_3d": mask,
     }
 
     state["constants"] = precompute_constants(state)
