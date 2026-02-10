@@ -143,6 +143,11 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Return REAL state (NumPy arrays, not lists)
+    # 15. Attach JSON‑safe mirror for serialization tests
+    # ---------------------------------------------------------
+    state_dict["state_as_dict"] = json_safe_state
+
+    # ---------------------------------------------------------
+    # 16. Return REAL state (NumPy arrays)
     # ---------------------------------------------------------
     return state_dict
