@@ -13,6 +13,12 @@ def make_state(nx, ny, nz, dx=1.0, dy=1.0, dz=1.0, mask=None):
     if mask is None:
         mask = np.ones((nx, ny, nz), int)
 
+    # Allocate staggered fields exactly like Step‑1
+    P = np.zeros((nx, ny, nz), float)
+    U = np.zeros((nx + 1, ny, nz), float)
+    V = np.zeros((nx, ny + 1, nz), float)
+    W = np.zeros((nx, ny, nz + 1), float)
+
     state = {
         "grid": {
             "nx": nx,
@@ -27,9 +33,13 @@ def make_state(nx, ny, nz, dx=1.0, dy=1.0, dz=1.0, mask=None):
             "simulation": {"dt": 0.1},
         },
         "fields": {
+            "P": P,
+            "U": U,
+            "V": V,
+            "W": W,
             "Mask": mask,
         },
-        # Step‑2 operators expect the canonical 3D mask here
+        # Step‑2 operators expect this canonical mask
         "mask_3d": mask,
     }
 
