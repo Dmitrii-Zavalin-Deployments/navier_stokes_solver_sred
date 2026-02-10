@@ -97,9 +97,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     mask_semantics = enforce_mask_semantics(state)
 
     # ---------------------------------------------------------
-    # 4. Fluid mask
+    # 4. Fluid mask (returns two arrays)
     # ---------------------------------------------------------
-    is_fluid = create_fluid_mask(state)
+    is_fluid, is_boundary_cell = create_fluid_mask(state)
 
     # ---------------------------------------------------------
     # 5. Compute is_solid
@@ -142,9 +142,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         "config": state["config"],
         "constants": constants,
         "mask": state["mask_3d"],
-        "is_fluid": is_fluid,
+        "is_fluid": is_fluid.tolist(),
         "is_solid": is_solid.tolist(),
-        "is_boundary_cell": mask_semantics["is_boundary_cell"],
+        "is_boundary_cell": is_boundary_cell.tolist(),
         "operators": {
             "divergence": "divergence",
             "gradient_p_x": "gradient_p_x",
