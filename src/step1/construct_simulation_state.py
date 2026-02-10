@@ -121,7 +121,7 @@ def construct_simulation_state(
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
     # ---------------------------------------------------------
-    # 13. Create JSON‑safe copy for serialization + schema validation
+    # 13. Create JSON‑safe copy for schema validation
     # ---------------------------------------------------------
     json_safe_state = {
         **state_dict,
@@ -142,11 +142,6 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Attach JSON‑safe mirror for tests expecting lists
+    # 15. Return JSON‑safe state (arrays → lists)
     # ---------------------------------------------------------
-    state_dict["state_as_dict"] = json_safe_state
-
-    # ---------------------------------------------------------
-    # 16. Return REAL state (NumPy arrays)
-    # ---------------------------------------------------------
-    return state_dict
+    return json_safe_state
