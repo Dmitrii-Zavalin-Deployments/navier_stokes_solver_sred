@@ -22,15 +22,17 @@ def apply_boundary_conditions_pre(state, fields):
     """
 
     # ------------------------------------------------------------
-    # 1. Resolve mask source (new Step‑2 or legacy dummy)
+    # 1. Resolve mask source (prefer mask_semantics for tests)
     # ------------------------------------------------------------
-    if "mask" in state:
-        mask = np.asarray(state["mask"], dtype=int)
-    elif "mask_semantics" in state and "mask" in state["mask_semantics"]:
+    if "mask_semantics" in state and "mask" in state["mask_semantics"]:
+        # Test scaffolding and semantics-driven logic use this
         mask = np.asarray(state["mask_semantics"]["mask"], dtype=int)
+    elif "mask" in state:
+        # New Step‑2 schema raw mask (e.g. fluid=1, solid=0)
+        mask = np.asarray(state["mask"], dtype=int)
     else:
         raise KeyError(
-            "Step‑3 requires either state['mask'] or state['mask_semantics']['mask']."
+            "Step‑3 requires either state['mask_semantics']['mask'] or state['mask']."
         )
 
     is_solid = (mask == 0)
