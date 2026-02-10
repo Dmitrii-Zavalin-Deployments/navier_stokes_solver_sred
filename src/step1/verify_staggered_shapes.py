@@ -16,7 +16,7 @@ def verify_staggered_shapes(state: Dict[str, Any]) -> None:
     """
 
     # ---------------------------------------------------------
-    # FIX: Skip verification if grid is missing
+    # Skip verification if grid is missing
     # (negative tests intentionally remove "grid")
     # ---------------------------------------------------------
     if "grid" not in state:
@@ -29,6 +29,16 @@ def verify_staggered_shapes(state: Dict[str, Any]) -> None:
     ny = int(grid["ny"])
     nz = int(grid["nz"])
 
+    # ---------------------------------------------------------
+    # Convert lists → numpy arrays (tests intentionally pass lists)
+    # ---------------------------------------------------------
+    for name in ["P", "U", "V", "W", "Mask"]:
+        arr = fields[name]
+        if isinstance(arr, list):
+            arr = np.asarray(arr)
+            fields[name] = arr  # update state in-place
+
+    # Rebind after conversion
     P = fields["P"]
     U = fields["U"]
     V = fields["V"]
