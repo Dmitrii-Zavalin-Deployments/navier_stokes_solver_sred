@@ -21,16 +21,22 @@ def precompute_constants(state: Dict[str, Any]) -> Dict[str, float]:
     rho = float(fluid["density"])
     mu = float(fluid["viscosity"])
 
-    # ---------------------------------------------------------
-    # FIX: dt must come from Step‑1 constants, not config
-    # ---------------------------------------------------------
-    dt = float(state["constants"]["dt"])
-    if dt <= 0:
-        raise ValueError("dt must be positive")
-
     dx = float(grid["dx"])
     dy = float(grid["dy"])
     dz = float(grid["dz"])
+
+    # ---------------------------------------------------------
+    # dt: prefer Step‑1 constants if present, otherwise fall back
+    # to config["simulation"]["dt"] for tests/minimal states.
+    # ---------------------------------------------------------
+    if "constants" in state and "dt" in state["constants"]:
+        dt = float(state["constants"]["dt"])
+    else:
+        sim = cfg.get("simulation", {})
+        dt = float(sim["dt"])
+
+    if dt <= 0:
+        raise ValueError("dt must be positive")
 
     inv_dx = 1.0 / dx
     inv_dy = 1.0 / dy
