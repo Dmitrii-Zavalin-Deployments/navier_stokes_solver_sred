@@ -8,7 +8,7 @@ def apply_boundary_conditions_pre(state, fields):
     Pure Step‑3 boundary‑condition application BEFORE prediction.
 
     Inputs:
-        state  – Step‑3 state dict (contains mask, is_fluid, is_solid)
+        state  – Step‑3 state dict (contains mask or mask_semantics)
         fields – dict with:
                  {
                      "U": ndarray,
@@ -22,11 +22,22 @@ def apply_boundary_conditions_pre(state, fields):
     """
 
     # ------------------------------------------------------------
-    # FIX: Step‑3 schema uses "mask", not "mask_semantics"
+    # 1. Resolve mask source (new Step‑2 or legacy dummy)
     # ------------------------------------------------------------
-    mask = np.asarray(state["mask"], dtype=int)
+    if "mask" in state:
+        mask = np.asarray(state["mask"], dtype=int)
+    elif "mask_semantics" in state and "mask" in state["mask_semantics"]:
+        mask = np.asarray(state["mask_semantics"]["mask"], dtype=int)
+    else:
+        raise KeyError(
+            "Step‑3 requires either state['mask'] or state['mask_semantics']['mask']."
+        )
+
     is_solid = (mask == 0)
 
+    # ------------------------------------------------------------
+    # 2. Copy fields (no mutation)
+    # ------------------------------------------------------------
     U = np.array(fields["U"], copy=True)
     V = np.array(fields["V"], copy=True)
     W = np.array(fields["W"], copy=True)
@@ -35,7 +46,7 @@ def apply_boundary_conditions_pre(state, fields):
     nx, ny, nz = mask.shape
 
     # ------------------------------------------------------------
-    # Zero-out velocity faces adjacent to solids (OR logic)
+    # 3. Zero-out velocity faces adjacent to solids (OR logic)
     # ------------------------------------------------------------
 
     # U faces: between i-1 and i
@@ -54,16 +65,16 @@ def apply_boundary_conditions_pre(state, fields):
     W[solid_w] = 0.0
 
     # ------------------------------------------------------------
-    # Optional pure-function BC hook
+    # 4. Optional pure-function BC hook
+    #    Signature: bc_fn(state, fields_dict) → new_fields_dict
     # ------------------------------------------------------------
     bc_fn = state.get("boundary_conditions_pre", None)
 
     if callable(bc_fn):
-        U, V, W, P = bc_fn(state, U, V, W, P)
+        out = bc_fn(state, {"U": U, "V": V, "W": W, "P": P})
+        U = out["U"]
+        V = out["V"]
+        W = out["W"]
+        P = out["P"]
 
-    return {
-        "U": U,
-        "V": V,
-        "W": W,
-        "P": P,
-    }
+    return {"U": U, "V": V, "W": W, "P": P}
