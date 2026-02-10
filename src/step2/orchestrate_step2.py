@@ -1,6 +1,7 @@
 # src/step2/orchestrate_step2.py
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict
 import numpy as np
@@ -23,20 +24,11 @@ except Exception:
     load_schema = None
 
 
-REQUIRED_KEYS = [
-    "grid",
-    "fields",
-    "mask_3d",
-    "boundary_table",
-    "constants",
-    "config",
-]
+REQUIRED_KEYS = ["grid", "fields", "mask_3d", "constants", "config"]
 
 
-def _extract_gradients(gradients: Any):
-    if isinstance(gradients, tuple) and len(gradients) == 3:
-        return gradients
-
+def _extract_gradients(gradients: Dict[str, Any]):
+    """Normalize gradient operator keys to schema-required names."""
     pg = gradients["pressure_gradients"]
 
     if "x" in pg:
@@ -54,6 +46,9 @@ def _extract_gradients(gradients: Any):
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
+    # Work on a defensive copy to avoid mutating caller state
+    state = deepcopy(state)
+
     # ---------------------------------------------------------
     # 0. Explicit required-key check (tests expect KeyError)
     # ---------------------------------------------------------
@@ -62,7 +57,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             raise KeyError(f"Missing required Step‑1 field: '{key}'")
 
     # ---------------------------------------------------------
-    # 1. Validate Step‑1 output (production safety)
+    # 1. Validate Step‑1 output
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -97,20 +92,21 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     # 5. Compute is_solid
     # ---------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
-    is_solid = (mask_arr == 0)
+    is_solid = mask_arr == 0
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence only)
+    # 6. Build operators (existence + side‑effects only)
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
     _ = build_advection_structure(state)
 
+    # Normalize gradient operator keys (for consistency / future use)
     _ = _extract_gradients(gradients)
 
     # ---------------------------------------------------------
-    # 7. PPE structure
+    # 7. PPE structure (internal representation)
     # ---------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
@@ -120,9 +116,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     health = compute_initial_health(state)
 
     # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output
+    # 9. Assemble Step‑2 output (schema‑aligned)
     # ---------------------------------------------------------
-    output = {
+    output: Dict[str, Any] = {
         "grid": state["grid"],
         "fields": state["fields"],
         "config": state["config"],
@@ -143,8 +139,9 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_v": "advection_v",
             "advection_w": "advection_w",
         },
+        # Internal + schema-safe PPE structure
         "ppe": ppe,
-        "ppe_structure": ppe,
+        "ppe_structure": ppe,  # Step‑3 expects this
         "health": health,
         "meta": {
             "step": 2,
@@ -153,14 +150,14 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # ---------------------------------------------------------
-    # 10. JSON‑safe PPE
+    # 10. JSON‑safe PPE: replace callable with string
     # ---------------------------------------------------------
     ppe_out = output.get("ppe", {})
     if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
         ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
 
     # ---------------------------------------------------------
-    # 11. Validate Step‑2 output (production safety)
+    # 11. Validate Step‑2 output
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -172,7 +169,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
         except Exception as exc:
             raise RuntimeError(
                 "\n[Step 2] Output schema validation FAILED.\n"
-                "The Step‑2 result does not match step2_output_schema.json.\n"
+                "The Step‑2 output does not match step2_output_schema.json.\n"
                 f"Validation error: {exc}\n"
             ) from exc
 
