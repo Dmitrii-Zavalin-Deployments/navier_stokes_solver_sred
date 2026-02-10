@@ -8,7 +8,7 @@ from .build_divergence_operator import build_divergence_operator
 
 
 def _to_numpy(arr):
-    return np.array(arr, dtype=float)
+    return np.asarray(arr, dtype=float)
 
 
 def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
@@ -21,7 +21,9 @@ def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
     - cfl_advection_estimate: dt * (|u|/dx + |v|/dy + |w|/dz) max over domain
     """
 
+    # ---------------------------------------------------------
     # Extract grid and constants
+    # ---------------------------------------------------------
     grid = state["grid"]
     nx = int(grid["nx"])
     ny = int(grid["ny"])
@@ -33,12 +35,16 @@ def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
     dy = float(const["dy"])
     dz = float(const["dz"])
 
+    # ---------------------------------------------------------
     # Convert staggered fields to numpy
+    # ---------------------------------------------------------
     U = _to_numpy(state["fields"]["U"])
     V = _to_numpy(state["fields"]["V"])
     W = _to_numpy(state["fields"]["W"])
 
+    # ---------------------------------------------------------
     # Validate shapes
+    # ---------------------------------------------------------
     if U.shape != (nx + 1, ny, nz):
         raise ValueError(f"U must have shape {(nx+1, ny, nz)}, got {U.shape}")
 
@@ -48,14 +54,18 @@ def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
     if W.shape != (nx, ny, nz + 1):
         raise ValueError(f"W must have shape {(nx, ny, nz+1)}, got {W.shape}")
 
-    # Compute divergence using the modern Step‑2 operator
-    div_result = build_divergence_operator(state)
-    div = _to_numpy(div_result["divergence"])
+    # ---------------------------------------------------------
+    # Compute divergence using the callable Step‑2 operator
+    # ---------------------------------------------------------
+    div_op = build_divergence_operator(state)
+    div = div_op(U, V, W)
 
     # L2 norm of divergence
-    initial_divergence_norm = float(np.linalg.norm(div.ravel(), ord=2))
+    initial_divergence_norm = float(np.linalg.norm(div))
 
+    # ---------------------------------------------------------
     # Velocity magnitude at cell centers
+    # ---------------------------------------------------------
     u_center = 0.5 * (U[0:nx, :, :] + U[1:nx + 1, :, :])
     v_center = 0.5 * (V[:, 0:ny, :] + V[:, 1:ny + 1, :])
     w_center = 0.5 * (W[:, :, 0:nz] + W[:, :, 1:nz + 1])
@@ -63,7 +73,9 @@ def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
     vel_mag = np.sqrt(u_center**2 + v_center**2 + w_center**2)
     max_velocity_magnitude = float(np.max(vel_mag))
 
-    # CFL estimate
+    # ---------------------------------------------------------
+    # CFL estimate (safe for tiny dx/dy/dz)
+    # ---------------------------------------------------------
     dx_safe = dx if dx > 0 else 1e-12
     dy_safe = dy if dy > 0 else 1e-12
     dz_safe = dz if dz > 0 else 1e-12
@@ -76,7 +88,9 @@ def compute_initial_health(state: Dict[str, Any]) -> Dict[str, float]:
 
     cfl_advection_estimate = float(np.max(cfl_field))
 
+    # ---------------------------------------------------------
     # Return pure JSON‑serializable health metrics
+    # ---------------------------------------------------------
     return {
         "initial_divergence_norm": initial_divergence_norm,
         "max_velocity_magnitude": max_velocity_magnitude,
