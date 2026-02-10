@@ -75,7 +75,7 @@ def parse_config(data: Dict[str, Any]) -> Config:
     forces_raw = data.get("external_forces", {})
     forces = _ensure_dict("external_forces", forces_raw)
 
-    # Accept either force_vector or gravity (test suite requires this)
+    # Accept either force_vector or gravity
     fv = forces.get("force_vector")
 
     if fv is None:
@@ -96,8 +96,11 @@ def parse_config(data: Dict[str, Any]) -> Config:
                 f"external_forces['force_vector'] entries must be finite numbers, got {fv}"
             )
 
-    # Normalize forces to canonical structure
-    forces_out = {"force_vector": list(fv)}
+    # ---------------------------------------------------------
+    # Preserve original keys (e.g., gravity) AND add force_vector
+    # ---------------------------------------------------------
+    forces_out = dict(forces)
+    forces_out["force_vector"] = list(fv)
 
     # ---------------------------------------------------------
     # Construct Config object
