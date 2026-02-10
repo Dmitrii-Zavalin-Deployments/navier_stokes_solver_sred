@@ -143,15 +143,6 @@ def construct_simulation_state(
         ) from exc
 
     # ---------------------------------------------------------
-    # 15. Return REAL state (fields MUST be NumPy arrays)
+    # 15. Return JSON‑safe state (arrays → lists)
     # ---------------------------------------------------------
-    f = state_dict["fields"]
-    state_dict["fields"] = {
-        "P": np.asarray(f["P"]),
-        "U": np.asarray(f["U"]),
-        "V": np.asarray(f["V"]),
-        "W": np.asarray(f["W"]),
-        "Mask": np.asarray(f["Mask"]),
-    }
-
-    return state_dict
+    return json_safe_state
