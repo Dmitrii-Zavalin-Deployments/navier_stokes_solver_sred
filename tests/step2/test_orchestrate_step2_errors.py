@@ -22,7 +22,7 @@ def test_orchestrate_step2_rejects_missing_grid():
     state = make_minimal_step1_state()
     state.pop("grid")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         orchestrate_step2(state)
 
 
@@ -30,7 +30,7 @@ def test_orchestrate_step2_rejects_missing_config():
     state = make_minimal_step1_state()
     state.pop("config")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         orchestrate_step2(state)
 
 
@@ -38,7 +38,7 @@ def test_orchestrate_step2_rejects_missing_fields():
     state = make_minimal_step1_state()
     state.pop("fields")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         orchestrate_step2(state)
 
 
@@ -46,7 +46,7 @@ def test_orchestrate_step2_rejects_missing_mask():
     state = make_minimal_step1_state()
     state.pop("mask_3d")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(RuntimeError):
         orchestrate_step2(state)
 
 
@@ -57,7 +57,6 @@ def test_orchestrate_step2_output_structure():
     state = make_minimal_step1_state()
     out = orchestrate_step2(state)
 
-    # Updated to match the actual Step‑2 output schema
     required_keys = {
         "grid",
         "fields",
