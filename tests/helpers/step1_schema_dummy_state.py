@@ -29,24 +29,39 @@ class Step1SchemaDummyState(dict):
         }
 
         # -----------------------------
-        # fields (required)
-        # JSON‑serializable lists
+        # helper constructors
         # -----------------------------
         def zeros(shape):
-            return [[[0.0 for _ in range(shape[2])]
-                     for _ in range(shape[1])]
-                     for _ in range(shape[0])]
+            return [
+                [
+                    [0.0 for _ in range(shape[2])]
+                    for _ in range(shape[1])
+                ]
+                for _ in range(shape[0])
+            ]
 
         def ones_int(shape):
-            return [[[1 for _ in range(shape[2])]
-                     for _ in range(shape[1])]
-                     for _ in range(shape[0])]
+            return [
+                [
+                    [1 for _ in range(shape[2])]
+                    for _ in range(shape[1])
+                ]
+                for _ in range(shape[0])
+            ]
 
+        # -----------------------------
+        # fields (required)
+        # Staggered MAC‑grid shapes:
+        #   U: (nx+1, ny,   nz)
+        #   V: (nx,   ny+1, nz)
+        #   W: (nx,   ny,   nz+1)
+        #   P: (nx,   ny,   nz)
+        # -----------------------------
         self["fields"] = {
             "P": zeros((nx, ny, nz)),
-            "U": zeros((nx, ny, nz)),
-            "V": zeros((nx, ny, nz)),
-            "W": zeros((nx, ny, nz)),
+            "U": zeros((nx + 1, ny, nz)),
+            "V": zeros((nx, ny + 1, nz)),
+            "W": zeros((nx, ny, nz + 1)),
             "Mask": ones_int((nx, ny, nz)),  # values ∈ {-1,0,1}
         }
 
@@ -69,6 +84,7 @@ class Step1SchemaDummyState(dict):
 
         # -----------------------------
         # constants (required)
+        # These are Step‑1 constants; Step‑2 may override dt.
         # -----------------------------
         self["constants"] = {
             "rho": 1.0,
