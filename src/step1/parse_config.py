@@ -75,11 +75,16 @@ def parse_config(data: Dict[str, Any]) -> Config:
     forces_raw = data.get("external_forces", {})
     forces = _ensure_dict("external_forces", forces_raw)
 
-    # Schema: force_vector is a length‑3 array of numbers; units/comment are strings.
-    fv = forces.get("force_vector", None)
-    if fv is None:
-        raise KeyError("external_forces must contain 'force_vector'")
+    # Accept either force_vector or gravity (test suite requires this)
+    fv = forces.get("force_vector")
 
+    if fv is None:
+        if "gravity" in forces:
+            fv = forces["gravity"]
+        else:
+            raise KeyError("external_forces must contain 'force_vector' or 'gravity'")
+
+    # Validate force vector
     if not isinstance(fv, (list, tuple)) or len(fv) != 3:
         raise ValueError(
             f"external_forces['force_vector'] must be a length‑3 vector, got {fv}"
@@ -91,7 +96,8 @@ def parse_config(data: Dict[str, Any]) -> Config:
                 f"external_forces['force_vector'] entries must be finite numbers, got {fv}"
             )
 
-    # Do NOT enforce numeric type on other keys (e.g. 'units', 'comment')
+    # Normalize forces to canonical structure
+    forces_out = {"force_vector": list(fv)}
 
     # ---------------------------------------------------------
     # Construct Config object
@@ -100,7 +106,7 @@ def parse_config(data: Dict[str, Any]) -> Config:
         domain=domain,
         fluid=fluid,
         simulation=simulation,
-        forces=forces,
+        forces=forces_out,
         boundary_conditions=bcs,
         geometry_definition=geometry,
     )
