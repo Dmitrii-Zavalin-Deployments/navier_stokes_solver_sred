@@ -24,15 +24,8 @@ except Exception:
     load_schema = None
 
 
-# EXACTLY the required Step‑1 fields
-REQUIRED_KEYS = [
-    "grid",
-    "fields",
-    "mask_3d",
-    "boundary_table",
-    "constants",
-    "config",
-]
+# Only the fields that MUST exist for Step‑2 to run
+REQUIRED_KEYS = ["grid", "fields", "mask_3d", "constants", "config"]
 
 
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,6 +38,10 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     for key in REQUIRED_KEYS:
         if key not in state:
             raise KeyError(f"Missing required Step‑1 field: '{key}'")
+
+    # boundary_table is OPTIONAL — inject if missing
+    if "boundary_table" not in state:
+        state["boundary_table"] = {}
 
     # ---------------------------------------------------------
     # 1. Validate Step‑1 output (production safety)
@@ -86,7 +83,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence only)
+    # 6. Build operators
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     _ = build_gradient_operators(state)
