@@ -24,20 +24,27 @@ except Exception:
     load_schema = None
 
 
+# EXACTLY the required Step‑1 fields
+REQUIRED_KEYS = [
+    "grid",
+    "fields",
+    "mask_3d",
+    "boundary_table",
+    "constants",
+    "config",
+]
+
+
 def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
-    # ---------------------------------------------------------
-    # Defensive copy — Step‑2 must not mutate caller state
-    # ---------------------------------------------------------
+    # Defensive copy
     state = deepcopy(state)
 
     # ---------------------------------------------------------
-    # Ensure required Step‑1 fields exist (but DO NOT KeyError)
-    # Step‑2 must *repair* missing fields, not reject them.
+    # 0. Required‑key check (tests expect KeyError)
     # ---------------------------------------------------------
-    if "constants" not in state:
-        state["constants"] = precompute_constants(state)
-    if "boundary_table" not in state:
-        state["boundary_table"] = {}
+    for key in REQUIRED_KEYS:
+        if key not in state:
+            raise KeyError(f"Missing required Step‑1 field: '{key}'")
 
     # ---------------------------------------------------------
     # 1. Validate Step‑1 output (production safety)
@@ -57,7 +64,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             ) from exc
 
     # ---------------------------------------------------------
-    # 2. Precompute constants (overwrite repaired version)
+    # 2. Precompute constants
     # ---------------------------------------------------------
     constants = precompute_constants(state)
     state["constants"] = constants
@@ -79,7 +86,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence only; schema stores names)
+    # 6. Build operators (existence only)
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     _ = build_gradient_operators(state)
@@ -97,7 +104,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     health = compute_initial_health(state)
 
     # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output (schema‑aligned)
+    # 9. Assemble Step‑2 output
     # ---------------------------------------------------------
     output: Dict[str, Any] = {
         "grid": state["grid"],
@@ -121,7 +128,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             "advection_w": "advection_w",
         },
         "ppe": ppe,
-        "ppe_structure": ppe,  # Step‑3 expects this
+        "ppe_structure": ppe,
         "health": health,
         "meta": {
             "step": 2,
@@ -130,14 +137,14 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # ---------------------------------------------------------
-    # 10. JSON‑safe PPE: replace callable with string
+    # 10. JSON‑safe PPE
     # ---------------------------------------------------------
     ppe_out = output.get("ppe", {})
     if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
         ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
 
     # ---------------------------------------------------------
-    # 11. Validate Step‑2 output (production safety)
+    # 11. Validate Step‑2 output
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
