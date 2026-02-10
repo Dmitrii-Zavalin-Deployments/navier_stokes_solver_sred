@@ -9,25 +9,18 @@ def _to_numpy(arr):
     return np.array(arr)
 
 
-def _to_list(arr):
-    return arr.tolist()
-
-
-def create_fluid_mask(state: Dict[str, Any]) -> Dict[str, Any]:
+def create_fluid_mask(state: Dict[str, Any]):
     """
     Convert the integer mask into boolean masks for operator use.
 
     Semantics:
-    - mask ==  1 : fluid
-    - mask == -1 : boundary-fluid (still fluid)
-    - mask ==  0 : solid
+      - mask ==  1 : fluid
+      - mask == -1 : boundary-fluid (still fluid)
+      - mask ==  0 : solid
 
     Returns:
-        {
-            "is_fluid": [...],
-            "is_boundary_cell": [...],
-            "mask_meta": {...}
-        }
+        is_fluid, is_boundary_cell
+        (both NumPy boolean arrays with shape (nx, ny, nz))
     """
 
     grid = state["grid"]
@@ -48,7 +41,7 @@ def create_fluid_mask(state: Dict[str, Any]) -> Dict[str, Any]:
     if not np.issubdtype(mask.dtype, np.integer):
         raise ValueError("Mask must be an integer array")
 
-    # Validate values
+    # Validate allowed values
     if not np.isin(mask, [-1, 0, 1]).all():
         raise ValueError("Mask values must be in {-1, 0, 1}")
 
@@ -58,11 +51,5 @@ def create_fluid_mask(state: Dict[str, Any]) -> Dict[str, Any]:
     # Boundary-fluid = -1
     is_boundary_cell = (mask == -1)
 
-    return {
-        "is_fluid": _to_list(is_fluid),
-        "is_boundary_cell": _to_list(is_boundary_cell),
-        "mask_meta": {
-            "encoding": {"fluid": 1, "solid": 0, "boundary-fluid": -1},
-            "source": "mask_3d",
-        },
-    }
+    # Return exactly two arrays (tests expect this)
+    return is_fluid, is_boundary_cell

@@ -7,17 +7,30 @@ def precompute_constants(state: Dict[str, Any]) -> Dict[str, float]:
     """
     Compute physical and geometric constants for Step‑2 numerical operators.
 
-    Pure function:
-    - Does NOT mutate the input state.
-    - Always recomputes constants from Step‑1 schema.
+    Contract:
+      • Step 2 does NOT override or recompute constants if Step 1 already
+        provided a non‑empty constants dictionary.
+      • Otherwise, compute constants from Step‑1 schema fields.
+      • Pure function: does NOT mutate the input state.
     """
 
+    # ---------------------------------------------------------
+    # 0. Passthrough: Step‑1 constants are authoritative
+    # ---------------------------------------------------------
+    if (
+        "constants" in state
+        and isinstance(state["constants"], dict)
+        and state["constants"]  # non‑empty
+    ):
+        return state["constants"]
+
+    # ---------------------------------------------------------
+    # 1. Compute constants from Step‑1 schema
+    # ---------------------------------------------------------
     cfg = state["config"]
     grid = state["grid"]
 
-    # Step‑1 schema fields
     fluid = cfg["fluid"]
-
     rho = float(fluid["density"])
     mu = float(fluid["viscosity"])
 
