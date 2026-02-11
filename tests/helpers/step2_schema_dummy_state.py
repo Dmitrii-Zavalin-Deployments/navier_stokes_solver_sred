@@ -134,6 +134,15 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
+        # divergence (TEST‑ONLY EXTENSION)
+        # Step‑3 tests expect:
+        #     state["divergence"]["op"] = callable
+        # ------------------------------------------------------------
+        self["divergence"] = {
+            "op": None,   # tests will overwrite this
+        }
+
+        # ------------------------------------------------------------
         # ppe (required)
         # ------------------------------------------------------------
         self["ppe"] = {
