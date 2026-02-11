@@ -14,6 +14,10 @@ def test_gradient_of_constant_pressure_is_zero():
     ∇P = 0 for constant pressure field.
     """
     s2 = Step2SchemaDummyState(nx=4, ny=4, nz=4)
+
+    # Step‑2 operators expect mask_3d
+    s2["mask_3d"] = np.asarray(s2["mask"])
+
     s2["fields"]["P"].fill(5.0)
 
     grads = build_gradient_operators(s2)
@@ -32,6 +36,8 @@ def test_laplacian_of_linear_field_is_zero():
     """
     nx, ny, nz = 4, 4, 4
     s2 = Step2SchemaDummyState(nx=nx, ny=ny, nz=nz)
+
+    s2["mask_3d"] = np.asarray(s2["mask"])
 
     X = np.linspace(0, 1, nx)
     Y = np.linspace(0, 1, ny)
@@ -53,11 +59,16 @@ def test_ppe_rhs_integrates_to_zero_for_singular_case():
     s2 = Step2SchemaDummyState(nx=4, ny=4, nz=4)
     s2["ppe"]["ppe_is_singular"] = True
 
+    s2["mask_3d"] = np.asarray(s2["mask"])
+
     U = s2["fields"]["U"]
     V = s2["fields"]["V"]
     W = s2["fields"]["W"]
 
-    rhs = build_ppe_rhs(s2, U, V, W)
+    dx = s2["constants"]["dx"]
+    dy = s2["constants"]["dy"]
+    dz = s2["constants"]["dz"]
 
-    total = float(np.sum(rhs))
-    assert abs(total) < 1e-6
+    rhs = build_ppe_rhs(s2, U, V, W, dx, dy, dz)
+
+    assert abs(float(np.sum(rhs))) < 1e-6
