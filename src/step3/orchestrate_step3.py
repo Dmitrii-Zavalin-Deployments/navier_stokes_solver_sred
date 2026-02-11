@@ -79,8 +79,15 @@ def orchestrate_step3(state, current_time, step_index):
     # Defensive shallow copy
     base_state = dict(state)
 
-    # Ensure is_solid exists
-    base_state = _ensure_is_solid(base_state)
+    # ------------------------------------------------------------
+    # Ensure is_solid exists (wrap errors in RuntimeError)
+    # ------------------------------------------------------------
+    try:
+        base_state = _ensure_is_solid(base_state)
+    except Exception as exc:
+        raise RuntimeError(
+            "[Step 3] Cannot infer is_solid: missing mask or fields"
+        ) from exc
 
     # ------------------------------------------------------------
     # 1 — Pre‑BC (must fail cleanly if fields missing)
