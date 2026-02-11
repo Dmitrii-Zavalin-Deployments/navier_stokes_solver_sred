@@ -40,15 +40,12 @@ def predict_velocity(state, fields):
             return op
         if isinstance(op, dict) and callable(op.get("op")):
             return op["op"]
-
-        # Fallback: zero diffusion
         return lambda arr: np.zeros_like(arr)
 
     lap_u = get_lap_op("laplacian_u")
     lap_v = get_lap_op("laplacian_v")
     lap_w = get_lap_op("laplacian_w")
 
-    # Diffusion terms
     Du = lap_u(U)
     Dv = lap_v(V)
     Dw = lap_w(W)
@@ -69,24 +66,33 @@ def predict_velocity(state, fields):
     W_star = W + dt * ((mu / rho) * Dw + fz)
 
     # ------------------------------------------------------------------
+    # Solid mask resolution (Step‑2 or legacy)
+    # ------------------------------------------------------------------
+    if "is_solid" in state:
+        is_solid = np.asarray(state["is_solid"], dtype=bool)
+    elif "mask_semantics" in state and "is_solid" in state["mask_semantics"]:
+        is_solid = np.asarray(state["mask_semantics"]["is_solid"], dtype=bool)
+    else:
+        raise KeyError("Step‑3 requires is_solid or mask_semantics.is_solid")
+
+    # ------------------------------------------------------------------
     # Zero faces adjacent to solids (OR logic)
     # ------------------------------------------------------------------
-    is_solid = np.asarray(state["is_solid"], dtype=bool)
-
     if np.any(is_solid):
-        # U faces
+
+        # U faces: shape (nx+1, ny, nz)
         solid_u = np.zeros_like(U_star, dtype=bool)
         solid_u[1:-1, :, :] = is_solid[:-1, :, :] | is_solid[1:, :, :]
         U_star = np.array(U_star, copy=True)
         U_star[solid_u] = 0.0
 
-        # V faces
+        # V faces: shape (nx, ny+1, nz)
         solid_v = np.zeros_like(V_star, dtype=bool)
         solid_v[:, 1:-1, :] = is_solid[:, :-1, :] | is_solid[:, 1:, :]
         V_star = np.array(V_star, copy=True)
         V_star[solid_v] = 0.0
 
-        # W faces
+        # W faces: shape (nx, ny, nz+1)
         solid_w = np.zeros_like(W_star, dtype=bool)
         solid_w[:, :, 1:-1] = is_solid[:, :, :-1] | is_solid[:, :, 1:]
         W_star = np.array(W_star, copy=True)
