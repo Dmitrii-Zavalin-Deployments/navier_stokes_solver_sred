@@ -104,10 +104,16 @@ def test_time_step_must_be_finite_and_positive():
 
 
 def test_grid_spacing_must_be_finite_and_positive():
+    """
+    GridConfig enforces dx>0 at construction time, so to test
+    compute_derived_constants we must override dx AFTER creation.
+    """
     bad_values = [0.0, -1.0, float("inf"), float("nan")]
 
-    for dx in bad_values:
-        grid = make_grid(dx=dx)
+    for bad_dx in bad_values:
+        grid = make_grid()  # valid grid
+        object.__setattr__(grid, "dx", bad_dx)  # override validation
+
         with pytest.raises(ValueError):
             compute_derived_constants(
                 grid,
