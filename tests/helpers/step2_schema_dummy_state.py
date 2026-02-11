@@ -6,7 +6,8 @@ import numpy as np
 class Step2SchemaDummyState(dict):
     """
     Fully schema‑compliant Step‑2 output dummy.
-    Matches the Step‑2 Output Schema exactly.
+    Matches the Step‑2 Output Schema exactly, with test‑only extensions
+    used by Step‑3 unit tests.
     """
 
     def __init__(
@@ -44,12 +45,13 @@ class Step2SchemaDummyState(dict):
 
         # ------------------------------------------------------------
         # fields (required)
+        # NOTE: stored as ndarrays; schema tests convert to lists.
         # ------------------------------------------------------------
         self["fields"] = {
-            "P": np.zeros((nx, ny, nz)).tolist(),
-            "U": np.zeros((nx + 1, ny, nz)).tolist(),
-            "V": np.zeros((nx, ny + 1, nz)).tolist(),
-            "W": np.zeros((nx, ny, nz + 1)).tolist(),
+            "P": np.zeros((nx, ny, nz)),
+            "U": np.zeros((nx + 1, ny, nz)),
+            "V": np.zeros((nx, ny + 1, nz)),
+            "W": np.zeros((nx, ny, nz + 1)),
         }
 
         # ------------------------------------------------------------
@@ -134,12 +136,10 @@ class Step2SchemaDummyState(dict):
         }
 
         # ------------------------------------------------------------
-        # divergence (TEST‑ONLY EXTENSION)
-        # Step‑3 tests expect:
-        #     state["divergence"]["op"] = callable
+        # divergence (TEST‑ONLY EXTENSION for Step‑3 build_ppe_rhs tests)
         # ------------------------------------------------------------
         self["divergence"] = {
-            "op": None,   # tests will overwrite this
+            "op": None,   # tests overwrite this with a callable
         }
 
         # ------------------------------------------------------------
@@ -151,6 +151,14 @@ class Step2SchemaDummyState(dict):
             "tolerance": 1e-6,
             "max_iterations": 1000,
             "ppe_is_singular": False,
+        }
+
+        # ------------------------------------------------------------
+        # ppe_structure (TEST‑ONLY EXTENSION for Step‑3 solve_pressure tests)
+        # ------------------------------------------------------------
+        self["ppe_structure"] = {
+            "ppe_is_singular": self["ppe"]["ppe_is_singular"],
+            "solver": None,  # tests overwrite this with a callable
         }
 
         # ------------------------------------------------------------
