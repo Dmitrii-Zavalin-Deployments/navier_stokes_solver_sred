@@ -8,7 +8,7 @@ def update_health(state, fields, P_new):
     Pure Step‑3 health computation.
 
     Computes:
-      • max_velocity_magnitude
+      • max_velocity_magnitude  = max(|U|, |V|, |W|)
       • post_correction_divergence_norm
       • cfl_advection_estimate
 
@@ -24,11 +24,13 @@ def update_health(state, fields, P_new):
     W = np.asarray(fields.get("W", np.zeros(1)))
 
     # ------------------------------------------------------------
-    # 1. Max velocity magnitude
+    # 1. Max velocity magnitude (component‑wise)
     # ------------------------------------------------------------
     try:
-        vel_mag = np.sqrt(U**2 + V**2 + W**2)
-        max_vel = float(np.max(vel_mag)) if vel_mag.size > 0 else 0.0
+        max_u = float(np.max(np.abs(U))) if U.size > 0 else 0.0
+        max_v = float(np.max(np.abs(V))) if V.size > 0 else 0.0
+        max_w = float(np.max(np.abs(W))) if W.size > 0 else 0.0
+        max_vel = max(max_u, max_v, max_w)
     except Exception:
         max_vel = 0.0
 
