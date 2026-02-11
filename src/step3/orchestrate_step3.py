@@ -58,14 +58,23 @@ def orchestrate_step3(state, current_time, step_index):
       • Step 3 must not mutate caller state.
     """
 
-    # 0 — Validate Step‑2 output
+    # ------------------------------------------------------------
+    # 0 — Validate Step‑2 output (MUST raise RuntimeError on failure)
+    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
-        step2_schema = load_schema("step2_output_schema.json")
-        validate_json_schema(
-            instance=_to_json_compatible(state),
-            schema=step2_schema,
-            context_label="[Step 3] Input schema validation",
-        )
+        try:
+            step2_schema = load_schema("step2_output_schema.json")
+            validate_json_schema(
+                instance=_to_json_compatible(state),
+                schema=step2_schema,
+                context_label="[Step 3] Input schema validation",
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "\n[Step 3] Input schema validation FAILED.\n"
+                "The Step‑2 output does not match step2_output_schema.json.\n"
+                f"Validation error: {exc}\n"
+            ) from exc
 
     # Defensive shallow copy
     base_state = dict(state)
@@ -73,46 +82,72 @@ def orchestrate_step3(state, current_time, step_index):
     # Ensure is_solid exists
     base_state = _ensure_is_solid(base_state)
 
-    # 1 — Pre‑BC
-    fields0 = base_state["fields"]
+    # ------------------------------------------------------------
+    # 1 — Pre‑BC (must fail cleanly if fields missing)
+    # ------------------------------------------------------------
+    try:
+        fields0 = base_state["fields"]
+    except KeyError as exc:
+        raise RuntimeError(
+            "[Step 3] Input violates Step‑2 schema: missing required key 'fields'"
+        ) from exc
+
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
 
+    # ------------------------------------------------------------
     # 2 — Predict velocity
+    # ------------------------------------------------------------
     U_star, V_star, W_star = predict_velocity(base_state, fields_pre)
 
+    # ------------------------------------------------------------
     # 3 — PPE RHS
+    # ------------------------------------------------------------
     rhs = build_ppe_rhs(base_state, U_star, V_star, W_star)
 
+    # ------------------------------------------------------------
     # 4 — Solve pressure
+    # ------------------------------------------------------------
     P_arr, _ppe_meta = solve_pressure(base_state, rhs)
 
+    # ------------------------------------------------------------
     # 5 — Correct velocity
+    # ------------------------------------------------------------
     U_new, V_new, W_new = correct_velocity(
         base_state, U_star, V_star, W_star, P_arr
     )
 
+    # ------------------------------------------------------------
     # 6 — Post‑BC
+    # ------------------------------------------------------------
     fields_post = apply_boundary_conditions_post(
         base_state, U_new, V_new, W_new, P_arr
     )
 
     fields_out = dict(fields_post)
-    fields_out["P"] = P_arr  # must be array only
+    fields_out["P"] = P_arr  # must be ndarray
 
-    # 7 — Health (Step‑3 health, includes post_correction_divergence_norm)
+    # ------------------------------------------------------------
+    # 7 — Health
+    # ------------------------------------------------------------
     health = update_health(base_state, fields_out, P_arr)
 
-    # 9 — Assemble Step‑3 output (attach health before diagnostics)
+    # ------------------------------------------------------------
+    # 9 — Assemble Step‑3 output
+    # ------------------------------------------------------------
     new_state = dict(base_state)
     new_state["fields"] = fields_out
     new_state["health"] = health
 
-    # 8 — Diagnostics (must see Step‑3 health, not Step‑2 health)
+    # ------------------------------------------------------------
+    # 8 — Diagnostics
+    # ------------------------------------------------------------
     diag_record = log_step_diagnostics(
         new_state, fields_out, current_time, step_index
     )
 
+    # ------------------------------------------------------------
     # 10 — History
+    # ------------------------------------------------------------
     hist = dict(
         new_state.get(
             "history",
@@ -134,14 +169,23 @@ def orchestrate_step3(state, current_time, step_index):
 
     new_state["history"] = hist
 
+    # ------------------------------------------------------------
     # 11 — Output schema validation
+    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
-        step3_schema = load_schema("step3_output_schema.json")
-        validate_json_schema(
-            instance=_to_json_compatible(new_state),
-            schema=step3_schema,
-            context_label="[Step 3] Output schema validation",
-        )
+        try:
+            step3_schema = load_schema("step3_output_schema.json")
+            validate_json_schema(
+                instance=_to_json_compatible(new_state),
+                schema=step3_schema,
+                context_label="[Step 3] Output schema validation",
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "\n[Step 3] Output schema validation FAILED.\n"
+                "The Step‑3 output does not match step3_output_schema.json.\n"
+                f"Validation error: {exc}\n"
+            ) from exc
 
     return new_state
 
