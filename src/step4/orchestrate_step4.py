@@ -10,6 +10,9 @@ from src.step4.boundary_cell_treatment import apply_boundary_cell_treatment
 from src.step4.precompute_rhs_source_terms import precompute_rhs_source_terms
 from src.step4.verify_post_bc_state import verify_post_bc_state
 
+# NEW: domain metadata subsystem
+from src.step4.domain_metadata import build_domain_block
+
 
 def orchestrate_step4(
     state,
@@ -29,6 +32,7 @@ def orchestrate_step4(
     - Apply boundary-fluid treatment
     - Precompute RHS source terms
     - Verify post-BC state integrity
+    - Build full domain metadata block
     - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
 
@@ -69,7 +73,12 @@ def orchestrate_step4(
     state = verify_post_bc_state(state)
 
     # ---------------------------------------------------------
-    # 3. Rename Step‑4 extended fields to match schema
+    # 3. Build full domain metadata block
+    # ---------------------------------------------------------
+    state = build_domain_block(state)
+
+    # ---------------------------------------------------------
+    # 4. Rename Step‑4 extended fields to match schema
     # ---------------------------------------------------------
     if "P_ext" in state:
         state["p_ext"] = state.pop("P_ext")
@@ -92,7 +101,7 @@ def orchestrate_step4(
         state["bc_applied"] = state.pop("BCApplied")
 
     # ---------------------------------------------------------
-    # 4. Validate Step‑4 output schema
+    # 5. Validate Step‑4 output schema
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
