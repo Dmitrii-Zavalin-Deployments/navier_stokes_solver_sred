@@ -18,16 +18,19 @@ def grid_sizes(draw):
 
 @st.composite
 def random_step2_states(draw):
+    """
+    Generates a randomized Step‑2 dummy state with a possibly modified mask.
+    This is safe because Step‑3 consumes Step‑2 output directly.
+    """
     nx, ny, nz = draw(grid_sizes())
     s2 = Step2SchemaDummyState(nx=nx, ny=ny, nz=nz)
 
-    # Randomly flip a cell to solid
-    mask = np.array(s2["mask_semantics"]["mask"], copy=True)
+    # Randomly flip a cell to solid (0) or fluid (1)
+    mask = np.array(s2["mask"], copy=True)
     if draw(st.booleans()):
-        mask[0, 0, 0] = 0
-    s2["mask_semantics"]["mask"] = mask
-    s2["mask_semantics"]["is_fluid"] = (mask == 1)
-    s2["mask_semantics"]["is_solid"] = (mask == 0)
+        mask[0, 0, 0] = 0  # turn one cell into solid
+    s2["mask"] = mask
+    s2["is_fluid"] = (mask == 1)
 
     return s2
 
@@ -43,6 +46,10 @@ def _make_fields(s2):
 
 @given(random_step2_states())
 def test_predict_velocity_property_based(s2):
+    """
+    Property‑based test for predict_velocity.
+    Ensures shapes are preserved and outputs are finite.
+    """
     fields = _make_fields(s2)
     U_star, V_star, W_star = predict_velocity(s2, fields)
 
@@ -56,6 +63,10 @@ def test_predict_velocity_property_based(s2):
 
 @given(random_step2_states())
 def test_build_ppe_rhs_property_based(s2):
+    """
+    Property‑based test for build_ppe_rhs.
+    Ensures RHS shape matches pressure shape and values are finite.
+    """
     fields = _make_fields(s2)
     U_star, V_star, W_star = predict_velocity(s2, fields)
     rhs = build_ppe_rhs(s2, U_star, V_star, W_star)

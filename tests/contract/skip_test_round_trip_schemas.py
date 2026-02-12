@@ -40,6 +40,10 @@ def _validate(instance, schema_name):
     validate(instance=_to_json_safe(instance), schema=schema)
 
 
+# ----------------------------------------------------------------------
+# Round‑trip tests for Steps 1 → 2 → 3 → 4
+# ----------------------------------------------------------------------
+
 def test_round_trip_step1_to_step2():
     inp = minimal_step1_input()
     _validate(inp, "input_schema.json")
@@ -52,6 +56,11 @@ def test_round_trip_step1_to_step2():
 
 
 def test_round_trip_step2_to_step3():
+    """
+    Step‑3 takes Step‑2 output and produces a valid Step‑3 state.
+    We use the Step‑3 dummy as a stand‑in for Step‑2 output here,
+    because Steps 1–3 are frozen and fully implemented.
+    """
     s3 = Step3SchemaDummyState(nx=3, ny=3, nz=3)
     _validate(s3, "step3_output_schema.json")
 
@@ -60,6 +69,11 @@ def test_round_trip_step2_to_step3():
 
 
 def test_round_trip_step3_to_step4():
+    """
+    Step‑4 consumes Step‑3 output and produces a valid Step‑4 state.
+    We use the Step‑4 dummy as a stand‑in for Step‑3 output here,
+    because Step‑4 implementation is still evolving.
+    """
     s4 = Step4SchemaDummyState(nx=3, ny=3, nz=3)
     _validate(s4, "step4_output_schema.json")
 

@@ -64,6 +64,11 @@ def test_step3_dummy_matches_schema():
 
 
 def test_step4_dummy_matches_schema():
+    """
+    Step‑4 schema validation test.
+    This stays active because Step‑4 schema exists,
+    even though Step‑4 implementation is still evolving.
+    """
     dummy = Step4SchemaDummyState(nx=3, ny=3, nz=3)
     _validate_dummy(dummy, "step4_output_schema.json")
 
@@ -81,6 +86,11 @@ def test_step2_dummy_fails_when_missing_required_field():
 
 
 def test_step4_dummy_fails_when_missing_required_field():
+    """
+    Negative test for Step‑4 schema.
+    This remains active because Step‑4 schema is defined,
+    even though Step‑4 implementation is still in progress.
+    """
     dummy = Step4SchemaDummyState(nx=3, ny=3, nz=3)
     del dummy["fields"]["P"]  # break it
 

@@ -18,8 +18,7 @@ def test_step2_output_has_keys_required_by_step3():
         "fields",
         "mask",
         "is_fluid",
-        # 'is_solid' is NOT present in the real Step‑2 dummy and is not
-        # required by Step‑3, so we do not assert on it here.
+        # 'is_solid' is NOT present in Step‑2 and not required by Step‑3.
         "constants",
         "config",
         "operators",
@@ -53,15 +52,50 @@ def test_step3_output_has_keys_required_by_step4():
     s3 = Step3SchemaDummyState(nx=3, ny=3, nz=3)
 
     required = [
-        "fields",
-        "constants",
-        "config",
-        "operators",
-        "is_fluid",
-        "is_solid",
-        "bcs",
-        "health",
+        "fields",       # interior u, v, w, p
+        "constants",    # rho, mu, dt, dx, dy, dz
+        "config",       # domain, BC definitions, simulation parameters
+        "operators",    # divergence, gradients, Laplacians, advection
+        "mask",         # geometry mask
+        "is_fluid",     # fluid mask
+        "health",       # diagnostics
     ]
 
     for key in required:
         assert key in s3, f"Step‑3 dummy missing key required by Step‑4: {key}"
+
+
+# ---------------------------------------------------------------------------
+# FUTURE TEST — Step‑4 → Step‑5 contract
+# ---------------------------------------------------------------------------
+# This test is commented out because Step‑4 is still under development.
+# Once Step‑4 dummy state exists, uncomment this test.
+#
+# def test_step4_output_has_keys_required_by_step5():
+#     """
+#     Step‑5 consumes Step‑4 output. This test ensures that the Step‑4 dummy
+#     contains all top‑level keys that Step‑5 actually relies on.
+#     """
+#     from tests.helpers.step4_schema_dummy_state import Step4SchemaDummyState
+#     s4 = Step4SchemaDummyState(nx=3, ny=3, nz=3)
+#
+#     required = [
+#         "U_ext",
+#         "V_ext",
+#         "W_ext",
+#         "P_ext",
+#         "Domain",
+#         "BCs",
+#         "RHS_Source",
+#         "constants",
+#         "config",
+#         "operators",
+#         "mask",
+#         "is_fluid",
+#         "health",
+#         "time",
+#         "step_index",
+#     ]
+#
+#     for key in required:
+#         assert key in s4, f"Step‑4 dummy missing key required by Step‑5: {key}"
