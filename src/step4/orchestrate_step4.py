@@ -29,6 +29,7 @@ def orchestrate_step4(
     - Apply boundary-fluid treatment
     - Precompute RHS source terms
     - Verify post-BC state integrity
+    - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
 
     This function is intentionally thin: it delegates all real work to
@@ -68,7 +69,30 @@ def orchestrate_step4(
     state = verify_post_bc_state(state)
 
     # ---------------------------------------------------------
-    # 3. Validate Step‑4 output schema
+    # 3. Rename Step‑4 extended fields to match schema
+    # ---------------------------------------------------------
+    if "P_ext" in state:
+        state["p_ext"] = state.pop("P_ext")
+
+    if "U_ext" in state:
+        state["u_ext"] = state.pop("U_ext")
+
+    if "V_ext" in state:
+        state["v_ext"] = state.pop("V_ext")
+
+    if "W_ext" in state:
+        state["w_ext"] = state.pop("W_ext")
+
+    # Rename RHS → rhs_source (structure expanded later)
+    if "RHS" in state:
+        state["rhs_source"] = state.pop("RHS")
+
+    # Rename BCApplied → bc_applied (structure expanded later)
+    if "BCApplied" in state:
+        state["bc_applied"] = state.pop("BCApplied")
+
+    # ---------------------------------------------------------
+    # 4. Validate Step‑4 output schema
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
