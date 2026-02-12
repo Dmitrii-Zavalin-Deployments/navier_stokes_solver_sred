@@ -43,3 +43,25 @@ def test_step2_step3_pressure_shape_compatible():
     P3 = np.asarray(s3["fields"]["P"])
 
     assert P2.shape == P3.shape, "Pressure field shapes must match"
+
+
+def test_step3_output_has_keys_required_by_step4():
+    """
+    Step‑4 consumes Step‑3 output. This test ensures that the Step‑3 dummy
+    contains all top‑level keys that Step‑4 actually relies on.
+    """
+    s3 = Step3SchemaDummyState(nx=3, ny=3, nz=3)
+
+    required = [
+        "fields",
+        "constants",
+        "config",
+        "operators",
+        "is_fluid",
+        "is_solid",
+        "bcs",
+        "health",
+    ]
+
+    for key in required:
+        assert key in s3, f"Step‑3 dummy missing key required by Step‑4: {key}"
