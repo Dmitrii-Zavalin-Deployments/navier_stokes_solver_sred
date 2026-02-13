@@ -24,12 +24,15 @@ except Exception:
     load_schema = None
 
 
+# ---------------------------------------------------------
+# Global debug flag for Step‑2
+# ---------------------------------------------------------
+DEBUG_STEP2 = False
+
+
 def _extract_gradients(gradients: Any) -> Any:
     """
     Normalize gradient operator keys to schema-required names when possible.
-
-    For older or alternate implementations that return a tuple or other
-    structure, this function is a no-op to remain backward compatible.
     """
     if not isinstance(gradients, dict):
         return gradients
@@ -53,15 +56,13 @@ def _extract_gradients(gradients: Any) -> Any:
     )
 
 
-def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
+def orchestrate_step2(
+    state: Dict[str, Any],
+    _unused_schema_argument: Dict[str, Any] = None,
+    **_ignored_kwargs,
+) -> Dict[str, Any]:
     """
     Step 2 — Numerical preprocessing.
-
-    Strict contract:
-      • Step 2 does NOT repair Step 1 output.
-      • Step 2 validates Step 1 output immediately.
-      • If Step 1 output violates its schema, Step 1 is broken.
-      • Step 2 must not mutate caller state.
     """
 
     # Defensive copy — Step 2 must not mutate caller state
@@ -69,8 +70,6 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # ---------------------------------------------------------
     # 1. Validate Step‑1 output (production safety)
-    #    Step 2 does NOT repair Step 1 output.
-    #    If the schema is violated, Step 1 is broken.
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -87,7 +86,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
             ) from exc
 
     # ---------------------------------------------------------
-    # 2. Precompute constants (authoritative Step‑2 constants)
+    # 2. Precompute constants
     # ---------------------------------------------------------
     constants = precompute_constants(state)
 
@@ -97,7 +96,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     mask_semantics = enforce_mask_semantics(state)
 
     # ---------------------------------------------------------
-    # 4. Fluid mask (returns two arrays)
+    # 4. Fluid mask
     # ---------------------------------------------------------
     is_fluid, is_boundary_cell = create_fluid_mask(state)
 
@@ -108,18 +107,17 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     is_solid = (mask_arr == 0)
 
     # ---------------------------------------------------------
-    # 6. Build operators (existence + side‑effects only)
+    # 6. Build operators
     # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
     _ = build_advection_structure(state)
 
-    # Normalize gradient operator keys (for consistency / future use)
     _ = _extract_gradients(gradients)
 
     # ---------------------------------------------------------
-    # 7. PPE structure (internal representation)
+    # 7. PPE structure
     # ---------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
@@ -134,7 +132,7 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output (schema‑aligned)
+    # 9. Assemble Step‑2 output
     # ---------------------------------------------------------
     output: Dict[str, Any] = {
         "grid": state["grid"],
@@ -189,5 +187,17 @@ def orchestrate_step2(state: Dict[str, Any]) -> Dict[str, Any]:
                 "The Step‑2 output does not match step2_output_schema.json.\n"
                 f"Validation error: {exc}\n"
             ) from exc
+
+    # ---------------------------------------------------------
+    # 12. Optional debug print
+    # ---------------------------------------------------------
+    if DEBUG_STEP2:
+        print("\n[DEBUG] Step‑2 output keys:", list(output.keys()))
+        print("[DEBUG] Step‑2 grid keys:", list(output["grid"].keys()))
+        print("[DEBUG] Step‑2 fields keys:", list(output["fields"].keys()))
+        print("[DEBUG] Step‑2 config keys:", list(output["config"].keys()))
+        print("[DEBUG] Step‑2 constants keys:", list(output["constants"].keys()))
+        print("[DEBUG] Step‑2 mask shape:", np.asarray(output["mask"]).shape)
+        print("[DEBUG] Step‑2 PPE keys:", list(output["ppe"].keys()))
 
     return output
