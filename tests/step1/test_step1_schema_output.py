@@ -2,8 +2,10 @@
 
 import json
 from pathlib import Path
+import numpy as np
 
 from src.step1.orchestrate_step1 import orchestrate_step1
+from tests.helpers.minimal_step1_input import make_minimal_step1_input
 
 
 def load_schema(path: str):
@@ -16,62 +18,17 @@ def validate_json_schema(instance, schema):
     validate(instance=instance, schema=schema)
 
 
-def make_minimal_step1_input():
-    """
-    Minimal valid input for Step 1.
-    Matches schema/input_schema.json exactly.
-    """
-    return {
-        "domain_definition": {
-            "x_min": 0.0, "x_max": 1.0,
-            "y_min": 0.0, "y_max": 1.0,
-            "z_min": 0.0, "z_max": 1.0,
-            "nx": 2, "ny": 2, "nz": 2
-        },
-
-        "fluid_properties": {
-            "density": 1.0,
-            "viscosity": 0.1
-        },
-
-        "initial_conditions": {
-            "initial_velocity": [0.0, 0.0, 0.0],
-            "initial_pressure": 0.0
-        },
-
-        "simulation_parameters": {
-            "time_step": 0.1,
-            "total_time": 1.0,
-            "output_interval": 1
-        },
-
-        "boundary_conditions": [
-            {
-                "role": "wall",
-                "type": "dirichlet",
-                "faces": ["x_min"],
-                "apply_to": ["velocity", "pressure"],
-                "velocity": [0.0, 0.0, 0.0],
-                "pressure": 0.0,
-                "pressure_gradient": 0.0,
-                "no_slip": True,
-                "comment": "minimal BC"
-            }
-        ],
-
-        "geometry_definition": {
-            "geometry_mask_flat": [1, 1, 1, 1, 1, 1, 1, 1],
-            "geometry_mask_shape": [2, 2, 2],
-            "mask_encoding": {"fluid": 1, "solid": -1},
-            "flattening_order": "C"
-        },
-
-        "external_forces": {
-            "force_vector": [0.0, 0.0, 0.0],
-            "units": "N",
-            "comment": "no external forces"
-        }
-    }
+# ------------------------------------------------------------
+# JSON‑safe conversion helper (same pattern as Step‑2 and Step‑3)
+# ------------------------------------------------------------
+def to_json_safe(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [to_json_safe(x) for x in obj]
+    return obj
 
 
 def test_step1_output_matches_schema():
@@ -85,6 +42,7 @@ def test_step1_output_matches_schema():
     )
     schema = load_schema(str(schema_path))
 
+    # Use the shared minimal Step‑1 input
     state_in = make_minimal_step1_input()
 
     state_out = orchestrate_step1(
@@ -93,5 +51,7 @@ def test_step1_output_matches_schema():
         load_schema=load_schema,
     )
 
-    # IMPORTANT: validate JSON‑safe mirror, not raw NumPy arrays
-    validate_json_schema(state_out["state_as_dict"], schema)
+    # Convert JSON‑safe mirror again (for consistency with Step‑2/3 tests)
+    state_json = to_json_safe(state_out["state_as_dict"])
+
+    validate_json_schema(state_json, schema)

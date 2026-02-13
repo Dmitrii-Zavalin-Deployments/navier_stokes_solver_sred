@@ -125,13 +125,9 @@ def orchestrate_step1(
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
     # ---------------------------------------------------------
-    # 13. Create JSON‑safe mirror
+    # 13. Create JSON‑safe mirror (convert all NumPy arrays)
     # ---------------------------------------------------------
-    json_safe_state = {
-        **state_dict,
-        "fields": _to_json_safe(state_dict["fields"]),
-        "mask_3d": _to_json_safe(state_dict["mask_3d"]),
-    }
+    json_safe_state = _to_json_safe(state_dict)
 
     # ---------------------------------------------------------
     # 14. Validate output schema using JSON‑safe version
