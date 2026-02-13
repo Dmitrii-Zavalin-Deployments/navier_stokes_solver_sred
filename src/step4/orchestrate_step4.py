@@ -19,6 +19,9 @@ from src.step4.assemble_rhs_source import assemble_rhs_source
 # NEW: bc_applied expansion subsystem
 from src.step4.assemble_bc_applied import assemble_bc_applied
 
+# NEW: diagnostics subsystem
+from src.step4.assemble_diagnostics import assemble_diagnostics
+
 
 def orchestrate_step4(
     state,
@@ -40,6 +43,7 @@ def orchestrate_step4(
     - Convert RHS to schema-compliant rhs_source
     - Verify post-BC state integrity
     - Expand bc_applied to schema format
+    - Compute diagnostics
     - Build full domain metadata block
     - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
@@ -89,6 +93,9 @@ def orchestrate_step4(
 
     # Expand bc_applied to schema format
     state = assemble_bc_applied(state)
+
+    # Compute diagnostics
+    state = assemble_diagnostics(state)
 
     # ---------------------------------------------------------
     # 3. Build full domain metadata block
