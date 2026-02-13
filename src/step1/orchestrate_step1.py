@@ -143,7 +143,7 @@ def orchestrate_step1(
     # ---------------------------------------------------------
     state_dict["state_as_dict"] = json_safe_state
 
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
     # 15b. Debug print for schema alignment (only during tests)
     # ---------------------------------------------------------
     import os
@@ -151,8 +151,8 @@ def orchestrate_step1(
         print("\n[DEBUG] Step‑1 output keys:", list(state_dict.keys()))
         print("[DEBUG] Step‑1 fields keys:", list(state_dict["fields"].keys()))
         print("[DEBUG] Step‑1 grid keys:", list(state_dict["grid"].keys()))
-        print("[DEBUG] Step‑1 config keys:", list(state_dict["config"].__dict__.keys()))
-        print("[DEBUG] Step‑1 bc_table keys:", list(state_dict["bc_table"].keys()))
+        print("[DEBUG] Step‑1 config keys:", list(state_dict["config"].keys()))
+        print("[DEBUG] Step‑1 boundary_table keys:", list(state_dict["boundary_table"].keys()))
         print("[DEBUG] Step‑1 constants keys:", list(state_dict["constants"].keys()))
         print("[DEBUG] Step‑1 mask_3d shape:", state_dict["mask_3d"].shape)
 
