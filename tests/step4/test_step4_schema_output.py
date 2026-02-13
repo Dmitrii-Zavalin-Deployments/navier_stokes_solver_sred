@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from src.step4.orchestrate_step4 import orchestrate_step4
+from src.common.json_safe import to_json_safe
 from tests.helpers.step3_schema_dummy_state import Step3SchemaDummyState
 
 
@@ -22,19 +23,6 @@ def validate_json_schema(instance, schema):
     """
     from jsonschema import validate
     validate(instance=instance, schema=schema)
-
-
-# ------------------------------------------------------------
-# JSON‑safe conversion helper (same as Steps 1–3)
-# ------------------------------------------------------------
-def to_json_safe(obj):
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, dict):
-        return {k: to_json_safe(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [to_json_safe(x) for x in obj]
-    return obj
 
 
 def make_minimal_step3_output():
