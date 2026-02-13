@@ -16,6 +16,12 @@ from .verify_staggered_shapes import verify_staggered_shapes
 from .schema_utils import load_schema, validate_with_schema
 
 
+# ---------------------------------------------------------
+# Global debug flag for Step‑1
+# ---------------------------------------------------------
+DEBUG_STEP1 = False
+
+
 def _to_json_safe(obj):
     """Recursively convert NumPy arrays to Python lists for JSON/schema compatibility."""
     if isinstance(obj, np.ndarray):
@@ -145,10 +151,9 @@ def orchestrate_step1(
     state_dict["state_as_dict"] = json_safe_state
 
     # ---------------------------------------------------------
-    # 15b. Debug print for schema alignment (only during tests)
+    # 15b. Optional debug print
     # ---------------------------------------------------------
-    import os
-    if os.environ.get("PYTEST_CURRENT_TEST"):
+    if DEBUG_STEP1:
         print("\n[DEBUG] Step‑1 output keys:", list(state_dict.keys()))
         print("[DEBUG] Step‑1 fields keys:", list(state_dict["fields"].keys()))
         print("[DEBUG] Step‑1 grid keys:", list(state_dict["grid"].keys()))
