@@ -56,8 +56,13 @@ def orchestrate_step3(
     _unused_schema_argument=None,
     **_ignored_kwargs,
 ):
+    """
+    Step 3 — Pressure projection and velocity correction.
+    """
 
+    # ------------------------------------------------------------
     # 0 — Validate Step‑2 output
+    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         try:
             step2_schema = load_schema("step2_output_schema.json")
@@ -72,33 +77,54 @@ def orchestrate_step3(
                 f"Validation error: {exc}\n"
             ) from exc
 
+    # Defensive shallow copy
     base_state = dict(state)
 
+    # ------------------------------------------------------------
     # Ensure is_solid exists
+    # ------------------------------------------------------------
     try:
         base_state = _ensure_is_solid(base_state)
     except Exception as exc:
         raise RuntimeError("[Step 3] Cannot infer is_solid") from exc
 
+    # ------------------------------------------------------------
     # 1 — Pre‑BC
-    fields0 = base_state["fields"]
+    # ------------------------------------------------------------
+    try:
+        fields0 = base_state["fields"]
+    except KeyError:
+        raise RuntimeError(
+            "[Step 3] Input violates Step‑2 schema: missing required key 'fields'"
+        )
+
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
 
+    # ------------------------------------------------------------
     # 2 — Predict velocity
+    # ------------------------------------------------------------
     U_star, V_star, W_star = predict_velocity(base_state, fields_pre)
 
+    # ------------------------------------------------------------
     # 3 — PPE RHS
+    # ------------------------------------------------------------
     rhs = build_ppe_rhs(base_state, U_star, V_star, W_star)
 
+    # ------------------------------------------------------------
     # 4 — Solve pressure
+    # ------------------------------------------------------------
     P_arr, _ppe_meta = solve_pressure(base_state, rhs)
 
+    # ------------------------------------------------------------
     # 5 — Correct velocity
+    # ------------------------------------------------------------
     U_new, V_new, W_new = correct_velocity(
         base_state, U_star, V_star, W_star, P_arr
     )
 
+    # ------------------------------------------------------------
     # 6 — Post‑BC
+    # ------------------------------------------------------------
     fields_post = apply_boundary_conditions_post(
         base_state, U_new, V_new, W_new, P_arr
     )
@@ -106,20 +132,28 @@ def orchestrate_step3(
     fields_out = dict(fields_post)
     fields_out["P"] = P_arr
 
+    # ------------------------------------------------------------
     # 7 — Health
+    # ------------------------------------------------------------
     health = update_health(base_state, fields_out, P_arr)
 
+    # ------------------------------------------------------------
     # 8 — Assemble Step‑3 state BEFORE diagnostics
+    # ------------------------------------------------------------
     new_state = dict(base_state)
     new_state["fields"] = fields_out
     new_state["health"] = health
 
+    # ------------------------------------------------------------
     # 9 — Diagnostics (must use new_state)
+    # ------------------------------------------------------------
     diag_record = log_step_diagnostics(
         new_state, new_state["fields"], current_time, step_index
     )
 
+    # ------------------------------------------------------------
     # 10 — History
+    # ------------------------------------------------------------
     hist = dict(
         base_state.get(
             "history",
@@ -142,14 +176,7 @@ def orchestrate_step3(
     new_state["history"] = hist
 
     # ------------------------------------------------------------
-    # --- NEW: JSON‑safe mask fields ---
-    # ------------------------------------------------------------
-    new_state["mask"] = _to_json_compatible(new_state["mask"])
-    new_state["is_fluid"] = _to_json_compatible(new_state["is_fluid"])
-    new_state["is_boundary_cell"] = _to_json_compatible(new_state["is_boundary_cell"])
-
-    # ------------------------------------------------------------
-    # 11 — Output schema validation
+    # 11 — Output schema validation (tests only)
     # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         try:
@@ -165,6 +192,9 @@ def orchestrate_step3(
                 f"Validation error: {exc}\n"
             ) from exc
 
+    # ------------------------------------------------------------
+    # 12 — Optional debug print
+    # ------------------------------------------------------------
     if DEBUG_STEP3:
         print("\n[DEBUG] Step‑3 output keys:", list(new_state.keys()))
 
