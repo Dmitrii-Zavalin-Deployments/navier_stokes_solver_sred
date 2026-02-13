@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import numpy as np
 
 from src.step3.orchestrate_step3 import orchestrate_step3
 
@@ -33,21 +34,21 @@ def make_minimal_step3_input():
 
     # Staggered fields for nx=1, ny=1, nz=1
     fields = {
-        "P": [[[0.0]]],            # (1,1,1)
-        "U": [[[0.0]], [[0.0]]],   # (2,1,1)
-        "V": [[[0.0], [0.0]]],     # (1,2,1)
-        "W": [[[0.0, 0.0]]],       # (1,1,2)
-        "Mask": [[[1]]],           # (1,1,1)
+        "P": np.zeros((1, 1, 1)),
+        "U": np.zeros((2, 1, 1)),
+        "V": np.zeros((1, 2, 1)),
+        "W": np.zeros((1, 1, 2)),
+        "Mask": np.ones((1, 1, 1), dtype=int),
     }
 
     # Mask
-    mask = [[[1]]]
+    mask = np.ones((1, 1, 1), dtype=int)
 
     # Fluid mask
-    is_fluid = [[[True]]]
+    is_fluid = np.ones((1, 1, 1), dtype=bool)
 
     # Boundary mask
-    is_boundary_cell = [[[False]]]
+    is_boundary_cell = np.zeros((1, 1, 1), dtype=bool)
 
     # Constants (from Step‑2)
     constants = {
@@ -67,21 +68,21 @@ def make_minimal_step3_input():
 
     # Operators (placeholders)
     operators = {
-        "divergence": "div",
-        "gradient_p_x": "gpx",
-        "gradient_p_y": "gpy",
-        "gradient_p_z": "gpz",
-        "laplacian_u": "lu",
-        "laplacian_v": "lv",
-        "laplacian_w": "lw",
-        "advection_u": "au",
-        "advection_v": "av",
-        "advection_w": "aw",
+        "divergence": {"op": lambda U, V, W: np.zeros((1, 1, 1))},
+        "gradient_p_x": {"op": None},
+        "gradient_p_y": {"op": None},
+        "gradient_p_z": {"op": None},
+        "laplacian_u": {"op": None},
+        "laplacian_v": {"op": None},
+        "laplacian_w": {"op": None},
+        "advection_u": {"op": None},
+        "advection_v": {"op": None},
+        "advection_w": {"op": None},
     }
 
     # PPE metadata
     ppe = {
-        "rhs_builder": "rhs",
+        "rhs_builder": {"op": None},
         "solver_type": "cg",
         "tolerance": 1e-6,
         "max_iterations": 50,
@@ -104,13 +105,27 @@ def make_minimal_step3_input():
         },
     }
 
-    # History (Step‑2 always provides this)
+    # Step‑2 health block (REQUIRED)
+    health = {
+        "initial_divergence_norm": 0.0,
+        "max_velocity_magnitude": 0.0,
+        "cfl_advection_estimate": 0.0,
+    }
+
+    # Step‑2 history block (REQUIRED)
     history = {
         "times": [],
         "divergence_norms": [],
         "max_velocity_history": [],
         "ppe_iterations_history": [],
         "energy_history": [],
+    }
+
+    # Mask semantics (used by integration tests)
+    mask_semantics = {
+        "mask": mask,
+        "is_fluid": is_fluid,
+        "is_solid": (mask == 0),
     }
 
     return {
@@ -123,7 +138,9 @@ def make_minimal_step3_input():
         "operators": operators,
         "ppe": ppe,
         "config": config,
+        "health": health,
         "history": history,
+        "mask_semantics": mask_semantics,
     }
 
 
@@ -140,7 +157,6 @@ def test_step3_output_matches_schema():
 
     state_in = make_minimal_step3_input()
 
-    # Step‑3 signature: (state, current_time, step_index)
     state_out = orchestrate_step3(
         state_in,
         current_time=0.0,
@@ -149,5 +165,4 @@ def test_step3_output_matches_schema():
         load_schema=load_schema,
     )
 
-    # Step‑3 output is JSON‑compatible after _to_json_compatible()
     validate_json_schema(state_out, schema)
