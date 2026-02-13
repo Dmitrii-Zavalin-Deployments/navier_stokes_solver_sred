@@ -139,19 +139,26 @@ def orchestrate_step3(
     fields_out["P"] = P_arr
 
     # ------------------------------------------------------------
-    # 7 — Health
+    # 7 — Health (Step‑3 health block)
     # ------------------------------------------------------------
     health = update_health(base_state, fields_out, P_arr)
 
     # ------------------------------------------------------------
-    # 8 — Diagnostics
+    # 8 — Assemble Step‑3 state BEFORE diagnostics
+    # ------------------------------------------------------------
+    new_state = dict(base_state)
+    new_state["fields"] = fields_out
+    new_state["health"] = health
+
+    # ------------------------------------------------------------
+    # 9 — Diagnostics (MUST use new_state, not base_state)
     # ------------------------------------------------------------
     diag_record = log_step_diagnostics(
-        base_state, fields_out, current_time, step_index
+        new_state, new_state["fields"], current_time, step_index
     )
 
     # ------------------------------------------------------------
-    # 9 — History
+    # 10 — History
     # ------------------------------------------------------------
     hist = dict(
         base_state.get(
@@ -172,12 +179,6 @@ def orchestrate_step3(
     hist["ppe_iterations_history"].append(diag_record.get("ppe_iterations", -1))
     hist["energy_history"].append(diag_record.get("energy", 0.0))
 
-    # ------------------------------------------------------------
-    # 10 — Assemble Step‑3 output
-    # ------------------------------------------------------------
-    new_state = dict(base_state)
-    new_state["fields"] = fields_out
-    new_state["health"] = health
     new_state["history"] = hist
 
     # ------------------------------------------------------------
