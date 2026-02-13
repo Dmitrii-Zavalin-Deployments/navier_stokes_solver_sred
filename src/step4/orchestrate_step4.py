@@ -1,7 +1,10 @@
-# src/step4/orchestrate_step4.py
+# file: src/step4/orchestrate_step4.py
 
 from copy import deepcopy
 from pathlib import Path
+import numpy as np
+
+from src.common.json_safe import to_json_safe
 
 from src.step4.allocate_extended_fields import allocate_extended_fields
 from src.step4.initialize_staggered_fields import initialize_staggered_fields
@@ -50,7 +53,6 @@ def orchestrate_step4(
     - Initialize empty history block
     - Build full domain metadata block
     - Set final Step‑4 flags
-    - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
     """
 
@@ -68,7 +70,7 @@ def orchestrate_step4(
         )
         schema = load_schema(str(schema_path))
         try:
-            validate_json_schema(state, schema)
+            validate_json_schema(to_json_safe(state), schema)
         except Exception as exc:
             raise RuntimeError(
                 "\n[Step 4] Input schema validation FAILED.\n"
@@ -114,30 +116,7 @@ def orchestrate_step4(
     state["ready_for_time_loop"] = True
 
     # ---------------------------------------------------------
-    # 5. Rename Step‑4 extended fields to match schema
-    # ---------------------------------------------------------
-    if "P_ext" in state:
-        state["p_ext"] = state.pop("P_ext")
-
-    if "U_ext" in state:
-        state["u_ext"] = state.pop("U_ext")
-
-    if "V_ext" in state:
-        state["v_ext"] = state.pop("V_ext")
-
-    if "W_ext" in state:
-        state["w_ext"] = state.pop("W_ext")
-
-    # Rename RHS → rhs_source (already restructured)
-    if "RHS" in state:
-        state["rhs_source"] = state.pop("RHS")
-
-    # Rename BCApplied → bc_applied (already expanded)
-    if "BCApplied" in state:
-        state["bc_applied"] = state.pop("BCApplied")
-
-    # ---------------------------------------------------------
-    # 6. Validate Step‑4 output schema
+    # 5. Validate Step‑4 output schema (JSON‑safe mirror)
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
@@ -145,7 +124,7 @@ def orchestrate_step4(
         )
         schema = load_schema(str(schema_path))
         try:
-            validate_json_schema(state, schema)
+            validate_json_schema(to_json_safe(state), schema)
         except Exception as exc:
             raise RuntimeError(
                 "\n[Step 4] Output schema validation FAILED.\n"

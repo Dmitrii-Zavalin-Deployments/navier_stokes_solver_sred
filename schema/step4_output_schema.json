@@ -5,10 +5,10 @@
   "type": "object",
 
   "required": [
-    "p_ext",
-    "u_ext",
-    "v_ext",
-    "w_ext",
+    "P_ext",
+    "U_ext",
+    "V_ext",
+    "W_ext",
     "domain",
     "rhs_source",
     "bc_applied",
@@ -20,25 +20,25 @@
 
   "properties": {
 
-    "p_ext": {
+    "P_ext": {
       "type": "array",
       "description": "Extended pressure field with ghost layers (3D float64 array)",
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
     },
 
-    "u_ext": {
+    "U_ext": {
       "type": "array",
       "description": "Extended U-velocity field on x-faces with ghost layers",
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
     },
 
-    "v_ext": {
+    "V_ext": {
       "type": "array",
       "description": "Extended V-velocity field on y-faces with ghost layers",
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
     },
 
-    "w_ext": {
+    "W_ext": {
       "type": "array",
       "description": "Extended W-velocity field on z-faces with ghost layers",
       "items": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
@@ -76,12 +76,12 @@
 
         "ghost_layers": {
           "type": "object",
-          "required": ["p_ext", "u_ext", "v_ext", "w_ext"],
+          "required": ["P_ext", "U_ext", "V_ext", "W_ext"],
           "properties": {
-            "p_ext": { "type": "array" },
-            "u_ext": { "type": "array" },
-            "v_ext": { "type": "array" },
-            "w_ext": { "type": "array" }
+            "P_ext": { "type": "array" },
+            "U_ext": { "type": "array" },
+            "V_ext": { "type": "array" },
+            "W_ext": { "type": "array" }
           }
         },
 

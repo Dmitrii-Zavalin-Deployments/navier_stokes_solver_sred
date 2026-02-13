@@ -6,20 +6,19 @@ import numpy as np
 class Step4SchemaDummyState(dict):
     """
     Fully schema‑compliant Step‑4 output dummy.
-    Matches the Step 4 Output Schema exactly.
+    Matches the updated Step‑4 Output Schema exactly.
     """
 
     def __init__(self, nx, ny, nz):
         super().__init__()
 
         # ---------------------------------------------------------
-        # Extended fields with ghost layers
+        # Extended fields with ghost layers (uppercase names)
         # ---------------------------------------------------------
-        # Minimal ghost layer: +2 in each dimension
-        self["p_ext"] = np.zeros((nx + 2, ny + 2, nz + 2))
-        self["u_ext"] = np.zeros((nx + 3, ny + 2, nz + 2))
-        self["v_ext"] = np.zeros((nx + 2, ny + 3, nz + 2))
-        self["w_ext"] = np.zeros((nx + 2, ny + 2, nz + 3))
+        self["P_ext"] = np.zeros((nx + 2, ny + 2, nz + 2))
+        self["U_ext"] = np.zeros((nx + 3, ny + 2, nz + 2))
+        self["V_ext"] = np.zeros((nx + 2, ny + 3, nz + 2))
+        self["W_ext"] = np.zeros((nx + 2, ny + 2, nz + 3))
 
         # ---------------------------------------------------------
         # Domain metadata
@@ -35,10 +34,10 @@ class Step4SchemaDummyState(dict):
             },
 
             "ghost_layers": {
-                "p_ext": [1, 1, 1, 1, 1, 1],
-                "u_ext": [1, 1, 1, 1, 1, 1],
-                "v_ext": [1, 1, 1, 1, 1, 1],
-                "w_ext": [1, 1, 1, 1, 1, 1],
+                "P_ext": [1, 1, 1, 1, 1, 1],
+                "U_ext": [1, 1, 1, 1, 1, 1],
+                "V_ext": [1, 1, 1, 1, 1, 1],
+                "W_ext": [1, 1, 1, 1, 1, 1],
             },
 
             "index_ranges": {
@@ -115,7 +114,7 @@ class Step4SchemaDummyState(dict):
         }
 
         # ---------------------------------------------------------
-        # History (optional but required key)
+        # History (required key, nullable)
         # ---------------------------------------------------------
         self["history"] = {
             "times": [],
