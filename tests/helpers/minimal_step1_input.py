@@ -4,7 +4,7 @@
 Minimal valid Step‑1 input used across tests.
 """
 
-def minimal_step1_input():
+def make_minimal_step1_input():
     return {
         "domain_definition": {
             "x_min": 0.0, "x_max": 1.0,
@@ -59,4 +59,4 @@ def minimal_step1_input():
 
 
 # Backwards compatibility for existing Step‑1 tests
-MINIMAL_VALID_INPUT = minimal_step1_input()
+MINIMAL_VALID_INPUT = make_minimal_step1_input()
