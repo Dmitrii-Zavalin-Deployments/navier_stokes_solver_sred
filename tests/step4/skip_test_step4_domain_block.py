@@ -1,7 +1,7 @@
 # tests/step4/test_step4_domain_block.py
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 from src.step4.orchestrate_step4 import orchestrate_step4
 
@@ -16,7 +16,7 @@ def validate_json_schema(instance, schema):
     validate(instance=instance, schema=schema)
 
 
-def make_minimal_step3_output():
+def make_minimal_step3_state():
     """
     Minimal valid Step‑3 output that Step‑4 can accept.
     Uses a 2×2×2 grid so that coordinates, ghost layers,
@@ -52,14 +52,13 @@ def make_minimal_step3_output():
     }
 
 
-def test_step4_domain_block_structure_and_required_keys():
+def test_step4_domain_block_structure():
     """
     Contract test:
-    Step‑4 MUST produce a fully structured 'domain' block
-    matching the Step‑4 schema.
+    Step‑4 MUST produce a complete, schema‑compliant 'domain' block.
     """
 
-    state_in = make_minimal_step3_output()
+    state_in = make_minimal_step3_state()
 
     state_out = orchestrate_step4(
         state_in,
@@ -67,11 +66,12 @@ def test_step4_domain_block_structure_and_required_keys():
         load_schema=load_schema,
     )
 
-    assert "domain" in state_out, "Step 4 output must contain 'domain' block"
-
+    assert "domain" in state_out, "Step‑4 output must contain 'domain' block"
     domain = state_out["domain"]
 
-    # Top-level required keys
+    # ---------------------------------------------------------
+    # Required top-level keys
+    # ---------------------------------------------------------
     for key in [
         "coordinates",
         "ghost_layers",
@@ -81,7 +81,9 @@ def test_step4_domain_block_structure_and_required_keys():
     ]:
         assert key in domain, f"'domain' must contain '{key}'"
 
-    # Coordinates block
+    # ---------------------------------------------------------
+    # Coordinates
+    # ---------------------------------------------------------
     coords = domain["coordinates"]
     for key in [
         "x_centers",
@@ -94,13 +96,27 @@ def test_step4_domain_block_structure_and_required_keys():
         assert key in coords, f"'coordinates' must contain '{key}'"
         assert isinstance(coords[key], list), f"'{key}' must be a list"
 
-    # Ghost layers block
+    # Expected lengths for nx = ny = nz = 2
+    assert len(coords["x_centers"]) == 2
+    assert len(coords["y_centers"]) == 2
+    assert len(coords["z_centers"]) == 2
+
+    assert len(coords["x_faces_u"]) == 3
+    assert len(coords["y_faces_v"]) == 3
+    assert len(coords["z_faces_w"]) == 3
+
+    # ---------------------------------------------------------
+    # Ghost layers
+    # ---------------------------------------------------------
     ghost = domain["ghost_layers"]
     for key in ["p_ext", "u_ext", "v_ext", "w_ext"]:
         assert key in ghost, f"'ghost_layers' must contain '{key}'"
         assert isinstance(ghost[key], list), f"'{key}' must be a list"
+        assert len(ghost[key]) == 2, f"'{key}' must be [lo, hi]"
 
-    # Index ranges block
+    # ---------------------------------------------------------
+    # Index ranges
+    # ---------------------------------------------------------
     idx = domain["index_ranges"]
     for key in [
         "interior",
@@ -114,13 +130,17 @@ def test_step4_domain_block_structure_and_required_keys():
         assert key in idx, f"'index_ranges' must contain '{key}'"
         assert isinstance(idx[key], str), f"'{key}' must be a string"
 
-    # Stencil maps block
+    # ---------------------------------------------------------
+    # Stencil maps
+    # ---------------------------------------------------------
     stencils = domain["stencil_maps"]
     for key in ["xp", "xm", "yp", "ym", "zp", "zm"]:
         assert key in stencils, f"'stencil_maps' must contain '{key}'"
         assert isinstance(stencils[key], list), f"'{key}' must be a list"
 
-    # Interpolation maps block
+    # ---------------------------------------------------------
+    # Interpolation maps
+    # ---------------------------------------------------------
     interp = domain["interpolation_maps"]
     for key in [
         "interp_u_to_v",
