@@ -49,11 +49,9 @@ def orchestrate_step4(
     - Compute diagnostics
     - Initialize empty history block
     - Build full domain metadata block
+    - Set final Step‑4 flags
     - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
-
-    This function is intentionally thin: it delegates all real work to
-    the subsystem modules. It simply defines the execution order.
     """
 
     # ---------------------------------------------------------
@@ -110,7 +108,13 @@ def orchestrate_step4(
     state = build_domain_block(state)
 
     # ---------------------------------------------------------
-    # 4. Rename Step‑4 extended fields to match schema
+    # 4. Set final Step‑4 flags
+    # ---------------------------------------------------------
+    state["initialized"] = True
+    state["ready_for_time_loop"] = True
+
+    # ---------------------------------------------------------
+    # 5. Rename Step‑4 extended fields to match schema
     # ---------------------------------------------------------
     if "P_ext" in state:
         state["p_ext"] = state.pop("P_ext")
@@ -133,7 +137,7 @@ def orchestrate_step4(
         state["bc_applied"] = state.pop("BCApplied")
 
     # ---------------------------------------------------------
-    # 5. Validate Step‑4 output schema
+    # 6. Validate Step‑4 output schema
     # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
