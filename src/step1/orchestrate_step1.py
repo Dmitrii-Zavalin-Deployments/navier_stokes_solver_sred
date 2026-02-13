@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 import numpy as np
-from pathlib import Path
 
 from .assemble_simulation_state import assemble_simulation_state
 from .allocate_staggered_fields import allocate_staggered_fields
@@ -30,30 +29,11 @@ def _to_json_safe(obj):
 
 def orchestrate_step1(
     json_input: Dict[str, Any],
-    *,
-    validate_json_schema=None,
-    load_schema=None,
+    _unused_schema_argument: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
-    """
-    Orchestrate Step 1 of the solver pipeline.
-
-    Responsibilities:
-    - Validate input schema
-    - Validate physical constraints
-    - Parse config
-    - Initialize grid
-    - Allocate staggered fields
-    - Map geometry mask
-    - Apply initial conditions
-    - Parse boundary conditions
-    - Compute derived constants
-    - Assemble final Step 1 state
-    - Verify shapes
-    - Validate output schema
-    """
 
     # ---------------------------------------------------------
-    # 1. Validate input JSON (original Step 1 logic)
+    # 1. Validate input JSON
     # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
     try:
@@ -147,7 +127,7 @@ def orchestrate_step1(
     }
 
     # ---------------------------------------------------------
-    # 14. Validate output schema (original Step 1 logic)
+    # 14. Validate output schema using JSON‑safe version
     # ---------------------------------------------------------
     output_schema = load_schema("schema/step1_output_schema.json")
     try:
