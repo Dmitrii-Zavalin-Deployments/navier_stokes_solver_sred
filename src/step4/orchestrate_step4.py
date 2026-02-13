@@ -13,6 +13,9 @@ from src.step4.verify_post_bc_state import verify_post_bc_state
 # NEW: domain metadata subsystem
 from src.step4.domain_metadata import build_domain_block
 
+# NEW: rhs_source restructuring subsystem
+from src.step4.assemble_rhs_source import assemble_rhs_source
+
 
 def orchestrate_step4(
     state,
@@ -31,6 +34,7 @@ def orchestrate_step4(
     - Apply all boundary conditions
     - Apply boundary-fluid treatment
     - Precompute RHS source terms
+    - Convert RHS to schema-compliant rhs_source
     - Verify post-BC state integrity
     - Build full domain metadata block
     - Rename fields to match Step‑4 schema
@@ -69,7 +73,14 @@ def orchestrate_step4(
     state = initialize_staggered_fields(state)
     state = apply_all_boundary_conditions(state)
     state = apply_boundary_cell_treatment(state)
+
+    # Compute RHS in internal format
     state = precompute_rhs_source_terms(state)
+
+    # Convert RHS → schema-compliant rhs_source
+    state = assemble_rhs_source(state)
+
+    # Post-BC integrity checks
     state = verify_post_bc_state(state)
 
     # ---------------------------------------------------------
@@ -92,7 +103,7 @@ def orchestrate_step4(
     if "W_ext" in state:
         state["w_ext"] = state.pop("W_ext")
 
-    # Rename RHS → rhs_source (structure expanded later)
+    # Rename RHS → rhs_source (already restructured)
     if "RHS" in state:
         state["rhs_source"] = state.pop("RHS")
 
