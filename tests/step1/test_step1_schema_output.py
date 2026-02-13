@@ -2,9 +2,9 @@
 
 import json
 from pathlib import Path
-import numpy as np
 
 from src.step1.orchestrate_step1 import orchestrate_step1
+from src.common.json_safe import to_json_safe
 from tests.helpers.minimal_step1_input import make_minimal_step1_input
 
 
@@ -16,19 +16,6 @@ def load_schema(path: str):
 def validate_json_schema(instance, schema):
     from jsonschema import validate
     validate(instance=instance, schema=schema)
-
-
-# ------------------------------------------------------------
-# JSON‑safe conversion helper (same pattern as Step‑2 and Step‑3)
-# ------------------------------------------------------------
-def to_json_safe(obj):
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, dict):
-        return {k: to_json_safe(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [to_json_safe(x) for x in obj]
-    return obj
 
 
 def test_step1_output_matches_schema():
@@ -51,7 +38,7 @@ def test_step1_output_matches_schema():
         load_schema=load_schema,
     )
 
-    # Convert JSON‑safe mirror again (for consistency with Step‑2/3 tests)
+    # Convert JSON‑safe mirror again (for consistency with Step‑2/3/4 tests)
     state_json = to_json_safe(state_out["state_as_dict"])
 
     validate_json_schema(state_json, schema)
