@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from src.step2.orchestrate_step2 import orchestrate_step2
-from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
+from tests.helpers.step1_schema_dummy_state import Step1SchemaDummyState
 
 
 def load_schema(path: str):
@@ -19,7 +19,7 @@ def validate_json_schema(instance, schema):
 
 
 # ------------------------------------------------------------
-# JSON‑safe conversion helper (same pattern as Step‑3 tests)
+# JSON‑safe conversion helper (mirrors Step‑3 schema test)
 # ------------------------------------------------------------
 def to_json_safe(obj):
     if isinstance(obj, np.ndarray):
@@ -34,9 +34,9 @@ def to_json_safe(obj):
 def make_minimal_step2_input():
     """
     Minimal valid Step‑1 output that Step‑2 can accept.
-    Use the official Step‑2 schema‑compliant dummy.
+    Use the official Step‑1 schema‑compliant dummy.
     """
-    return Step2SchemaDummyState(nx=1, ny=1, nz=1)
+    return Step1SchemaDummyState(nx=1, ny=1, nz=1)
 
 
 def test_step2_output_matches_schema():
