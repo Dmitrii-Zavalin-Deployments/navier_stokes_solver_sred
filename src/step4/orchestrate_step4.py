@@ -10,19 +10,19 @@ from src.step4.boundary_cell_treatment import apply_boundary_cell_treatment
 from src.step4.precompute_rhs_source_terms import precompute_rhs_source_terms
 from src.step4.verify_post_bc_state import verify_post_bc_state
 
-# NEW: domain metadata subsystem
+# Domain metadata subsystem
 from src.step4.domain_metadata import build_domain_block
 
-# NEW: rhs_source restructuring subsystem
+# rhs_source restructuring subsystem
 from src.step4.assemble_rhs_source import assemble_rhs_source
 
-# NEW: bc_applied expansion subsystem
+# bc_applied expansion subsystem
 from src.step4.assemble_bc_applied import assemble_bc_applied
 
-# NEW: diagnostics subsystem
+# diagnostics subsystem
 from src.step4.assemble_diagnostics import assemble_diagnostics
 
-# NEW: history subsystem
+# history subsystem
 from src.step4.assemble_history import assemble_history
 
 
