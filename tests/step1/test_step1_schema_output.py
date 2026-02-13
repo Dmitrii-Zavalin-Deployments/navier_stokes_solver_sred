@@ -93,4 +93,5 @@ def test_step1_output_matches_schema():
         load_schema=load_schema,
     )
 
-    validate_json_schema(state_out, schema)
+    # IMPORTANT: validate JSON‑safe mirror, not raw NumPy arrays
+    validate_json_schema(state_out["state_as_dict"], schema)
