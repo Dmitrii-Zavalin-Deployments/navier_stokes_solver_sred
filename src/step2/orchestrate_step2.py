@@ -136,10 +136,10 @@ def orchestrate_step2(
     # ---------------------------------------------------------
     output: Dict[str, Any] = {
         "grid": state["grid"],
-        "fields": state["fields"],
+        "fields": state["fields"],  # NumPy arrays (solver‑side)
         "config": state["config"],
         "constants": constants,
-        "mask": state["mask_3d"],
+        "mask": state["mask_3d"],  # JSON‑safe list
         "is_fluid": is_fluid.tolist(),
         "is_solid": is_solid.tolist(),
         "is_boundary_cell": is_boundary_cell.tolist(),
@@ -156,7 +156,7 @@ def orchestrate_step2(
             "advection_w": "advection_w",
         },
         "ppe": ppe,
-        "ppe_structure": ppe,
+        "ppe_structure": ppe,  # test‑only extension
         "health": health,
         "meta": {
             "step": 2,
