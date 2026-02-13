@@ -22,6 +22,9 @@ from src.step4.assemble_bc_applied import assemble_bc_applied
 # NEW: diagnostics subsystem
 from src.step4.assemble_diagnostics import assemble_diagnostics
 
+# NEW: history subsystem
+from src.step4.assemble_history import assemble_history
+
 
 def orchestrate_step4(
     state,
@@ -44,6 +47,7 @@ def orchestrate_step4(
     - Verify post-BC state integrity
     - Expand bc_applied to schema format
     - Compute diagnostics
+    - Initialize empty history block
     - Build full domain metadata block
     - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
@@ -96,6 +100,9 @@ def orchestrate_step4(
 
     # Compute diagnostics
     state = assemble_diagnostics(state)
+
+    # Initialize empty history block
+    state = assemble_history(state)
 
     # ---------------------------------------------------------
     # 3. Build full domain metadata block
