@@ -14,6 +14,11 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 validate_json_schema = None
 load_schema = None
 
+# ---------------------------------------------------------
+# Global debug flag for Step‑3
+# ---------------------------------------------------------
+DEBUG_STEP3 = False
+
 
 def _to_json_compatible(obj):
     if isinstance(obj, np.ndarray):
@@ -47,19 +52,19 @@ def _ensure_is_solid(state):
     return new_state
 
 
-def orchestrate_step3(state, current_time, step_index):
+def orchestrate_step3(
+    state,
+    current_time,
+    step_index,
+    _unused_schema_argument=None,
+    **_ignored_kwargs,
+):
     """
     Step 3 — Pressure projection and velocity correction.
-
-    Strict contract:
-      • Step 3 does NOT repair Step 2 output.
-      • Step 3 validates Step 2 output immediately.
-      • If Step 2 output violates its schema, Step 2 is broken.
-      • Step 3 must not mutate caller state.
     """
 
     # ------------------------------------------------------------
-    # 0 — Validate Step‑2 output (MUST raise RuntimeError on failure)
+    # 0 — Validate Step‑2 output
     # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         try:
@@ -80,7 +85,7 @@ def orchestrate_step3(state, current_time, step_index):
     base_state = dict(state)
 
     # ------------------------------------------------------------
-    # Ensure is_solid exists (wrap errors in RuntimeError)
+    # Ensure is_solid exists
     # ------------------------------------------------------------
     try:
         base_state = _ensure_is_solid(base_state)
@@ -90,7 +95,7 @@ def orchestrate_step3(state, current_time, step_index):
         ) from exc
 
     # ------------------------------------------------------------
-    # 1 — Pre‑BC (must fail cleanly if fields missing)
+    # 1 — Pre‑BC
     # ------------------------------------------------------------
     try:
         fields0 = base_state["fields"]
@@ -131,7 +136,7 @@ def orchestrate_step3(state, current_time, step_index):
     )
 
     fields_out = dict(fields_post)
-    fields_out["P"] = P_arr  # must be ndarray
+    fields_out["P"] = P_arr
 
     # ------------------------------------------------------------
     # 7 — Health
@@ -139,24 +144,17 @@ def orchestrate_step3(state, current_time, step_index):
     health = update_health(base_state, fields_out, P_arr)
 
     # ------------------------------------------------------------
-    # 9 — Assemble Step‑3 output
-    # ------------------------------------------------------------
-    new_state = dict(base_state)
-    new_state["fields"] = fields_out
-    new_state["health"] = health
-
-    # ------------------------------------------------------------
     # 8 — Diagnostics
     # ------------------------------------------------------------
     diag_record = log_step_diagnostics(
-        new_state, fields_out, current_time, step_index
+        base_state, fields_out, current_time, step_index
     )
 
     # ------------------------------------------------------------
-    # 10 — History
+    # 9 — History
     # ------------------------------------------------------------
     hist = dict(
-        new_state.get(
+        base_state.get(
             "history",
             {
                 "times": [],
@@ -174,6 +172,12 @@ def orchestrate_step3(state, current_time, step_index):
     hist["ppe_iterations_history"].append(diag_record.get("ppe_iterations", -1))
     hist["energy_history"].append(diag_record.get("energy", 0.0))
 
+    # ------------------------------------------------------------
+    # 10 — Assemble Step‑3 output
+    # ------------------------------------------------------------
+    new_state = dict(base_state)
+    new_state["fields"] = fields_out
+    new_state["health"] = health
     new_state["history"] = hist
 
     # ------------------------------------------------------------
@@ -193,6 +197,15 @@ def orchestrate_step3(state, current_time, step_index):
                 "The Step‑3 output does not match step3_output_schema.json.\n"
                 f"Validation error: {exc}\n"
             ) from exc
+
+    # ------------------------------------------------------------
+    # 12 — Optional debug print
+    # ------------------------------------------------------------
+    if DEBUG_STEP3:
+        print("\n[DEBUG] Step‑3 output keys:", list(new_state.keys()))
+        print("[DEBUG] Step‑3 fields keys:", list(new_state["fields"].keys()))
+        print("[DEBUG] Step‑3 health keys:", list(new_state["health"].keys()))
+        print("[DEBUG] Step‑3 history keys:", list(new_state["history"].keys()))
 
     return new_state
 
