@@ -16,6 +16,9 @@ from src.step4.domain_metadata import build_domain_block
 # NEW: rhs_source restructuring subsystem
 from src.step4.assemble_rhs_source import assemble_rhs_source
 
+# NEW: bc_applied expansion subsystem
+from src.step4.assemble_bc_applied import assemble_bc_applied
+
 
 def orchestrate_step4(
     state,
@@ -36,6 +39,7 @@ def orchestrate_step4(
     - Precompute RHS source terms
     - Convert RHS to schema-compliant rhs_source
     - Verify post-BC state integrity
+    - Expand bc_applied to schema format
     - Build full domain metadata block
     - Rename fields to match Step‑4 schema
     - Validate Step‑4 → Step‑5 output schema
@@ -83,6 +87,9 @@ def orchestrate_step4(
     # Post-BC integrity checks
     state = verify_post_bc_state(state)
 
+    # Expand bc_applied to schema format
+    state = assemble_bc_applied(state)
+
     # ---------------------------------------------------------
     # 3. Build full domain metadata block
     # ---------------------------------------------------------
@@ -107,7 +114,7 @@ def orchestrate_step4(
     if "RHS" in state:
         state["rhs_source"] = state.pop("RHS")
 
-    # Rename BCApplied → bc_applied (structure expanded later)
+    # Rename BCApplied → bc_applied (already expanded)
     if "BCApplied" in state:
         state["bc_applied"] = state.pop("BCApplied")
 
