@@ -2,8 +2,10 @@
 
 import json
 from pathlib import Path
+import numpy as np
 
 from src.step2.orchestrate_step2 import orchestrate_step2
+from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 
 def load_schema(path: str):
@@ -16,71 +18,25 @@ def validate_json_schema(instance, schema):
     validate(instance=instance, schema=schema)
 
 
+# ------------------------------------------------------------
+# JSON‑safe conversion helper (same pattern as Step‑3 tests)
+# ------------------------------------------------------------
+def to_json_safe(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [to_json_safe(x) for x in obj]
+    return obj
+
+
 def make_minimal_step2_input():
     """
     Minimal valid Step‑1 output that Step‑2 can accept.
-    Must match step1_output_schema.json exactly.
+    Use the official Step‑2 schema‑compliant dummy.
     """
-
-    return {
-        "grid": {
-            "x_min": 0.0, "x_max": 1.0,
-            "y_min": 0.0, "y_max": 1.0,
-            "z_min": 0.0, "z_max": 1.0,
-            "nx": 1, "ny": 1, "nz": 1,
-            "dx": 1.0, "dy": 1.0, "dz": 1.0,
-        },
-
-        "fields": {
-            "P": [[[0.0]]],          # (1,1,1)
-            "U": [[[0.0]], [[0.0]]], # (2,1,1)
-            "V": [[[0.0], [0.0]]],   # (1,2,1)
-            "W": [[[0.0, 0.0]]],     # (1,1,2)
-            "Mask": [[[1]]],         # (1,1,1)
-        },
-
-        "mask_3d": [[[1]]],
-
-        "boundary_table": {
-            "x_min": [],
-            "x_max": [],
-            "y_min": [],
-            "y_max": [],
-            "z_min": [],
-            "z_max": [],
-        },
-
-        "constants": {
-            "rho": 1.0,
-            "mu": 1.0,
-            "dt": 0.1,
-            "dx": 1.0,
-            "dy": 1.0,
-            "dz": 1.0,
-            "inv_dx": 1.0,
-            "inv_dy": 1.0,
-            "inv_dz": 1.0,
-            "inv_dx2": 1.0,
-            "inv_dy2": 1.0,
-            "inv_dz2": 1.0,
-        },
-
-        "config": {
-            "domain": {"nx": 1, "ny": 1, "nz": 1},
-            "fluid": {"density": 1.0, "viscosity": 0.1},
-            "simulation": {"time_step": 0.1},
-            "forces": {"force_vector": [0.0, 0.0, 0.0]},
-            "boundary_conditions": [],
-            "geometry_definition": {
-                "geometry_mask_flat": [1],
-                "geometry_mask_shape": [1, 1, 1],
-                "mask_encoding": {"fluid": 1, "solid": -1},
-                "flattening_order": "C",
-            },
-        },
-
-        "state_as_dict": {}
-    }
+    return Step2SchemaDummyState(nx=1, ny=1, nz=1)
 
 
 def test_step2_output_matches_schema():
@@ -102,4 +58,7 @@ def test_step2_output_matches_schema():
         load_schema=load_schema,
     )
 
-    validate_json_schema(state_out, schema)
+    # Convert to JSON‑safe form BEFORE schema validation
+    state_json = to_json_safe(state_out)
+
+    validate_json_schema(state_json, schema)
