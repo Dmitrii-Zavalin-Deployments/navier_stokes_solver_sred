@@ -30,6 +30,7 @@ def _to_json_safe(obj):
 def orchestrate_step1(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
+    **_ignored_kwargs,
 ) -> Dict[str, Any]:
 
     # ---------------------------------------------------------
