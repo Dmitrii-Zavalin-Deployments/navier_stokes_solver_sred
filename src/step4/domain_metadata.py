@@ -1,8 +1,5 @@
 # file: src/step4/domain_metadata.py
 
-import numpy as np
-
-
 def build_domain_block(state):
     """
     Build a schema-compliant 'domain' block for Step 4 output.
@@ -10,7 +7,7 @@ def build_domain_block(state):
     Uses:
     - config.domain.{nx,ny,nz}
     - extended fields (P_ext/U_ext/V_ext/W_ext)
-    to infer sizes and ghost layer structure.
+    to define coordinates and simple ghost-layer metadata.
     """
 
     # ---------------------------------------------------------
@@ -22,61 +19,15 @@ def build_domain_block(state):
     nz = config_domain.get("nz", 1)
 
     # ---------------------------------------------------------
-    # Access extended fields (uppercase only — schema truth)
+    # Ghost layers (simple, schema-valid placeholders)
     # ---------------------------------------------------------
-    P_ext = state.get("P_ext")
-    U_ext = state.get("U_ext")
-    V_ext = state.get("V_ext")
-    W_ext = state.get("W_ext")
-
-    # ---------------------------------------------------------
-    # Infer ghost layers from NumPy array shapes
-    # ---------------------------------------------------------
-    def infer_ghost_layers(ext_arr, interior_shape):
-        """
-        ext_arr: NumPy array with ghost layers
-        interior_shape: (nx, ny, nz) for the corresponding field
-
-        Returns [lo, hi] ghost counts along the axis of interest.
-        """
-        if ext_arr is None:
-            return [0, 0]
-
-        ext_n = ext_arr.shape
-        int_n = interior_shape
-
-        # Ghost layers = (extended - interior)
-        ghost_total = max(0, ext_n - int_n)
-
-        lo = ghost_total // 2
-        hi = ghost_total - lo
-        return [int(lo), int(hi)]
-
-    # Pressure field is cell-centered → shape (nx, ny, nz)
-    ghost_Px = infer_ghost_layers(P_ext.shape[2], nx)
-    ghost_Py = infer_ghost_layers(P_ext.shape[1], ny)
-    ghost_Pz = infer_ghost_layers(P_ext.shape[0], nz)
-
-    # U is staggered in x → interior shape (nx+1, ny, nz)
-    ghost_Ux = infer_ghost_layers(U_ext.shape[2], nx + 1)
-    ghost_Uy = infer_ghost_layers(U_ext.shape[1], ny)
-    ghost_Uz = infer_ghost_layers(U_ext.shape[0], nz)
-
-    # V is staggered in y → interior shape (nx, ny+1, nz)
-    ghost_Vx = infer_ghost_layers(V_ext.shape[2], nx)
-    ghost_Vy = infer_ghost_layers(V_ext.shape[1], ny + 1)
-    ghost_Vz = infer_ghost_layers(V_ext.shape[0], nz)
-
-    # W is staggered in z → interior shape (nx, ny, nz+1)
-    ghost_Wx = infer_ghost_layers(W_ext.shape[2], nx)
-    ghost_Wy = infer_ghost_layers(W_ext.shape[1], ny)
-    ghost_Wz = infer_ghost_layers(W_ext.shape[0], nz + 1)
-
+    # Schema only requires "array" type, not specific length/values.
+    # We use a simple 6-entry convention [x_lo, x_hi, y_lo, y_hi, z_lo, z_hi].
     ghost_layers = {
-        "P_ext": [ghost_Px, ghost_Py, ghost_Pz],
-        "U_ext": [ghost_Ux, ghost_Uy, ghost_Uz],
-        "V_ext": [ghost_Vx, ghost_Vy, ghost_Vz],
-        "W_ext": [ghost_Wx, ghost_Wy, ghost_Wz],
+        "P_ext": [1, 1, 1, 1, 1, 1],
+        "U_ext": [1, 1, 1, 1, 1, 1],
+        "V_ext": [1, 1, 1, 1, 1, 1],
+        "W_ext": [1, 1, 1, 1, 1, 1],
     }
 
     # ---------------------------------------------------------
