@@ -32,11 +32,11 @@ def make_minimal_step2_input():
         },
 
         "fields": {
-            "P": [[[0.0]]],
-            "U": [[[0.0]]],
-            "V": [[[0.0]]],
-            "W": [[[0.0]]],
-            "Mask": [[[1]]],
+            "P": [[[0.0]]],          # (1,1,1)
+            "U": [[[0.0]], [[0.0]]], # (2,1,1)
+            "V": [[[0.0], [0.0]]],   # (1,2,1)
+            "W": [[[0.0, 0.0]]],     # (1,1,2)
+            "Mask": [[[1]]],         # (1,1,1)
         },
 
         "mask_3d": [[[1]]],
@@ -79,7 +79,6 @@ def make_minimal_step2_input():
             },
         },
 
-        # Step‑1 always includes this JSON‑safe mirror
         "state_as_dict": {}
     }
 
@@ -103,5 +102,4 @@ def test_step2_output_matches_schema():
         load_schema=load_schema,
     )
 
-    # Step‑2 output is already JSON‑safe (lists, dicts, numbers)
     validate_json_schema(state_out, schema)
