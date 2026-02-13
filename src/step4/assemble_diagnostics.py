@@ -1,4 +1,7 @@
-# src/step4/assemble_diagnostics.py
+# file: src/step4/assemble_diagnostics.py
+
+import numpy as np
+
 
 def assemble_diagnostics(state):
     """
@@ -26,57 +29,52 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # grid_volume_per_cell
-    # For now: assume unit cube cells (1.0)
     # ---------------------------------------------------------
     grid_volume_per_cell = 1.0
 
     # ---------------------------------------------------------
     # initialized
-    # True if staggered fields exist
+    # True if extended fields exist (uppercase keys)
     # ---------------------------------------------------------
     initialized = (
-        "u_ext" in state and
-        "v_ext" in state and
-        "w_ext" in state
+        "U_ext" in state and
+        "V_ext" in state and
+        "W_ext" in state
     )
 
     # ---------------------------------------------------------
     # post_bc_max_velocity
-    # Compute max |U|, |V|, |W| from extended fields
+    # Use NumPy for fast absolute max
     # ---------------------------------------------------------
     def max_abs(field):
-        if not field:
-            return 0.0
-        m = 0.0
-        for k in field:
-            for j in k:
-                for v in j:
-                    m = max(m, abs(v))
-        return m
+        if isinstance(field, np.ndarray):
+            return float(np.max(np.abs(field)))
+        return 0.0
 
     post_bc_max_velocity = max(
-        max_abs(state.get("u_ext")),
-        max_abs(state.get("v_ext")),
-        max_abs(state.get("w_ext")),
+        max_abs(state.get("U_ext")),
+        max_abs(state.get("V_ext")),
+        max_abs(state.get("W_ext")),
     )
 
     # ---------------------------------------------------------
     # post_bc_divergence_norm
-    # Provided by verify_post_bc_state
     # ---------------------------------------------------------
     health = state.get("health", {})
-    post_bc_divergence_norm = health.get("post_correction_divergence_norm", 0.0)
+    post_bc_divergence_norm = float(
+        health.get("post_correction_divergence_norm", 0.0)
+    )
 
     # ---------------------------------------------------------
     # bc_violation_count
-    # Count faces where applied=False
+    # Now statuses are STRINGS ("applied", "skipped", "error")
     # ---------------------------------------------------------
     bc_applied = state.get("bc_applied", {})
     bc_status = bc_applied.get("boundary_conditions_status", {})
 
     bc_violation_count = 0
-    for face, info in bc_status.items():
-        if not info.get("applied", False):
+    for face, status in bc_status.items():
+        if status != "applied":
             bc_violation_count += 1
 
     # ---------------------------------------------------------
