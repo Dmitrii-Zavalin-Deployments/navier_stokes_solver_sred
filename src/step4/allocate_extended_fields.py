@@ -21,6 +21,7 @@ def allocate_extended_fields(state):
     # Copy interior values (defensively)
     # ---------------------------------------------------------
 
+    # ---------- P ----------
     if "P" in fields:
         P = np.asarray(fields["P"])
         sx = min(nx, P.shape[0])
@@ -28,6 +29,7 @@ def allocate_extended_fields(state):
         sz = min(nz, P.shape[2])
         P_ext[1:1+sx, 1:1+sy, 1:1+sz] = P[:sx, :sy, :sz]
 
+    # ---------- U (staggered in x) ----------
     if "U" in fields:
         U = np.asarray(fields["U"])
         sx = min(nx + 1, U.shape[0])
@@ -35,6 +37,7 @@ def allocate_extended_fields(state):
         sz = min(nz,     U.shape[2])
         U_ext[1:1+sx, 1:1+sy, 1:1+sz] = U[:sx, :sy, :sz]
 
+    # ---------- V (staggered in y) ----------
     if "V" in fields:
         V = np.asarray(fields["V"])
         sx = min(nx,     V.shape[0])
@@ -42,6 +45,7 @@ def allocate_extended_fields(state):
         sz = min(nz,     V.shape[2])
         V_ext[0:sx, 1:1+sy, 1:1+sz] = V[:sx, :sy, :sz]
 
+    # ---------- W (staggered in z) ----------
     if "W" in fields:
         W = np.asarray(fields["W"])
         sx = min(nx,     W.shape[0])
@@ -58,7 +62,7 @@ def allocate_extended_fields(state):
     state["W_ext"] = W_ext
 
     # ---------------------------------------------------------
-    # New schema ghost layers (lowercase domain)
+    # New schema ghost layers (lowercase domain, [lo, hi])
     # ---------------------------------------------------------
     ghost_layers_schema = {
         "P_ext": [1, 1],
@@ -68,27 +72,45 @@ def allocate_extended_fields(state):
     }
 
     # ---------------------------------------------------------
-    # Legacy GhostLayers block (uppercase Domain)
+    # Legacy GhostLayers block (index tuples usable as slices)
     # ---------------------------------------------------------
-    def ghost_slices(arr):
-        return {
-            "GHOST_X_LO": arr[0, :, :],
-            "GHOST_X_HI": arr[-1, :, :],
-            "GHOST_Y_LO": arr[:, 0, :],
-            "GHOST_Y_HI": arr[:, -1, :],
-            "GHOST_Z_LO": arr[:, :, 0],
-            "GHOST_Z_HI": arr[:, :, -1],
-        }
-
     ghost_layers_legacy = {
-        "P_ext": ghost_slices(P_ext),
-        "U_ext": ghost_slices(U_ext),
-        "V_ext": ghost_slices(V_ext),
-        "W_ext": ghost_slices(W_ext),
+        "P_ext": {
+            "GHOST_X_LO": (0, slice(None), slice(None)),
+            "GHOST_X_HI": (-1, slice(None), slice(None)),
+            "GHOST_Y_LO": (slice(None), 0, slice(None)),
+            "GHOST_Y_HI": (slice(None), -1, slice(None)),
+            "GHOST_Z_LO": (slice(None), slice(None), 0),
+            "GHOST_Z_HI": (slice(None), slice(None), -1),
+        },
+        "U_ext": {
+            "GHOST_X_LO": (0, slice(None), slice(None)),
+            "GHOST_X_HI": (-1, slice(None), slice(None)),
+            "GHOST_Y_LO": (slice(None), 0, slice(None)),
+            "GHOST_Y_HI": (slice(None), -1, slice(None)),
+            "GHOST_Z_LO": (slice(None), slice(None), 0),
+            "GHOST_Z_HI": (slice(None), slice(None), -1),
+        },
+        "V_ext": {
+            "GHOST_X_LO": (0, slice(None), slice(None)),
+            "GHOST_X_HI": (-1, slice(None), slice(None)),
+            "GHOST_Y_LO": (slice(None), 0, slice(None)),
+            "GHOST_Y_HI": (slice(None), -1, slice(None)),
+            "GHOST_Z_LO": (slice(None), slice(None), 0),
+            "GHOST_Z_HI": (slice(None), slice(None), -1),
+        },
+        "W_ext": {
+            "GHOST_X_LO": (0, slice(None), slice(None)),
+            "GHOST_X_HI": (-1, slice(None), slice(None)),
+            "GHOST_Y_LO": (slice(None), 0, slice(None)),
+            "GHOST_Y_HI": (slice(None), -1, slice(None)),
+            "GHOST_Z_LO": (slice(None), slice(None), 0),
+            "GHOST_Z_HI": (slice(None), slice(None), -1),
+        },
     }
 
     # ---------------------------------------------------------
-    # New schema domain block
+    # New schema domain block (lowercase)
     # ---------------------------------------------------------
     state["domain"] = {
         "ghost_layers": ghost_layers_schema,
@@ -110,7 +132,7 @@ def allocate_extended_fields(state):
     }
 
     # ---------------------------------------------------------
-    # Legacy Domain block (required by tests)
+    # Legacy Domain block (uppercase, required by tests)
     # ---------------------------------------------------------
     state["Domain"] = {
         "P_ext": P_ext,
