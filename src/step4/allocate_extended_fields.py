@@ -24,52 +24,34 @@ def allocate_extended_fields(state):
     # ---------- P ----------
     if "P" in fields:
         P = np.asarray(fields["P"])
-        if P.shape == (nx, ny, nz):
-            P_ext[1:nx+1, 1:ny+1, 1:nz+1] = P
-        else:
-            sx = min(nx, P.shape[0])
-            sy = min(ny, P.shape[1])
-            sz = min(nz, P.shape[2])
-            P_ext[1:1+sx, 1:1+sy, 1:1+sz] = P[:sx, :sy, :sz]
+        sx = min(nx, P.shape[0])
+        sy = min(ny, P.shape[1])
+        sz = min(nz, P.shape[2])
+        P_ext[1:1+sx, 1:1+sy, 1:1+sz] = P[:sx, :sy, :sz]
 
     # ---------- U (staggered in x) ----------
     if "U" in fields:
         U = np.asarray(fields["U"])
-        expected = (nx + 1, ny, nz)
-
-        if U.shape == expected:
-            U_ext[1:nx+2, 1:ny+1, 1:nz+1] = U
-        else:
-            sx = min(nx + 1, U.shape[0])
-            sy = min(ny,     U.shape[1])
-            sz = min(nz,     U.shape[2])
-            U_ext[1:1+sx, 1:1+sy, 1:1+sz] = U[:sx, :sy, :sz]
+        sx = min(nx + 1, U.shape[0])
+        sy = min(ny,     U.shape[1])
+        sz = min(nz,     U.shape[2])
+        U_ext[1:1+sx, 1:1+sy, 1:1+sz] = U[:sx, :sy, :sz]
 
     # ---------- V (staggered in y) ----------
     if "V" in fields:
         V = np.asarray(fields["V"])
-        expected = (nx, ny + 1, nz)
-
-        if V.shape == expected:
-            V_ext[0:nx, 1:ny+2, 1:nz+1] = V
-        else:
-            sx = min(nx,     V.shape[0])
-            sy = min(ny + 1, V.shape[1])
-            sz = min(nz,     V.shape[2])
-            V_ext[0:sx, 1:1+sy, 1:1+sz] = V[:sx, :sy, :sz]
+        sx = min(nx,     V.shape[0])
+        sy = min(ny + 1, V.shape[1])
+        sz = min(nz,     V.shape[2])
+        V_ext[0:sx, 1:1+sy, 1:1+sz] = V[:sx, :sy, :sz]
 
     # ---------- W (staggered in z) ----------
     if "W" in fields:
         W = np.asarray(fields["W"])
-        expected = (nx, ny, nz + 1)
-
-        if W.shape == expected:
-            W_ext[0:nx, 0:ny, 1:nz+2] = W
-        else:
-            sx = min(nx,     W.shape[0])
-            sy = min(ny,     W.shape[1])
-            sz = min(nz + 1, W.shape[2])
-            W_ext[0:sx, 0:sy, 1:1+sz] = W[:sx, :sy, :sz]
+        sx = min(nx,     W.shape[0])
+        sy = min(ny,     W.shape[1])
+        sz = min(nz + 1, W.shape[2])
+        W_ext[0:sx, 0:sy, 1:1+sz] = W[:sx, :sy, :sz]
 
     # ---------------------------------------------------------
     # Store extended fields
@@ -81,7 +63,6 @@ def allocate_extended_fields(state):
 
     # ---------------------------------------------------------
     # Schema-compliant ghost layer format: [lo, hi]
-    # All extended fields have exactly one ghost layer on each side.
     # ---------------------------------------------------------
     GhostLayers = {
         "P_ext": [1, 1],
@@ -91,14 +72,28 @@ def allocate_extended_fields(state):
     }
 
     # ---------------------------------------------------------
-    # Domain block
+    # Domain block (capital D — required by tests)
     # ---------------------------------------------------------
-    state["domain"] = {
-        "coordinates": {},          # Filled later in orchestrate_step4
-        "ghost_layers": GhostLayers,
-        "index_ranges": {},         # Filled later
-        "stencil_maps": {},         # Filled later
-        "interpolation_maps": {},   # Filled later
+    state["Domain"] = {
+        "P_ext": P_ext,
+        "U_ext": U_ext,
+        "V_ext": V_ext,
+        "W_ext": W_ext,
+
+        "GhostLayers": GhostLayers,
+
+        "index_ranges": {
+            "x": (0, nx - 1),
+            "y": (0, ny - 1),
+            "z": (0, nz - 1),
+        },
+
+        "views": {
+            "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
+            "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
+            "V_interior": V_ext[:, 1:ny+2, 1:nz+1],
+            "W_interior": W_ext[:, :, 1:nz+2],
+        },
     }
 
     return state

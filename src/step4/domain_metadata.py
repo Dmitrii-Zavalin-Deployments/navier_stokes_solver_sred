@@ -2,12 +2,15 @@
 
 def build_domain_block(state):
     """
-    Build a schema-compliant 'domain' block for Step 4 output.
+    Build a schema-compliant 'Domain' block for Step 4 output.
 
-    Uses:
-    - config.domain.{nx,ny,nz}
-    - extended fields (P_ext/U_ext/V_ext/W_ext)
-    to define coordinates and simple ghost-layer metadata.
+    This function AUGMENTS the Domain block created earlier by
+    allocate_extended_fields(), adding:
+      - coordinates
+      - ghost_layers (schema-compliant [lo, hi])
+      - index_ranges
+      - stencil_maps
+      - interpolation_maps
     """
 
     # ---------------------------------------------------------
@@ -19,19 +22,17 @@ def build_domain_block(state):
     nz = config_domain.get("nz", 1)
 
     # ---------------------------------------------------------
-    # Ghost layers (simple, schema-valid placeholders)
+    # Ghost layers (schema-compliant: [lo, hi])
     # ---------------------------------------------------------
-    # Schema only requires "array" type, not specific length/values.
-    # We use a simple 6-entry convention [x_lo, x_hi, y_lo, y_hi, z_lo, z_hi].
     ghost_layers = {
-        "P_ext": [1, 1, 1, 1, 1, 1],
-        "U_ext": [1, 1, 1, 1, 1, 1],
-        "V_ext": [1, 1, 1, 1, 1, 1],
-        "W_ext": [1, 1, 1, 1, 1, 1],
+        "P_ext": [1, 1],
+        "U_ext": [1, 1],
+        "V_ext": [1, 1],
+        "W_ext": [1, 1],
     }
 
     # ---------------------------------------------------------
-    # Coordinates (uniform grid for now)
+    # Coordinates (uniform grid)
     # ---------------------------------------------------------
     def linspace_1d(n):
         if n <= 0:
@@ -87,14 +88,15 @@ def build_domain_block(state):
     }
 
     # ---------------------------------------------------------
-    # Assemble final domain block
+    # Merge into existing Domain block (capital D)
     # ---------------------------------------------------------
-    state["domain"] = {
-        "coordinates": coordinates,
-        "ghost_layers": ghost_layers,
-        "index_ranges": index_ranges,
-        "stencil_maps": stencil_maps,
-        "interpolation_maps": interpolation_maps,
-    }
+    domain = state.get("Domain", {})
 
+    domain["coordinates"] = coordinates
+    domain["ghost_layers"] = ghost_layers
+    domain["index_ranges"] = index_ranges
+    domain["stencil_maps"] = stencil_maps
+    domain["interpolation_maps"] = interpolation_maps
+
+    state["Domain"] = domain
     return state
