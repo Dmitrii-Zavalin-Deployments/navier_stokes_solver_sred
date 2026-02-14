@@ -4,21 +4,6 @@ import numpy as np
 
 
 def allocate_extended_fields(state):
-    """
-    Allocate extended (ghost-layer) fields for Step 4.
-
-    Axis order is ALWAYS (x, y, z).
-
-    Shapes required by tests:
-        P_ext: (nx+2, ny+2, nz+2)
-        U_ext: (nx+3, ny+2, nz+2)
-        V_ext: (nx,   ny+3, nz+2)
-        W_ext: (nx,   ny+2, nz+3)
-
-    Interior values are copied into the correct interior slices.
-    Ghost layers are zero-filled.
-    """
-
     cfg = state["config"]["domain"]
     nx, ny, nz = cfg["nx"], cfg["ny"], cfg["nz"]
 
@@ -30,7 +15,7 @@ def allocate_extended_fields(state):
     P_ext = np.zeros((nx + 2, ny + 2, nz + 2), dtype=float)
     U_ext = np.zeros((nx + 3, ny + 2, nz + 2), dtype=float)
     V_ext = np.zeros((nx,     ny + 3, nz + 2), dtype=float)
-    W_ext = np.zeros((nx,     ny + 2, nz + 3), dtype=float)
+    W_ext = np.zeros((nx,     ny,     nz + 3), dtype=float)
 
     # ---------------------------------------------------------
     # Copy interior values
@@ -39,16 +24,13 @@ def allocate_extended_fields(state):
         P_ext[1:nx+1, 1:ny+1, 1:nz+1] = fields["P"]
 
     if "U" in fields:
-        # U interior shape: (nx+1, ny, nz)
         U_ext[1:nx+2, 1:ny+1, 1:nz+1] = fields["U"]
 
     if "V" in fields:
-        # V interior shape: (nx, ny+1, nz)
         V_ext[:, 1:ny+2, 1:nz+1] = fields["V"]
 
     if "W" in fields:
-        # W interior shape: (nx, ny, nz+1)
-        W_ext[:, 1:ny+1, 1:nz+2] = fields["W"]
+        W_ext[:, :, 1:nz+2] = fields["W"]
 
     # ---------------------------------------------------------
     # Store extended fields
@@ -59,27 +41,27 @@ def allocate_extended_fields(state):
     state["W_ext"] = W_ext
 
     # ---------------------------------------------------------
-    # Build GhostLayers block required by tests
+    # GhostLayers must return INDEX TUPLES, not array slices
     # ---------------------------------------------------------
-    def ghost_slices(arr):
+    def ghost_indices(arr):
         return {
-            "GHOST_X_LO": arr[0, :, :],
-            "GHOST_X_HI": arr[-1, :, :],
-            "GHOST_Y_LO": arr[:, 0, :],
-            "GHOST_Y_HI": arr[:, -1, :],
-            "GHOST_Z_LO": arr[:, :, 0],
-            "GHOST_Z_HI": arr[:, :, -1],
+            "GHOST_X_LO": (0, slice(None), slice(None)),
+            "GHOST_X_HI": (-1, slice(None), slice(None)),
+            "GHOST_Y_LO": (slice(None), 0, slice(None)),
+            "GHOST_Y_HI": (slice(None), -1, slice(None)),
+            "GHOST_Z_LO": (slice(None), slice(None), 0),
+            "GHOST_Z_HI": (slice(None), slice(None), -1),
         }
 
     GhostLayers = {
-        "P_ext": ghost_slices(P_ext),
-        "U_ext": ghost_slices(U_ext),
-        "V_ext": ghost_slices(V_ext),
-        "W_ext": ghost_slices(W_ext),
+        "P_ext": ghost_indices(P_ext),
+        "U_ext": ghost_indices(U_ext),
+        "V_ext": ghost_indices(V_ext),
+        "W_ext": ghost_indices(W_ext),
     }
 
     # ---------------------------------------------------------
-    # Build Domain block required by tests
+    # Domain block
     # ---------------------------------------------------------
     state["Domain"] = {
         "P_ext": P_ext,
@@ -99,7 +81,7 @@ def allocate_extended_fields(state):
             "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
             "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
             "V_interior": V_ext[:, 1:ny+2, 1:nz+1],
-            "W_interior": W_ext[:, 1:ny+1, 1:nz+2],
+            "W_interior": W_ext[:, :, 1:nz+2],
         },
     }
 

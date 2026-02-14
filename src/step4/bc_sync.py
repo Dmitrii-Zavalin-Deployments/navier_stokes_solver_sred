@@ -11,12 +11,9 @@ def sync_dirichlet_ghosts(state):
     """
     Synchronize Dirichlet ghost cells for velocity and pressure.
 
-    This function ensures that if a face was assigned a Dirichlet value,
-    the ghost layer is consistent and does not contain uninitialized data.
-
-    Notes:
-    - This is a safety pass; most Dirichlet BCs already set ghost cells.
-    - We simply ensure that ghost cells match the nearest interior value.
+    Safety rules:
+    - Only copy ghost layers if the interior exists (size > 1).
+    - Prevent crashes on minimal grids (nx=1, ny=1, nz=1).
     """
 
     for name in ("U_ext", "V_ext", "W_ext", "P_ext"):
@@ -25,17 +22,26 @@ def sync_dirichlet_ghosts(state):
 
         arr = state[name]
 
-        # x-direction
-        arr[0, :, :] = arr[1, :, :]
-        arr[-1, :, :] = arr[-2, :, :]
+        # -------------------------------
+        # X direction
+        # -------------------------------
+        if arr.shape[0] > 1:
+            arr[0, :, :] = arr[1, :, :]
+            arr[-1, :, :] = arr[-2, :, :]
 
-        # y-direction
-        arr[:, 0, :] = arr[:, 1, :]
-        arr[:, -1, :] = arr[:, -2, :]
+        # -------------------------------
+        # Y direction
+        # -------------------------------
+        if arr.shape[1] > 1:
+            arr[:, 0, :] = arr[:, 1, :]
+            arr[:, -1, :] = arr[:, -2, :]
 
-        # z-direction
-        arr[:, :, 0] = arr[:, :, 1]
-        arr[:, :, -1] = arr[:, :, -2]
+        # -------------------------------
+        # Z direction
+        # -------------------------------
+        if arr.shape[2] > 1:
+            arr[:, :, 0] = arr[:, :, 1]
+            arr[:, :, -1] = arr[:, :, -2]
 
 
 # ----------------------------------------------------------------------
@@ -45,8 +51,7 @@ def sync_neumann_ghosts(state):
     """
     Synchronize Neumann ghost cells (zero normal gradient).
 
-    This is a second safety pass: if a Neumann BC was applied, we ensure
-    the ghost layer matches the interior cell exactly.
+    Same safety rules as Dirichlet sync.
     """
 
     for name in ("U_ext", "V_ext", "W_ext", "P_ext"):
@@ -55,17 +60,26 @@ def sync_neumann_ghosts(state):
 
         arr = state[name]
 
-        # x-direction
-        arr[0, :, :] = arr[1, :, :]
-        arr[-1, :, :] = arr[-2, :, :]
+        # -------------------------------
+        # X direction
+        # -------------------------------
+        if arr.shape[0] > 1:
+            arr[0, :, :] = arr[1, :, :]
+            arr[-1, :, :] = arr[-2, :, :]
 
-        # y-direction
-        arr[:, 0, :] = arr[:, 1, :]
-        arr[:, -1, :] = arr[:, -2, :]
+        # -------------------------------
+        # Y direction
+        # -------------------------------
+        if arr.shape[1] > 1:
+            arr[:, 0, :] = arr[:, 1, :]
+            arr[:, -1, :] = arr[:, -2, :]
 
-        # z-direction
-        arr[:, :, 0] = arr[:, :, 1]
-        arr[:, :, -1] = arr[:, :, -2]
+        # -------------------------------
+        # Z direction
+        # -------------------------------
+        if arr.shape[2] > 1:
+            arr[:, :, 0] = arr[:, :, 1]
+            arr[:, :, -1] = arr[:, :, -2]
 
 
 # ----------------------------------------------------------------------
@@ -77,15 +91,6 @@ def resolve_corner_and_edge_conflicts(state):
 
     If multiple BCs apply to the same corner or edge, we use the
     priority rule defined in bc_priority.py.
-
-    This function:
-        - inspects the BC status map
-        - identifies corners/edges touched by multiple BCs
-        - applies the priority rule to choose the winning BC
-        - ensures ghost cells reflect the chosen BC
-
-    This is intentionally lightweight: Step 4 does not enforce physics
-    here, only consistency.
     """
 
     bc_status = state.get("BCApplied", {}).get("boundary_conditions_status", {})
@@ -124,8 +129,7 @@ def resolve_corner_and_edge_conflicts(state):
         # Resolve conflict using priority rule
         winning_bc_type = apply_priority_rule(bc_values)
 
-        # No need to modify fields here — BC modules already set ghost cells.
-        # This step only ensures consistency in the BC status map.
+        # Update BC status map
         for face in faces:
             if face_to_bc.get(face) != winning_bc_type:
                 bc_status[face] = "overridden"
