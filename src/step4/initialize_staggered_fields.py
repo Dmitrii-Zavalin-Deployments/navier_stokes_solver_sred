@@ -1,3 +1,5 @@
+# src/step4/initialize_staggered_fields.py
+
 import numpy as np
 from src.step4.allocate_extended_fields import allocate_extended_fields
 
@@ -108,5 +110,12 @@ def initialize_staggered_fields(state):
 
         W_ext[0:nx, 0:ny, 1:nz+1][solid] = 0.0
         W_ext[0:nx, 0:ny, 2:nz+2][solid] = 0.0
+
+    # ---------------------------------------------------------
+    # 7. Mark that initial velocity has been enforced
+    # ---------------------------------------------------------
+    bc_applied = state.get("BCApplied", {})
+    bc_applied["initial_velocity_enforced"] = True
+    state["BCApplied"] = bc_applied
 
     return state
