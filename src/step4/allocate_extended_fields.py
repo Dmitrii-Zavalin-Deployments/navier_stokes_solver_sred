@@ -38,10 +38,8 @@ def allocate_extended_fields(state):
         expected = (nx + 1, ny, nz)
 
         if U.shape == expected:
-            # Perfect match → use strict test‑required alignment
             U_ext[1:nx+2, 1:ny+1, 1:nz+1] = U
         else:
-            # Defensive fallback for minimal/dummy states
             sx = min(nx + 1, U.shape[0])
             sy = min(ny,     U.shape[1])
             sz = min(nz,     U.shape[2])
@@ -82,48 +80,25 @@ def allocate_extended_fields(state):
     state["W_ext"] = W_ext
 
     # ---------------------------------------------------------
-    # GhostLayers must return INDEX TUPLES, not array slices
+    # Schema-compliant ghost layer format: [lo, hi]
+    # All extended fields have exactly one ghost layer on each side.
     # ---------------------------------------------------------
-    def ghost_indices(arr):
-        return {
-            "GHOST_X_LO": (0, slice(None), slice(None)),
-            "GHOST_X_HI": (-1, slice(None), slice(None)),
-            "GHOST_Y_LO": (slice(None), 0, slice(None)),
-            "GHOST_Y_HI": (slice(None), -1, slice(None)),
-            "GHOST_Z_LO": (slice(None), slice(None), 0),
-            "GHOST_Z_HI": (slice(None), slice(None), -1),
-        }
-
     GhostLayers = {
-        "P_ext": ghost_indices(P_ext),
-        "U_ext": ghost_indices(U_ext),
-        "V_ext": ghost_indices(V_ext),
-        "W_ext": ghost_indices(W_ext),
+        "P_ext": [1, 1],
+        "U_ext": [1, 1],
+        "V_ext": [1, 1],
+        "W_ext": [1, 1],
     }
 
     # ---------------------------------------------------------
     # Domain block
     # ---------------------------------------------------------
-    state["Domain"] = {
-        "P_ext": P_ext,
-        "U_ext": U_ext,
-        "V_ext": V_ext,
-        "W_ext": W_ext,
-
-        "GhostLayers": GhostLayers,
-
-        "index_ranges": {
-            "x": (0, nx - 1),
-            "y": (0, ny - 1),
-            "z": (0, nz - 1),
-        },
-
-        "views": {
-            "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
-            "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
-            "V_interior": V_ext[:, 1:ny+2, 1:nz+1],
-            "W_interior": W_ext[:, :, 1:nz+2],
-        },
+    state["domain"] = {
+        "coordinates": {},          # Filled later in orchestrate_step4
+        "ghost_layers": GhostLayers,
+        "index_ranges": {},         # Filled later
+        "stencil_maps": {},         # Filled later
+        "interpolation_maps": {},   # Filled later
     }
 
     return state
