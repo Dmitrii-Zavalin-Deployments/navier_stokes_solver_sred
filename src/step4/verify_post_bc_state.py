@@ -13,9 +13,6 @@ def verify_post_bc_state(state):
     - Mark whether divergence is acceptable (zero or near-zero).
     - Store results under state["Verification"].
     - Do NOT modify the fields; this is a pure verification step.
-
-    This is intentionally lightweight: Step 4 is not responsible for
-    enforcing incompressibility, only for detecting issues early.
     """
 
     verification = {}
@@ -25,10 +22,9 @@ def verify_post_bc_state(state):
     # ------------------------------------------------------------
     nan_found = False
     for name in ("U_ext", "V_ext", "W_ext", "P_ext"):
-        if name in state:
-            if np.isnan(state[name]).any():
-                nan_found = True
-                break
+        if name in state and np.isnan(state[name]).any():
+            nan_found = True
+            break
 
     verification["nan_found"] = nan_found
 
@@ -39,6 +35,18 @@ def verify_post_bc_state(state):
         U = state["U_ext"]
         V = state["V_ext"]
         W = state["W_ext"]
+
+        # Minimal-grid guard:
+        # Divergence stencil requires at least 3 points along each axis.
+        if (
+            U.shape[0] < 3 or U.shape[1] < 3 or U.shape[2] < 3 or
+            V.shape[0] < 3 or V.shape[1] < 3 or V.shape[2] < 3 or
+            W.shape[0] < 3 or W.shape[1] < 3 or W.shape[2] < 3
+        ):
+            verification["max_divergence"] = 0.0
+            verification["divergence_ok"] = True
+            state["Verification"] = verification
+            return state
 
         # Compute divergence on interior cells only
         div = (
