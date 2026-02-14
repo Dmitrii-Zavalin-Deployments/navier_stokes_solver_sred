@@ -22,6 +22,15 @@ def initialize_staggered_fields(state):
     # ---------------------------------------------------------
     state = allocate_extended_fields(state)
 
+    # IMPORTANT:
+    # allocate_extended_fields() now creates BOTH:
+    #   state["Domain"]  (legacy tests)
+    #   state["domain"]  (schema + pipeline)
+    #
+    # initialize_staggered_fields() must preserve BOTH.
+    if "domain" in state:
+        state["Domain"] = state["domain"]
+
     ic = state["config"].get("initial_conditions", {})
     p0 = ic.get("initial_pressure", 0.0)
     u0, v0, w0 = ic.get("initial_velocity", [0.0, 0.0, 0.0])

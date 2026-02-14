@@ -72,9 +72,9 @@ def allocate_extended_fields(state):
     }
 
     # ---------------------------------------------------------
-    # Domain block (lowercase — required by schema)
+    # Domain block (schema-compliant lowercase)
     # ---------------------------------------------------------
-    state["domain"] = {
+    domain_block = {
         "ghost_layers": ghost_layers,
 
         # Filled later by build_domain_block()
@@ -97,5 +97,13 @@ def allocate_extended_fields(state):
             "z": (0, nz - 1),
         },
     }
+
+    # ---------------------------------------------------------
+    # Provide BOTH keys:
+    #   - "Domain" for legacy tests
+    #   - "domain" for schema + pipeline
+    # ---------------------------------------------------------
+    state["Domain"] = domain_block
+    state["domain"] = domain_block
 
     return state
