@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Any, Dict
 import numpy as np
 
+from src.common.json_safe import to_json_safe
+
 from .assemble_simulation_state import assemble_simulation_state
 from .allocate_staggered_fields import allocate_staggered_fields
 from .compute_derived_constants import compute_derived_constants
@@ -20,17 +22,6 @@ from .schema_utils import load_schema, validate_with_schema
 # Global debug flag for Step‑1
 # ---------------------------------------------------------
 DEBUG_STEP1 = False
-
-
-def _to_json_safe(obj):
-    """Recursively convert NumPy arrays to Python lists for JSON/schema compatibility."""
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, dict):
-        return {k: _to_json_safe(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_to_json_safe(x) for x in obj]
-    return obj
 
 
 def orchestrate_step1(
@@ -127,7 +118,7 @@ def orchestrate_step1(
     # ---------------------------------------------------------
     # 13. Create JSON‑safe mirror (convert all NumPy arrays)
     # ---------------------------------------------------------
-    json_safe_state = _to_json_safe(state_dict)
+    json_safe_state = to_json_safe(state_dict)
 
     # ---------------------------------------------------------
     # 14. Validate output schema using JSON‑safe version

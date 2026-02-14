@@ -1,10 +1,12 @@
-# src/step2/orchestrate_step2.py
+# file: src/step2/orchestrate_step2.py
 from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict
 import numpy as np
+
+from src.common.json_safe import to_json_safe
 
 from .enforce_mask_semantics import enforce_mask_semantics
 from .precompute_constants import precompute_constants
@@ -77,7 +79,7 @@ def orchestrate_step2(
         )
         schema = load_schema(str(schema_path))
         try:
-            validate_json_schema(state, schema)
+            validate_json_schema(to_json_safe(state), schema)
         except Exception as exc:
             raise RuntimeError(
                 "\n[Step 2] Input schema validation FAILED.\n"
@@ -180,7 +182,7 @@ def orchestrate_step2(
         )
         schema = load_schema(str(schema_path))
         try:
-            validate_json_schema(output, schema)
+            validate_json_schema(to_json_safe(output), schema)
         except Exception as exc:
             raise RuntimeError(
                 "\n[Step 2] Output schema validation FAILED.\n"

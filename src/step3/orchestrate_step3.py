@@ -1,6 +1,8 @@
-# src/step3/orchestrate_step3.py
+# file: src/step3/orchestrate_step3.py
 
 import numpy as np
+
+from src.common.json_safe import to_json_safe
 
 from src.step3.apply_boundary_conditions_pre import apply_boundary_conditions_pre
 from src.step3.predict_velocity import predict_velocity
@@ -15,19 +17,6 @@ validate_json_schema = None
 load_schema = None
 
 DEBUG_STEP3 = False
-
-
-def _to_json_compatible(obj):
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, dict):
-        return {k: _to_json_compatible(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_to_json_compatible(x) for x in obj]
-    if callable(obj):
-        name = getattr(obj, "__name__", obj.__class__.__name__)
-        return f"<function {name}>"
-    return obj
 
 
 def _ensure_is_solid(state):
@@ -67,7 +56,7 @@ def orchestrate_step3(
         try:
             step2_schema = load_schema("step2_output_schema.json")
             validate_json_schema(
-                instance=_to_json_compatible(state),
+                instance=to_json_safe(state),
                 schema=step2_schema,
                 context_label="[Step 3] Input schema validation",
             )
@@ -182,7 +171,7 @@ def orchestrate_step3(
         try:
             step3_schema = load_schema("step3_output_schema.json")
             validate_json_schema(
-                instance=_to_json_compatible(new_state),
+                instance=to_json_safe(new_state),
                 schema=step3_schema,
                 context_label="[Step 3] Output schema validation",
             )
