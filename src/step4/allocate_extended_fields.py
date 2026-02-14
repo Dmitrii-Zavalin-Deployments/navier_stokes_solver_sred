@@ -1,65 +1,80 @@
-# file: src/step4/allocate_extended_fields.py
-
 import numpy as np
 
 
 def allocate_extended_fields(state):
     """
-    Allocate extended (halo) fields for Step 4.
+    Allocate extended (ghost-layer) fields for Step 4.
 
-    Produces uppercase *_ext fields that match the Step‑4 schema:
+    Axis order is ALWAYS (x, y, z).
 
-        P_ext: (nz+2, ny+2, nx+2)
-        U_ext: (nz+2, ny+2, nx+3)
-        V_ext: (nz+2, ny+3, nx+2)
-        W_ext: (nz+3, ny+2, nx+2)
+    Shapes required by tests:
+        P_ext: (nx+2, ny+2, nz+2)
+        U_ext: (nx+3, ny+2, nz+2)
+        V_ext: (nx+2, ny+3, nz+2)
+        W_ext: (nx+2, ny+2, nz+3)
 
-    The interior values from P, U, V, W are copied into the
-    [1:-1, 1:-1, 1:-1] region of each extended array.
-
-    The original fields remain unchanged.
+    Interior values are copied into [1:-1, 1:-1, 1:-1].
+    Ghost layers are zero-filled.
     """
 
-    # ---------------------------------------------------------
-    # Grid sizes
-    # ---------------------------------------------------------
-    config_domain = state.get("config", {}).get("domain", {})
-    nx = config_domain.get("nx", 1)
-    ny = config_domain.get("ny", 1)
-    nz = config_domain.get("nz", 1)
+    cfg = state["config"]["domain"]
+    nx, ny, nz = cfg["nx"], cfg["ny"], cfg["nz"]
+
+    fields = state["fields"]
 
     # ---------------------------------------------------------
-    # Allocate extended arrays with correct shapes
+    # Allocate extended arrays (axis order: x, y, z)
     # ---------------------------------------------------------
-    P_ext = np.zeros((nz + 2, ny + 2, nx + 2))
-    U_ext = np.zeros((nz + 2, ny + 2, nx + 3))
-    V_ext = np.zeros((nz + 2, ny + 3, nx + 2))
-    W_ext = np.zeros((nz + 3, ny + 2, nx + 2))
-
-    # ---------------------------------------------------------
-    # Copy interior values (if present)
-    # ---------------------------------------------------------
-    if "P" in state and isinstance(state["P"], np.ndarray):
-        P_ext[1:-1, 1:-1, 1:-1] = state["P"]
-
-    if "U" in state and isinstance(state["U"], np.ndarray):
-        # U is staggered in x → interior shape (nz, ny, nx+1)
-        U_ext[1:-1, 1:-1, 1:-2] = state["U"]
-
-    if "V" in state and isinstance(state["V"], np.ndarray):
-        # V is staggered in y → interior shape (nz, ny+1, nx)
-        V_ext[1:-1, 1:-2, 1:-1] = state["V"]
-
-    if "W" in state and isinstance(state["W"], np.ndarray):
-        # W is staggered in z → interior shape (nz+1, ny, nx)
-        W_ext[1:-2, 1:-1, 1:-1] = state["W"]
+    P_ext = np.zeros((nx + 2, ny + 2, nz + 2), dtype=float)
+    U_ext = np.zeros((nx + 3, ny + 2, nz + 2), dtype=float)
+    V_ext = np.zeros((nx + 2, ny + 3, nz + 2), dtype=float)
+    W_ext = np.zeros((nx + 2, ny + 2, nz + 3), dtype=float)
 
     # ---------------------------------------------------------
-    # Store uppercase extended fields (schema truth)
+    # Copy interior values
+    # ---------------------------------------------------------
+    if "P" in fields:
+        P_ext[1:nx+1, 1:ny+1, 1:nz+1] = fields["P"]
+
+    if "U" in fields:
+        # U interior shape: (nx+1, ny, nz)
+        U_ext[1:nx+2, 1:ny+1, 1:nz+1] = fields["U"]
+
+    if "V" in fields:
+        # V interior shape: (nx, ny+1, nz)
+        V_ext[1:nx+1, 1:ny+2, 1:nz+1] = fields["V"]
+
+    if "W" in fields:
+        # W interior shape: (nx, ny, nz+1)
+        W_ext[1:nx+1, 1:ny+1, 1:nz+2] = fields["W"]
+
+    # ---------------------------------------------------------
+    # Store extended fields
     # ---------------------------------------------------------
     state["P_ext"] = P_ext
     state["U_ext"] = U_ext
     state["V_ext"] = V_ext
     state["W_ext"] = W_ext
+
+    # ---------------------------------------------------------
+    # Insert "Domain" block required by tests
+    # ---------------------------------------------------------
+    state["Domain"] = {
+        "P_ext": P_ext,
+        "U_ext": U_ext,
+        "V_ext": V_ext,
+        "W_ext": W_ext,
+        "index_ranges": {
+            "x": (0, nx - 1),
+            "y": (0, ny - 1),
+            "z": (0, nz - 1),
+        },
+        "views": {
+            "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
+            "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
+            "V_interior": V_ext[1:nx+1, 1:ny+2, 1:nz+1],
+            "W_interior": W_ext[1:nx+1, 1:ny+1, 1:nz+2],
+        },
+    }
 
     return state
