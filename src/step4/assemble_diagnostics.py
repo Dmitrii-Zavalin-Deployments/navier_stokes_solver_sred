@@ -1,4 +1,4 @@
-# file: src/step4/assemble_diagnostics.py
+# src/step4/assemble_diagnostics.py
 
 import numpy as np
 
@@ -7,7 +7,7 @@ def assemble_diagnostics(state):
     """
     Build the schema-compliant diagnostics block for Step 4 output.
 
-    Schema requires:
+    Required fields:
         - total_fluid_cells
         - grid_volume_per_cell
         - initialized
@@ -29,6 +29,7 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # grid_volume_per_cell
+    # (can be refined later if non-unit spacing is introduced)
     # ---------------------------------------------------------
     grid_volume_per_cell = 1.0
 
@@ -44,29 +45,18 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # post_bc_max_velocity
-    # Must consider BOTH extended fields and Step‑3 fields.
+    # Use NumPy for fast absolute max over extended fields
     # ---------------------------------------------------------
     def max_abs(field):
         if isinstance(field, np.ndarray):
             return float(np.max(np.abs(field)))
         return 0.0
 
-    fields = state.get("fields", {})
-
-    candidates = [
-        state.get("U_ext"),
-        state.get("V_ext"),
-        state.get("W_ext"),
-        fields.get("U"),
-        fields.get("V"),
-        fields.get("W"),
-    ]
-
-    post_bc_max_velocity = 0.0
-    for f in candidates:
-        val = max_abs(f)
-        if val > post_bc_max_velocity:
-            post_bc_max_velocity = val
+    post_bc_max_velocity = max(
+        max_abs(state.get("U_ext")),
+        max_abs(state.get("V_ext")),
+        max_abs(state.get("W_ext")),
+    )
 
     # ---------------------------------------------------------
     # post_bc_divergence_norm
@@ -78,13 +68,14 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # bc_violation_count
-    # Now statuses are STRINGS ("applied", "skipped", "error")
+    # boundary_conditions_status is expected to be a mapping
+    # from face → status string ("applied", "skipped", "error", ...)
     # ---------------------------------------------------------
     bc_applied = state.get("bc_applied", {})
     bc_status = bc_applied.get("boundary_conditions_status", {})
 
     bc_violation_count = 0
-    for face, status in bc_status.items():
+    for _, status in bc_status.items():
         if status != "applied":
             bc_violation_count += 1
 
