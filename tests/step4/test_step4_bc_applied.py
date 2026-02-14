@@ -73,17 +73,23 @@ def test_step4_bc_applied_structure():
     bc = state_out["bc_applied"]
 
     # ---------------------------------------------------------
-    # Required boolean flags
+    # Required flags
     # ---------------------------------------------------------
-    for key in [
-        "initial_velocity_enforced",
-        "pressure_initial_applied",
-        "velocity_initial_applied",
-        "ghost_cells_filled",
-        "boundary_cells_checked",
-    ]:
-        assert key in bc, f"'bc_applied' must contain '{key}'"
-        assert isinstance(bc[key], bool), f"'{key}' must be a boolean"
+    assert "initial_velocity_enforced" in bc
+    assert isinstance(bc["initial_velocity_enforced"], bool)
+
+    assert "pressure_initial_applied" in bc
+    assert isinstance(bc["pressure_initial_applied"], bool)
+
+    assert "velocity_initial_applied" in bc
+    assert isinstance(bc["velocity_initial_applied"], bool)
+
+    assert "ghost_cells_filled" in bc
+    assert isinstance(bc["ghost_cells_filled"], bool)
+
+    # SCHEMA: integer
+    assert "boundary_cells_checked" in bc
+    assert isinstance(bc["boundary_cells_checked"], int)
 
     # ---------------------------------------------------------
     # Boundary faces
@@ -92,20 +98,19 @@ def test_step4_bc_applied_structure():
         "'bc_applied' must contain 'boundary_conditions_status'"
 
     faces = bc["boundary_conditions_status"]
-
     expected_faces = ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
 
     for face in expected_faces:
         assert face in faces, f"Missing face '{face}' in boundary_conditions_status"
-        assert isinstance(faces[face], dict), f"Face '{face}' must be a dict"
-        assert "applied" in faces[face], f"Face '{face}' must contain 'applied'"
-        assert isinstance(faces[face]["applied"], bool), \
-            f"'applied' for face '{face}' must be a boolean"
+        assert isinstance(faces[face], str), f"Face '{face}' must be a string enum"
+        assert faces[face] in ["applied", "skipped", "error"], \
+            f"Face '{face}' must be a valid enum"
 
     # ---------------------------------------------------------
     # Metadata
     # ---------------------------------------------------------
-    assert "version" in bc, "'bc_applied' must contain 'version'"
-    assert "timestamp_applied" in bc, "'bc_applied' must contain 'timestamp_applied'"
-    assert isinstance(bc["version"], str), "'version' must be a string"
-    assert isinstance(bc["timestamp_applied"], str), "'timestamp_applied' must be a string"
+    assert "version" in bc
+    assert isinstance(bc["version"], str)
+
+    assert "timestamp_applied" in bc
+    assert isinstance(bc["timestamp_applied"], str)
