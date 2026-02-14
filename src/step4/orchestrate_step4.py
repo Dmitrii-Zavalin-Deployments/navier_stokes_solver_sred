@@ -108,7 +108,7 @@ def orchestrate_step4(
     # 3. Build full domain metadata block
     # ---------------------------------------------------------
     # IMPORTANT:
-    # allocate_extended_fields() now creates state["Domain"]
+    # allocate_extended_fields() now creates state["domain"]
     # build_domain_block() must *augment* it, not overwrite it.
     state = build_domain_block(state)
 

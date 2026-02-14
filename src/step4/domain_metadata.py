@@ -2,9 +2,9 @@
 
 def build_domain_block(state):
     """
-    Build a schema-compliant 'Domain' block for Step 4 output.
+    Build a schema-compliant 'domain' block for Step 4 output.
 
-    This function AUGMENTS the Domain block created earlier by
+    This function AUGMENTS the domain block created earlier by
     allocate_extended_fields(), adding:
       - coordinates
       - ghost_layers (schema-compliant [lo, hi])
@@ -88,9 +88,9 @@ def build_domain_block(state):
     }
 
     # ---------------------------------------------------------
-    # Merge into existing Domain block (capital D)
+    # Merge into existing domain block (lowercase)
     # ---------------------------------------------------------
-    domain = state.get("Domain", {})
+    domain = state.get("domain", {})
 
     domain["coordinates"] = coordinates
     domain["ghost_layers"] = ghost_layers
@@ -98,5 +98,5 @@ def build_domain_block(state):
     domain["stencil_maps"] = stencil_maps
     domain["interpolation_maps"] = interpolation_maps
 
-    state["Domain"] = domain
+    state["domain"] = domain
     return state

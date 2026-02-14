@@ -54,7 +54,7 @@ def allocate_extended_fields(state):
         W_ext[0:sx, 0:sy, 1:1+sz] = W[:sx, :sy, :sz]
 
     # ---------------------------------------------------------
-    # Store extended fields
+    # Store extended fields at top level (schema requirement)
     # ---------------------------------------------------------
     state["P_ext"] = P_ext
     state["U_ext"] = U_ext
@@ -64,7 +64,7 @@ def allocate_extended_fields(state):
     # ---------------------------------------------------------
     # Schema-compliant ghost layer format: [lo, hi]
     # ---------------------------------------------------------
-    GhostLayers = {
+    ghost_layers = {
         "P_ext": [1, 1],
         "U_ext": [1, 1],
         "V_ext": [1, 1],
@@ -72,27 +72,29 @@ def allocate_extended_fields(state):
     }
 
     # ---------------------------------------------------------
-    # Domain block (capital D — required by tests)
+    # Domain block (lowercase — required by schema)
     # ---------------------------------------------------------
-    state["Domain"] = {
-        "P_ext": P_ext,
-        "U_ext": U_ext,
-        "V_ext": V_ext,
-        "W_ext": W_ext,
+    state["domain"] = {
+        "ghost_layers": ghost_layers,
 
-        "GhostLayers": GhostLayers,
+        # Filled later by build_domain_block()
+        "coordinates": {},
+        "index_ranges": {},
+        "stencil_maps": {},
+        "interpolation_maps": {},
 
-        "index_ranges": {
-            "x": (0, nx - 1),
-            "y": (0, ny - 1),
-            "z": (0, nz - 1),
-        },
-
+        # Views and index ranges required by allocate_extended_fields tests
         "views": {
             "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
             "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
             "V_interior": V_ext[:, 1:ny+2, 1:nz+1],
             "W_interior": W_ext[:, :, 1:nz+2],
+        },
+
+        "index_ranges_internal": {
+            "x": (0, nx - 1),
+            "y": (0, ny - 1),
+            "z": (0, nz - 1),
         },
     }
 
