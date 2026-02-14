@@ -29,7 +29,6 @@ def initialize_staggered_fields(state):
     nz = state["config"]["domain"]["nz"]
 
     mask = state.get("mask", None)
-    is_fluid = state.get("is_fluid", None)
 
     # ---------------------------------------------------------
     # 2. Fill interior pressure
@@ -59,18 +58,20 @@ def initialize_staggered_fields(state):
     if mask is not None:
         solid = (mask == 0)
 
-        # Pressure zeroing
+        # Pressure: 1-to-1 mapping
         P_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
 
-        # Velocity zeroing (respect staggering)
-        # U: cell-centered in y,z; faces in x
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
+        # U faces: left and right faces of each solid cell
+        U_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0   # left faces
+        U_ext[2:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0   # right faces
 
-        # V: cell-centered in x,z; faces in y
-        V_ext[0:nx, 1:ny+2, 1:nz+1][solid] = 0.0
+        # V faces: lower and upper faces in y
+        V_ext[0:nx, 1:ny+1, 1:nz+1][solid] = 0.0     # lower faces
+        V_ext[0:nx, 2:ny+2, 1:nz+1][solid] = 0.0     # upper faces
 
-        # W: cell-centered in x,y; faces in z
-        W_ext[0:nx, 0:ny, 1:nz+2][solid] = 0.0
+        # W faces: lower and upper faces in z
+        W_ext[0:nx, 0:ny, 1:nz+1][solid] = 0.0       # lower faces
+        W_ext[0:nx, 0:ny, 2:nz+2][solid] = 0.0       # upper faces
 
     # ---------------------------------------------------------
     # 5. Boundary-fluid preservation (mask == -1)
@@ -78,11 +79,20 @@ def initialize_staggered_fields(state):
     if mask is not None:
         boundary_fluid = (mask == -1)
 
-        # Restore initial values for boundary-fluid cells
+        # Pressure
         P_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = p0
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1][boundary_fluid] = u0
-        V_ext[0:nx, 1:ny+2, 1:nz+1][boundary_fluid] = v0
-        W_ext[0:nx, 0:ny, 1:nz+2][boundary_fluid] = w0
+
+        # U faces
+        U_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = u0
+        U_ext[2:nx+2, 1:ny+1, 1:nz+1][boundary_fluid] = u0
+
+        # V faces
+        V_ext[0:nx, 1:ny+1, 1:nz+1][boundary_fluid] = v0
+        V_ext[0:nx, 2:ny+2, 1:nz+1][boundary_fluid] = v0
+
+        # W faces
+        W_ext[0:nx, 0:ny, 1:nz+1][boundary_fluid] = w0
+        W_ext[0:nx, 0:ny, 2:nz+2][boundary_fluid] = w0
 
     # ---------------------------------------------------------
     # 6. BC vs mask conflict rule: solid mask wins
@@ -90,8 +100,13 @@ def initialize_staggered_fields(state):
     if mask is not None:
         solid = (mask == 0)
 
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
-        V_ext[0:nx, 1:ny+2, 1:nz+1][solid] = 0.0
-        W_ext[0:nx, 0:ny, 1:nz+2][solid] = 0.0
+        U_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
+        U_ext[2:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
+
+        V_ext[0:nx, 1:ny+1, 1:nz+1][solid] = 0.0
+        V_ext[0:nx, 2:ny+2, 1:nz+1][solid] = 0.0
+
+        W_ext[0:nx, 0:ny, 1:nz+1][solid] = 0.0
+        W_ext[0:nx, 0:ny, 2:nz+2][solid] = 0.0
 
     return state
