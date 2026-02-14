@@ -54,10 +54,12 @@ def test_allocate_extended_fields_interior_copy_correctness():
 
     # Interior slices must match original fields
     assert np.all(out["P_ext"][1:-1, 1:-1, 1:-1] == P)
-    # Fixed: slice must have shape (nx+1, ny, nz)
+    # U: staggered in x, ghosts on both sides
     assert np.all(out["U_ext"][1:-1, 1:-1, 1:-1] == state["fields"]["U"])
-    assert np.all(out["V_ext"][0:nx, 1:-2, 1:-1] == state["fields"]["V"])
-    assert np.all(out["W_ext"][0:nx, 0:ny, 1:-2] == state["fields"]["W"])
+    # V: staggered in y, interior in y is 1:-1, full x
+    assert np.all(out["V_ext"][:, 1:-1, 1:-1] == state["fields"]["V"])
+    # W: staggered in z, interior in z is 1:-1, full x,y
+    assert np.all(out["W_ext"][:, :, 1:-1] == state["fields"]["W"])
 
 
 # ----------------------------------------------------------------------
