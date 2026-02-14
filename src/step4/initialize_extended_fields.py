@@ -1,7 +1,6 @@
 # src/step4/initialize_extended_fields.py
 
 import numpy as np
-from src.step4.allocate_extended_fields import allocate_extended_fields
 
 
 def initialize_extended_fields(state):
@@ -9,7 +8,7 @@ def initialize_extended_fields(state):
     Initialize extended staggered fields (P_ext, U_ext, V_ext, W_ext).
 
     Responsibilities:
-    - Allocate extended fields via allocate_extended_fields.
+    - Allocate extended fields (inlined here).
     - Fill interior pressure and velocity:
         * Prefer Step-3 fields (state["fields"]) when present.
         * Fall back to initial_conditions otherwise.
@@ -20,11 +19,6 @@ def initialize_extended_fields(state):
     - Expose extended arrays on legacy 'Domain' block for compatibility.
     """
 
-    # ---------------------------------------------------------
-    # 1. Allocate extended fields
-    # ---------------------------------------------------------
-    state = allocate_extended_fields(state)
-
     config = state.get("config", {})
     domain_cfg = config.get("domain", {})
     ic = config.get("initial_conditions", {})
@@ -33,23 +27,27 @@ def initialize_extended_fields(state):
     ny = domain_cfg["ny"]
     nz = domain_cfg["nz"]
 
-    p0 = ic.get("initial_pressure", 0.0)
-    u0, v0, w0 = ic.get("initial_velocity", [0.0, 0.0, 0.0])
-
-    fields = state.get("fields", {})
+    # ---------------------------------------------------------
+    # 1. Allocate extended fields (inlined)
+    # ---------------------------------------------------------
+    state["P_ext"] = np.zeros((nx + 2, ny + 2, nz + 2), dtype=float)
+    state["U_ext"] = np.zeros((nx + 3, ny + 2, nz + 2), dtype=float)
+    state["V_ext"] = np.zeros((nx + 2, ny + 3, nz + 2), dtype=float)
+    state["W_ext"] = np.zeros((nx + 2, ny + 2, nz + 3), dtype=float)
 
     P_ext = state["P_ext"]
     U_ext = state["U_ext"]
     V_ext = state["V_ext"]
     W_ext = state["W_ext"]
 
+    p0 = ic.get("initial_pressure", 0.0)
+    u0, v0, w0 = ic.get("initial_velocity", [0.0, 0.0, 0.0])
+
+    fields = state.get("fields", {})
+
     # ---------------------------------------------------------
     # 2. Normalize mask and semantics
     # ---------------------------------------------------------
-    # Mask semantics (single source of truth):
-    #   0   → solid
-    #   1   → pure fluid
-    #  -1   → boundary-fluid (fluid but special; not zeroed here)
     mask_raw = state.get("mask", None)
     mask = None
     if mask_raw is not None:
@@ -59,7 +57,6 @@ def initialize_extended_fields(state):
             mask = np.array(mask_raw, dtype=int)
 
         if mask.shape != (nx, ny, nz):
-            # Try to broadcast if user provided a simpler shape
             try:
                 mask = np.broadcast_to(mask, (nx, ny, nz))
             except ValueError as exc:
@@ -79,10 +76,6 @@ def initialize_extended_fields(state):
 
     # ---------------------------------------------------------
     # 4. Velocity interior: Step-3 fields override IC when present
-    #    Staggering (MAC-style):
-    #      U: (nx+1, ny,   nz)
-    #      V: (nx,   ny+1, nz)
-    #      W: (nx,   ny,   nz+1)
     # ---------------------------------------------------------
     U_field = fields.get("U", None)
     V_field = fields.get("V", None)
@@ -108,26 +101,20 @@ def initialize_extended_fields(state):
 
     # ---------------------------------------------------------
     # 5. Apply solid-mask zeroing (mask == 0)
-    #    Boundary-fluid cells (mask == -1) are preserved.
-    #    Approximation: zero faces adjacent to solid cell centers.
     # ---------------------------------------------------------
     if mask is not None:
         solid = (mask == 0)
 
-        # Pressure: 1-to-1 mapping
         P_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
 
-        # U faces: left and right faces of each solid cell
-        U_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0   # left faces
-        U_ext[2:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0   # right faces
+        U_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
+        U_ext[2:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
 
-        # V faces: lower and upper faces in y
-        V_ext[0:nx, 1:ny+1, 1:nz+1][solid] = 0.0     # lower faces
-        V_ext[0:nx, 2:ny+2, 1:nz+1][solid] = 0.0     # upper faces
+        V_ext[0:nx, 1:ny+1, 1:nz+1][solid] = 0.0
+        V_ext[0:nx, 2:ny+2, 1:nz+1][solid] = 0.0
 
-        # W faces: lower and upper faces in z
-        W_ext[0:nx, 0:ny, 1:nz+1][solid] = 0.0       # lower faces
-        W_ext[0:nx, 0:ny, 2:nz+2][solid] = 0.0       # upper faces
+        W_ext[0:nx, 0:ny, 1:nz+1][solid] = 0.0
+        W_ext[0:nx, 0:ny, 2:nz+2][solid] = 0.0
 
     # ---------------------------------------------------------
     # 6. Mark that initial velocity has been enforced
@@ -137,7 +124,7 @@ def initialize_extended_fields(state):
     state["BCApplied"] = bc_applied
 
     # ---------------------------------------------------------
-    # 7. Ensure legacy Domain exposes extended arrays
+    # 7. Expose extended arrays on legacy Domain block
     # ---------------------------------------------------------
     domain_legacy = state.get("Domain", {})
     domain_legacy["P_ext"] = P_ext
