@@ -22,15 +22,6 @@ def initialize_staggered_fields(state):
     # ---------------------------------------------------------
     state = allocate_extended_fields(state)
 
-    # IMPORTANT:
-    # allocate_extended_fields() now creates BOTH:
-    #   state["Domain"]  (legacy tests)
-    #   state["domain"]  (schema + pipeline)
-    #
-    # initialize_staggered_fields() must preserve BOTH.
-    if "domain" in state:
-        state["Domain"] = state["domain"]
-
     ic = state["config"].get("initial_conditions", {})
     p0 = ic.get("initial_pressure", 0.0)
     u0, v0, w0 = ic.get("initial_velocity", [0.0, 0.0, 0.0])
@@ -126,5 +117,15 @@ def initialize_staggered_fields(state):
     bc_applied = state.get("BCApplied", {})
     bc_applied["initial_velocity_enforced"] = True
     state["BCApplied"] = bc_applied
+
+    # ---------------------------------------------------------
+    # 8. Ensure legacy Domain exposes extended arrays
+    # ---------------------------------------------------------
+    domain_legacy = state.get("Domain", {})
+    domain_legacy["P_ext"] = state["P_ext"]
+    domain_legacy["U_ext"] = state["U_ext"]
+    domain_legacy["V_ext"] = state["V_ext"]
+    domain_legacy["W_ext"] = state["W_ext"]
+    state["Domain"] = domain_legacy
 
     return state
