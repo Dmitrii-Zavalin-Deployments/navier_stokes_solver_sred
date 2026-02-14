@@ -44,18 +44,29 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # post_bc_max_velocity
-    # Use NumPy for fast absolute max
+    # Must consider BOTH extended fields and Step‑3 fields.
     # ---------------------------------------------------------
     def max_abs(field):
         if isinstance(field, np.ndarray):
             return float(np.max(np.abs(field)))
         return 0.0
 
-    post_bc_max_velocity = max(
-        max_abs(state.get("U_ext")),
-        max_abs(state.get("V_ext")),
-        max_abs(state.get("W_ext")),
-    )
+    fields = state.get("fields", {})
+
+    candidates = [
+        state.get("U_ext"),
+        state.get("V_ext"),
+        state.get("W_ext"),
+        fields.get("U"),
+        fields.get("V"),
+        fields.get("W"),
+    ]
+
+    post_bc_max_velocity = 0.0
+    for f in candidates:
+        val = max_abs(f)
+        if val > post_bc_max_velocity:
+            post_bc_max_velocity = val
 
     # ---------------------------------------------------------
     # post_bc_divergence_norm
