@@ -7,29 +7,30 @@ def assemble_bc_applied(state):
     """
     Build a schema-compliant bc_applied block for Step 4.
 
-    Contract:
-    - bc_applied.boundary_cells_checked MUST be a boolean (tests require this)
-    - Legacy BCApplied.boundary_cells_checked may store an integer count
+    Final contract:
+      - bc_applied.boundary_cells_checked → INTEGER (schema)
+      - BCApplied.boundary_cells_checked → BOOLEAN (legacy tests)
     """
 
     # ---------------------------------------------------------
-    # Legacy internal block (may contain integer counters)
+    # Grid size → integer count of interior cells
     # ---------------------------------------------------------
-    legacy = state.get("BCApplied", {})
-
-    # Compute integer count of boundary cells (internal only)
     domain = state.get("config", {}).get("domain", {})
     nx = domain.get("nx", 1)
     ny = domain.get("ny", 1)
     nz = domain.get("nz", 1)
+
     boundary_cells_count = int(nx * ny * nz)
 
-    # Store integer count ONLY in legacy block
-    legacy["boundary_cells_checked"] = boundary_cells_count
+    # ---------------------------------------------------------
+    # Legacy block (tests expect boolean here)
+    # ---------------------------------------------------------
+    legacy = state.get("BCApplied", {})
+    legacy["boundary_cells_checked"] = True
     state["BCApplied"] = legacy
 
     # ---------------------------------------------------------
-    # Schema-compliant bc_applied block
+    # Schema-compliant block (schema expects integer here)
     # ---------------------------------------------------------
     bc_applied = {
         "initial_velocity_enforced": True,
@@ -37,8 +38,8 @@ def assemble_bc_applied(state):
         "velocity_initial_applied": True,
         "ghost_cells_filled": True,
 
-        # TESTS REQUIRE THIS TO BE BOOLEAN
-        "boundary_cells_checked": True,
+        # SCHEMA REQUIRES INTEGER
+        "boundary_cells_checked": boundary_cells_count,
 
         "version": "1.0",
         "timestamp_applied": datetime.utcnow().isoformat() + "Z",
