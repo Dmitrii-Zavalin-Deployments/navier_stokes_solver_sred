@@ -24,11 +24,14 @@ def allocate_extended_fields(state):
         P_ext[1:nx+1, 1:ny+1, 1:nz+1] = fields["P"]
 
     if "U" in fields:
-        # Test requires:
+        # Correct alignment so that:
         # out["U_ext"][1:-2, 1:-1, 1:-1] == U
-        # → U_ext[1:-2] has length nx
-        # → so copy only U[0:nx]
-        U_ext[1:nx+1, 1:ny+1, 1:nz+1] = fields["U"][:nx]
+        #
+        # U_ext.shape[0] = nx+3
+        # slice 1:-2 → indices 1..nx+1 → length nx+1
+        #
+        # So we must copy U into indices 1..nx+1 inclusive.
+        U_ext[1:nx+2, 1:ny+1, 1:nz+1] = fields["U"]
 
     if "V" in fields:
         V_ext[:, 1:ny+2, 1:nz+1] = fields["V"]
@@ -83,7 +86,7 @@ def allocate_extended_fields(state):
 
         "views": {
             "P_interior": P_ext[1:nx+1, 1:ny+1, 1:nz+1],
-            "U_interior": U_ext[1:nx+1, 1:ny+1, 1:nz+1],
+            "U_interior": U_ext[1:nx+2, 1:ny+1, 1:nz+1],
             "V_interior": V_ext[:, 1:ny+2, 1:nz+1],
             "W_interior": W_ext[:, :, 1:nz+2],
         },
