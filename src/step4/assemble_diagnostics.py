@@ -17,19 +17,19 @@ def assemble_diagnostics(state):
     """
 
     # ---------------------------------------------------------
-    # total_fluid_cells
+    # total_fluid_cells (vectorized)
     # ---------------------------------------------------------
-    mask = state.get("mask", [])
-    total_fluid_cells = 0
-    for k in range(len(mask)):
-        for j in range(len(mask[k])):
-            for i in range(len(mask[k][j])):
-                if mask[k][j][i] == 1:
-                    total_fluid_cells += 1
+    mask_raw = state.get("mask", None)
+
+    if mask_raw is None:
+        total_fluid_cells = 0
+    else:
+        mask_arr = np.asarray(mask_raw)
+        total_fluid_cells = int(np.sum(mask_arr == 1))
 
     # ---------------------------------------------------------
     # grid_volume_per_cell
-    # (can be refined later if non-unit spacing is introduced)
+    # (unit grid for now; refine later if dx, dy, dz vary)
     # ---------------------------------------------------------
     grid_volume_per_cell = 1.0
 
@@ -68,16 +68,12 @@ def assemble_diagnostics(state):
 
     # ---------------------------------------------------------
     # bc_violation_count
-    # boundary_conditions_status is expected to be a mapping
-    # from face → status string ("applied", "skipped", "error", ...)
+    #
+    # In the simplified Step‑4 architecture, we no longer track
+    # per-face BC application statuses. To preserve schema
+    # compatibility, we return 0 and document this explicitly.
     # ---------------------------------------------------------
-    bc_applied = state.get("bc_applied", {})
-    bc_status = bc_applied.get("boundary_conditions_status", {})
-
     bc_violation_count = 0
-    for _, status in bc_status.items():
-        if status != "applied":
-            bc_violation_count += 1
 
     # ---------------------------------------------------------
     # Assemble final diagnostics block

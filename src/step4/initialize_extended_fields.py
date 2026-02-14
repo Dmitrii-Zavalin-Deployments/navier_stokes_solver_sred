@@ -14,8 +14,8 @@ def initialize_extended_fields(state):
         * Prefer Step-3 fields (state["fields"]) when present.
         * Fall back to initial_conditions otherwise.
     - Apply mask semantics:
-        * mask == 0  → solid         → zero velocity, zero pressure.
-        * mask == 1  → fluid         → normal interior.
+        * mask == 0  → solid          → zero velocity, zero pressure.
+        * mask == 1  → pure fluid     → normal interior.
         * mask == -1 → boundary-fluid → preserved (not zeroed here).
     - Expose extended arrays on legacy 'Domain' block for compatibility.
     """
@@ -53,7 +53,11 @@ def initialize_extended_fields(state):
     mask_raw = state.get("mask", None)
     mask = None
     if mask_raw is not None:
-        mask = np.asarray(mask_raw, dtype=int)
+        if isinstance(mask_raw, np.ndarray):
+            mask = mask_raw.astype(int)
+        else:
+            mask = np.array(mask_raw, dtype=int)
+
         if mask.shape != (nx, ny, nz):
             # Try to broadcast if user provided a simpler shape
             try:
@@ -105,6 +109,7 @@ def initialize_extended_fields(state):
     # ---------------------------------------------------------
     # 5. Apply solid-mask zeroing (mask == 0)
     #    Boundary-fluid cells (mask == -1) are preserved.
+    #    Approximation: zero faces adjacent to solid cell centers.
     # ---------------------------------------------------------
     if mask is not None:
         solid = (mask == 0)

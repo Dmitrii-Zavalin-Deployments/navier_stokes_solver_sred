@@ -16,11 +16,22 @@ DEBUG_STEP4 = True
 
 # ---------------------------------------------------------
 # Structured debug inspector for Step‑4
+# (limited to the most relevant keys)
 # ---------------------------------------------------------
 def debug_state_step4(state):
     print("\n==================== DEBUG: STEP‑4 STATE SUMMARY ====================")
 
-    for key, value in state.items():
+    interesting_keys = [
+        "P_ext", "U_ext", "V_ext", "W_ext",
+        "diagnostics", "ready_for_time_loop",
+        "mask", "fields"
+    ]
+
+    for key in interesting_keys:
+        if key not in state:
+            continue
+
+        value = state[key]
         print(f"\n• {key}: {type(value)}")
 
         if isinstance(value, np.ndarray):
@@ -28,9 +39,6 @@ def debug_state_step4(state):
 
         elif isinstance(value, dict):
             print(f"    dict keys={list(value.keys())}")
-
-        elif hasattr(value, "__dict__"):
-            print(f"    object attributes={list(vars(value).keys())}")
 
         else:
             print(f"    value={value}")
