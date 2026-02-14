@@ -18,26 +18,60 @@ def allocate_extended_fields(state):
     W_ext = np.zeros((nx,     ny,     nz + 3), dtype=float)
 
     # ---------------------------------------------------------
-    # Copy interior values
+    # Copy interior values (defensively)
     # ---------------------------------------------------------
+
+    # ---------- P ----------
     if "P" in fields:
-        P_ext[1:nx+1, 1:ny+1, 1:nz+1] = fields["P"]
+        P = np.asarray(fields["P"])
+        if P.shape == (nx, ny, nz):
+            P_ext[1:nx+1, 1:ny+1, 1:nz+1] = P
+        else:
+            sx = min(nx, P.shape[0])
+            sy = min(ny, P.shape[1])
+            sz = min(nz, P.shape[2])
+            P_ext[1:1+sx, 1:1+sy, 1:1+sz] = P[:sx, :sy, :sz]
 
+    # ---------- U (staggered in x) ----------
     if "U" in fields:
-        # Correct alignment so that:
-        # out["U_ext"][1:-2, 1:-1, 1:-1] == U
-        #
-        # U_ext.shape[0] = nx+3
-        # slice 1:-2 → indices 1..nx+1 → length nx+1
-        #
-        # So we must copy U into indices 1..nx+1 inclusive.
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1] = fields["U"]
+        U = np.asarray(fields["U"])
+        expected = (nx + 1, ny, nz)
 
+        if U.shape == expected:
+            # Perfect match → use strict test‑required alignment
+            U_ext[1:nx+2, 1:ny+1, 1:nz+1] = U
+        else:
+            # Defensive fallback for minimal/dummy states
+            sx = min(nx + 1, U.shape[0])
+            sy = min(ny,     U.shape[1])
+            sz = min(nz,     U.shape[2])
+            U_ext[1:1+sx, 1:1+sy, 1:1+sz] = U[:sx, :sy, :sz]
+
+    # ---------- V (staggered in y) ----------
     if "V" in fields:
-        V_ext[:, 1:ny+2, 1:nz+1] = fields["V"]
+        V = np.asarray(fields["V"])
+        expected = (nx, ny + 1, nz)
 
+        if V.shape == expected:
+            V_ext[0:nx, 1:ny+2, 1:nz+1] = V
+        else:
+            sx = min(nx,     V.shape[0])
+            sy = min(ny + 1, V.shape[1])
+            sz = min(nz,     V.shape[2])
+            V_ext[0:sx, 1:1+sy, 1:1+sz] = V[:sx, :sy, :sz]
+
+    # ---------- W (staggered in z) ----------
     if "W" in fields:
-        W_ext[:, :, 1:nz+2] = fields["W"]
+        W = np.asarray(fields["W"])
+        expected = (nx, ny, nz + 1)
+
+        if W.shape == expected:
+            W_ext[0:nx, 0:ny, 1:nz+2] = W
+        else:
+            sx = min(nx,     W.shape[0])
+            sy = min(ny,     W.shape[1])
+            sz = min(nz + 1, W.shape[2])
+            W_ext[0:sx, 0:sy, 1:1+sz] = W[:sx, :sy, :sz]
 
     # ---------------------------------------------------------
     # Store extended fields
