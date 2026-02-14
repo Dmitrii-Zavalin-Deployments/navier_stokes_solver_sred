@@ -7,13 +7,11 @@ from src.step4.allocate_extended_fields import allocate_extended_fields
 def initialize_staggered_fields(state):
     """
     Initialize the extended staggered fields (U_ext, V_ext, W_ext, P_ext)
-    using the fields produced by Step 3 (and falling back to initial
-    conditions where needed).
+    using the initial conditions provided in the configuration.
 
     Responsibilities:
     - Allocate extended fields (via allocate_extended_fields).
-    - Fill interior pressure and velocity from Step‑3 fields when available.
-    - Fall back to initial_conditions if fields are missing.
+    - Fill interior pressure and velocity with initial conditions.
     - Apply solid-mask zeroing (mask == 0).
     - Preserve boundary-fluid cells (mask == -1).
     - Apply BC vs mask conflict rule (solid mask wins).
@@ -33,10 +31,12 @@ def initialize_staggered_fields(state):
     ny = config["domain"]["ny"]
     nz = config["domain"]["nz"]
 
+    # Mask: ensure proper 3D NumPy shape (nx, ny, nz) if present
     mask_raw = state.get("mask", None)
-    mask = np.asarray(mask_raw) if mask_raw is not None else None
-
-    fields = state.get("fields", {})
+    if mask_raw is not None:
+        mask = np.asarray(mask_raw, dtype=int).reshape((nx, ny, nz))
+    else:
+        mask = None
 
     P_ext = state["P_ext"]
     U_ext = state["U_ext"]
@@ -44,40 +44,21 @@ def initialize_staggered_fields(state):
     W_ext = state["W_ext"]
 
     # ---------------------------------------------------------
-    # 2. Fill interior pressure
-    #    Prefer Step‑3 P field; fall back to p0 if absent.
+    # 2. Fill interior pressure with initial condition
     # ---------------------------------------------------------
-    P_field = fields.get("P", None)
-    if isinstance(P_field, np.ndarray) and P_field.shape == (nx, ny, nz):
-        P_ext[1:nx+1, 1:ny+1, 1:nz+1] = P_field
-    else:
-        P_ext[1:nx+1, 1:ny+1, 1:nz+1] = p0
+    P_ext[1:nx+1, 1:ny+1, 1:nz+1] = p0
 
     # ---------------------------------------------------------
     # 3. Fill interior velocities (respect staggering)
-    #    Prefer Step‑3 U/V/W fields; fall back to u0/v0/w0.
     # ---------------------------------------------------------
-    U_field = fields.get("U", None)
-    V_field = fields.get("V", None)
-    W_field = fields.get("W", None)
+    # U staggered in x → shape (nx+3, ny+2, nz+2), interior (nx+1, ny, nz)
+    U_ext[1:nx+2, 1:ny+1, 1:nz+1] = u0
 
-    # U staggered in x → interior shape (nx+1, ny, nz)
-    if isinstance(U_field, np.ndarray) and U_field.shape == (nx+1, ny, nz):
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1] = U_field
-    else:
-        U_ext[1:nx+2, 1:ny+1, 1:nz+1] = u0
+    # V staggered in y → shape (nx, ny+3, nz+2), interior (nx, ny+1, nz)
+    V_ext[0:nx, 1:ny+2, 1:nz+1] = v0
 
-    # V staggered in y → interior shape (nx, ny+1, nz)
-    if isinstance(V_field, np.ndarray) and V_field.shape == (nx, ny+1, nz):
-        V_ext[0:nx, 1:ny+2, 1:nz+1] = V_field
-    else:
-        V_ext[0:nx, 1:ny+2, 1:nz+1] = v0
-
-    # W staggered in z → interior shape (nx, ny, nz+1)
-    if isinstance(W_field, np.ndarray) and W_field.shape == (nx, ny, nz+1):
-        W_ext[0:nx, 0:ny, 1:nz+2] = W_field
-    else:
-        W_ext[0:nx, 0:ny, 1:nz+2] = w0
+    # W staggered in z → shape (nx, ny, nz+3), interior (nx, ny, nz+1)
+    W_ext[0:nx, 0:ny, 1:nz+2] = w0
 
     # ---------------------------------------------------------
     # 4. Apply solid-mask zeroing (mask == 0)
@@ -107,33 +88,19 @@ def initialize_staggered_fields(state):
         boundary_fluid = (mask == -1)
 
         # Pressure
-        P_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = P_ext[
-            1:nx+1, 1:ny+1, 1:nz+1
-        ][boundary_fluid]
+        P_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = p0
 
         # U faces
-        U_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = U_ext[
-            1:nx+1, 1:ny+1, 1:nz+1
-        ][boundary_fluid]
-        U_ext[2:nx+2, 1:ny+1, 1:nz+1][boundary_fluid] = U_ext[
-            2:nx+2, 1:ny+1, 1:nz+1
-        ][boundary_fluid]
+        U_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = u0
+        U_ext[2:nx+2, 1:ny+1, 1:nz+1][boundary_fluid] = u0
 
         # V faces
-        V_ext[0:nx, 1:ny+1, 1:nz+1][boundary_fluid] = V_ext[
-            0:nx, 1:ny+1, 1:nz+1
-        ][boundary_fluid]
-        V_ext[0:nx, 2:ny+2, 1:nz+1][boundary_fluid] = V_ext[
-            0:nx, 2:ny+2, 1:nz+1
-        ][boundary_fluid]
+        V_ext[0:nx, 1:ny+1, 1:nz+1][boundary_fluid] = v0
+        V_ext[0:nx, 2:ny+2, 1:nz+1][boundary_fluid] = v0
 
         # W faces
-        W_ext[0:nx, 0:ny, 1:nz+1][boundary_fluid] = W_ext[
-            0:nx, 0:ny, 1:nz+1
-        ][boundary_fluid]
-        W_ext[0:nx, 0:ny, 2:nz+2][boundary_fluid] = W_ext[
-            0:nx, 0:ny, 2:nz+2
-        ][boundary_fluid]
+        W_ext[0:nx, 0:ny, 1:nz+1][boundary_fluid] = w0
+        W_ext[0:nx, 0:ny, 2:nz+2][boundary_fluid] = w0
 
     # ---------------------------------------------------------
     # 6. BC vs mask conflict rule: solid mask wins
