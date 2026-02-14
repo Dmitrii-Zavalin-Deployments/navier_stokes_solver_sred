@@ -1,6 +1,5 @@
-# src/step4/initialize_staggered_fields.py
-
 import numpy as np
+from src.step4.allocate_extended_fields import allocate_extended_fields
 
 
 def initialize_staggered_fields(state):
@@ -8,50 +7,91 @@ def initialize_staggered_fields(state):
     Initialize the extended staggered fields (U_ext, V_ext, W_ext, P_ext)
     using the initial conditions provided in the Step 3 configuration.
 
-    This function assumes that allocate_extended_fields() has already created
-    the *_ext arrays with a one-cell halo in each direction.
-
     Responsibilities:
-    - Fill interior velocity components with the configured initial velocity.
-    - Fill interior pressure with the configured initial pressure.
-    - Leave halo cells unchanged (they will be set by BCs later).
-    - Do NOT apply any physics or gradients here — this is a pure initializer.
-
-    Parameters
-    ----------
-    state : dict-like
-        Must contain:
-            state["config"]["initial_conditions"]
-            state["U_ext"], state["V_ext"], state["W_ext"], state["P_ext"]
-
-    Returns
-    -------
-    state : dict-like
-        Updated with initialized interior fields.
+    - Allocate extended fields (via allocate_extended_fields).
+    - Fill interior pressure and velocity with initial conditions.
+    - Apply solid-mask zeroing (mask == 0).
+    - Preserve boundary-fluid cells (mask == -1).
+    - Apply BC vs mask conflict rule (solid mask wins).
     """
 
-    ic = state["config"].get("initial_conditions", {})
+    # ---------------------------------------------------------
+    # 1. Allocate extended fields (P_ext, U_ext, V_ext, W_ext)
+    # ---------------------------------------------------------
+    state = allocate_extended_fields(state)
 
-    # Defaults if not provided
+    ic = state["config"].get("initial_conditions", {})
     p0 = ic.get("initial_pressure", 0.0)
     u0, v0, w0 = ic.get("initial_velocity", [0.0, 0.0, 0.0])
 
-    # Initialize pressure
-    if "P_ext" in state:
-        P = state["P_ext"]
-        P[1:-1, 1:-1, 1:-1] = p0
+    nx = state["config"]["domain"]["nx"]
+    ny = state["config"]["domain"]["ny"]
+    nz = state["config"]["domain"]["nz"]
 
-    # Initialize velocity components
-    if "U_ext" in state:
-        U = state["U_ext"]
-        U[1:-1, 1:-1, 1:-1] = u0
+    mask = state.get("mask", None)
+    is_fluid = state.get("is_fluid", None)
 
-    if "V_ext" in state:
-        V = state["V_ext"]
-        V[1:-1, 1:-1, 1:-1] = v0
+    # ---------------------------------------------------------
+    # 2. Fill interior pressure
+    # ---------------------------------------------------------
+    P_ext = state["P_ext"]
+    P_ext[1:nx+1, 1:ny+1, 1:nz+1] = p0
 
-    if "W_ext" in state:
-        W = state["W_ext"]
-        W[1:-1, 1:-1, 1:-1] = w0
+    # ---------------------------------------------------------
+    # 3. Fill interior velocities (respect staggering)
+    # ---------------------------------------------------------
+    U_ext = state["U_ext"]
+    V_ext = state["V_ext"]
+    W_ext = state["W_ext"]
+
+    # U staggered in x → shape (nx+1, ny, nz)
+    U_ext[1:nx+2, 1:ny+1, 1:nz+1] = u0
+
+    # V staggered in y → shape (nx, ny+1, nz)
+    V_ext[0:nx, 1:ny+2, 1:nz+1] = v0
+
+    # W staggered in z → shape (nx, ny, nz+1)
+    W_ext[0:nx, 0:ny, 1:nz+2] = w0
+
+    # ---------------------------------------------------------
+    # 4. Apply solid-mask zeroing (mask == 0)
+    # ---------------------------------------------------------
+    if mask is not None:
+        solid = (mask == 0)
+
+        # Pressure zeroing
+        P_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
+
+        # Velocity zeroing (respect staggering)
+        # U: cell-centered in y,z; faces in x
+        U_ext[1:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
+
+        # V: cell-centered in x,z; faces in y
+        V_ext[0:nx, 1:ny+2, 1:nz+1][solid] = 0.0
+
+        # W: cell-centered in x,y; faces in z
+        W_ext[0:nx, 0:ny, 1:nz+2][solid] = 0.0
+
+    # ---------------------------------------------------------
+    # 5. Boundary-fluid preservation (mask == -1)
+    # ---------------------------------------------------------
+    if mask is not None:
+        boundary_fluid = (mask == -1)
+
+        # Restore initial values for boundary-fluid cells
+        P_ext[1:nx+1, 1:ny+1, 1:nz+1][boundary_fluid] = p0
+        U_ext[1:nx+2, 1:ny+1, 1:nz+1][boundary_fluid] = u0
+        V_ext[0:nx, 1:ny+2, 1:nz+1][boundary_fluid] = v0
+        W_ext[0:nx, 0:ny, 1:nz+2][boundary_fluid] = w0
+
+    # ---------------------------------------------------------
+    # 6. BC vs mask conflict rule: solid mask wins
+    # ---------------------------------------------------------
+    if mask is not None:
+        solid = (mask == 0)
+
+        U_ext[1:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
+        V_ext[0:nx, 1:ny+2, 1:nz+1][solid] = 0.0
+        W_ext[0:nx, 0:ny, 1:nz+2][solid] = 0.0
 
     return state
