@@ -16,7 +16,38 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 validate_json_schema = None
 load_schema = None
 
-DEBUG_STEP3 = False
+# ---------------------------------------------------------
+# Global debug flag for Step‑3
+# ---------------------------------------------------------
+DEBUG_STEP3 = True
+
+
+# ---------------------------------------------------------
+# Structured debug inspector for Step‑3
+# ---------------------------------------------------------
+def debug_state_step3(state):
+    print("\n==================== DEBUG: STEP‑3 STATE SUMMARY ====================")
+
+    for key, value in state.items():
+        print(f"\n• {key}: {type(value)}")
+
+        # NumPy arrays
+        if isinstance(value, np.ndarray):
+            print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
+
+        # Dictionaries
+        elif isinstance(value, dict):
+            print(f"    dict keys={list(value.keys())}")
+
+        # Objects with attributes
+        elif hasattr(value, "__dict__"):
+            print(f"    object attributes={list(vars(value).keys())}")
+
+        # Everything else
+        else:
+            print(f"    value={value}")
+
+    print("====================================================================\n")
 
 
 def _ensure_is_solid(state):
@@ -182,10 +213,10 @@ def orchestrate_step3(
             ) from exc
 
     # ------------------------------------------------------------
-    # 12 — Optional debug print
+    # 12 — Optional structured debug print
     # ------------------------------------------------------------
     if DEBUG_STEP3:
-        print("\n[DEBUG] Step‑3 output keys:", list(new_state.keys()))
+        debug_state_step3(new_state)
 
     return new_state
 

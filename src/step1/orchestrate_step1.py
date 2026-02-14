@@ -21,7 +21,35 @@ from .schema_utils import load_schema, validate_with_schema
 # ---------------------------------------------------------
 # Global debug flag for Step‑1
 # ---------------------------------------------------------
-DEBUG_STEP1 = False
+DEBUG_STEP1 = True
+
+
+# ---------------------------------------------------------
+# Structured debug inspector for Step‑1
+# ---------------------------------------------------------
+def debug_state_step1(state: Dict[str, Any]) -> None:
+    print("\n==================== DEBUG: STEP‑1 STATE SUMMARY ====================")
+
+    for key, value in state.items():
+        print(f"\n• {key}: {type(value)}")
+
+        # NumPy arrays
+        if isinstance(value, np.ndarray):
+            print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
+
+        # Dictionaries
+        elif isinstance(value, dict):
+            print(f"    dict keys={list(value.keys())}")
+
+        # Objects with attributes (grid, config, fields)
+        elif hasattr(value, "__dict__"):
+            print(f"    object attributes={list(vars(value).keys())}")
+
+        # Everything else
+        else:
+            print(f"    value={value}")
+
+    print("====================================================================\n")
 
 
 def orchestrate_step1(
@@ -138,16 +166,10 @@ def orchestrate_step1(
     state_dict["state_as_dict"] = json_safe_state
 
     # ---------------------------------------------------------
-    # 15b. Optional debug print
+    # 15b. Optional structured debug print
     # ---------------------------------------------------------
     if DEBUG_STEP1:
-        print("\n[DEBUG] Step‑1 output keys:", list(state_dict.keys()))
-        print("[DEBUG] Step‑1 fields keys:", list(state_dict["fields"].keys()))
-        print("[DEBUG] Step‑1 grid keys:", list(state_dict["grid"].keys()))
-        print("[DEBUG] Step‑1 config keys:", list(state_dict["config"].keys()))
-        print("[DEBUG] Step‑1 boundary_table keys:", list(state_dict["boundary_table"].keys()))
-        print("[DEBUG] Step‑1 constants keys:", list(state_dict["constants"].keys()))
-        print("[DEBUG] Step‑1 mask_3d shape:", state_dict["mask_3d"].shape)
+        debug_state_step1(state_dict)
 
     # ---------------------------------------------------------
     # 16. Return REAL state (NumPy arrays)

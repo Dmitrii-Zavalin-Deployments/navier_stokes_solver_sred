@@ -29,6 +29,40 @@ from src.step4.assemble_diagnostics import assemble_diagnostics
 from src.step4.assemble_history import assemble_history
 
 
+# ---------------------------------------------------------
+# Global debug flag for Step‑4
+# ---------------------------------------------------------
+DEBUG_STEP4 = True
+
+
+# ---------------------------------------------------------
+# Structured debug inspector for Step‑4
+# ---------------------------------------------------------
+def debug_state_step4(state):
+    print("\n==================== DEBUG: STEP‑4 STATE SUMMARY ====================")
+
+    for key, value in state.items():
+        print(f"\n• {key}: {type(value)}")
+
+        # NumPy arrays
+        if isinstance(value, np.ndarray):
+            print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
+
+        # Dictionaries
+        elif isinstance(value, dict):
+            print(f"    dict keys={list(value.keys())}")
+
+        # Objects with attributes
+        elif hasattr(value, "__dict__"):
+            print(f"    object attributes={list(vars(value).keys())}")
+
+        # Everything else
+        else:
+            print(f"    value={value}")
+
+    print("====================================================================\n")
+
+
 def orchestrate_step4(
     state,
     *,
@@ -134,5 +168,11 @@ def orchestrate_step4(
                 "The Step‑4 output does not match step4_output_schema.json.\n"
                 f"Validation error: {exc}\n"
             ) from exc
+
+    # ---------------------------------------------------------
+    # 6. Optional structured debug print
+    # ---------------------------------------------------------
+    if DEBUG_STEP4:
+        debug_state_step4(state)
 
     return state

@@ -29,7 +29,35 @@ except Exception:
 # ---------------------------------------------------------
 # Global debug flag for Step‑2
 # ---------------------------------------------------------
-DEBUG_STEP2 = False
+DEBUG_STEP2 = True
+
+
+# ---------------------------------------------------------
+# Structured debug inspector for Step‑2
+# ---------------------------------------------------------
+def debug_state_step2(state: Dict[str, Any]) -> None:
+    print("\n==================== DEBUG: STEP‑2 STATE SUMMARY ====================")
+
+    for key, value in state.items():
+        print(f"\n• {key}: {type(value)}")
+
+        # NumPy arrays
+        if isinstance(value, np.ndarray):
+            print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
+
+        # Dictionaries
+        elif isinstance(value, dict):
+            print(f"    dict keys={list(value.keys())}")
+
+        # Objects with attributes
+        elif hasattr(value, "__dict__"):
+            print(f"    object attributes={list(vars(value).keys())}")
+
+        # Everything else
+        else:
+            print(f"    value={value}")
+
+    print("====================================================================\n")
 
 
 def _extract_gradients(gradients: Any) -> Any:
@@ -141,7 +169,7 @@ def orchestrate_step2(
         "fields": state["fields"],  # NumPy arrays (solver‑side)
         "config": state["config"],
         "constants": constants,
-        "mask": state["mask_3d"],  # JSON‑safe list
+        "mask": state["mask_3d"],
         "is_fluid": is_fluid.tolist(),
         "is_solid": is_solid.tolist(),
         "is_boundary_cell": is_boundary_cell.tolist(),
@@ -191,15 +219,9 @@ def orchestrate_step2(
             ) from exc
 
     # ---------------------------------------------------------
-    # 12. Optional debug print
+    # 12. Optional structured debug print
     # ---------------------------------------------------------
     if DEBUG_STEP2:
-        print("\n[DEBUG] Step‑2 output keys:", list(output.keys()))
-        print("[DEBUG] Step‑2 grid keys:", list(output["grid"].keys()))
-        print("[DEBUG] Step‑2 fields keys:", list(output["fields"].keys()))
-        print("[DEBUG] Step‑2 config keys:", list(output["config"].keys()))
-        print("[DEBUG] Step‑2 constants keys:", list(output["constants"].keys()))
-        print("[DEBUG] Step‑2 mask shape:", np.asarray(output["mask"]).shape)
-        print("[DEBUG] Step‑2 PPE keys:", list(output["ppe"].keys()))
+        debug_state_step2(output)
 
     return output
