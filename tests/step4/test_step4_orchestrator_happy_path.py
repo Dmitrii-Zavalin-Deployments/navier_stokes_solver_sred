@@ -1,13 +1,11 @@
-# tests/step4/test_step4_schema_output.py
+# tests/step4/test_step4_orchestrator_happy_path.py
 
 import numpy as np
 from src.step4.orchestrate_step4 import orchestrate_step4
 
 
-def test_step4_schema_output(load_schema, validate_json_schema):
-    nx = ny = nz = 2
-
-    state = {
+def make_minimal_step3_state(nx=2, ny=2, nz=2):
+    return {
         "config": {
             "domain": {"nx": nx, "ny": ny, "nz": nz},
             "initial_conditions": {
@@ -26,5 +24,19 @@ def test_step4_schema_output(load_schema, validate_json_schema):
         "health": {"post_correction_divergence_norm": 0.0},
     }
 
-    out = orchestrate_step4(state, validate_json_schema, load_schema)
-    assert "diagnostics" in out
+
+def test_step4_orchestrator_happy_path():
+    state_in = make_minimal_step3_state()
+    state_out = orchestrate_step4(state_in)
+
+    # Extended fields exist
+    assert "U_ext" in state_out
+    assert "V_ext" in state_out
+    assert "W_ext" in state_out
+    assert "P_ext" in state_out
+
+    # Diagnostics exist
+    assert "diagnostics" in state_out
+
+    # Ready for time loop
+    assert state_out["ready_for_time_loop"] is True
