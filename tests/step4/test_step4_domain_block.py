@@ -109,7 +109,7 @@ def test_step4_domain_block_structure():
     # Ghost layers
     # ---------------------------------------------------------
     ghost = domain["ghost_layers"]
-    for key in ["p_ext", "u_ext", "v_ext", "w_ext"]:
+    for key in ["P_ext", "U_ext", "V_ext", "W_ext"]:
         assert key in ghost, f"'ghost_layers' must contain '{key}'"
         assert isinstance(ghost[key], list), f"'{key}' must be a list"
         assert len(ghost[key]) == 2, f"'{key}' must be [lo, hi]"
