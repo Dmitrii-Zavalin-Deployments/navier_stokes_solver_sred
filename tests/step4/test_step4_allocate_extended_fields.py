@@ -54,7 +54,8 @@ def test_allocate_extended_fields_interior_copy_correctness():
 
     # Interior slices must match original fields
     assert np.all(out["P_ext"][1:-1, 1:-1, 1:-1] == P)
-    assert np.all(out["U_ext"][1:-2, 1:-1, 1:-1] == state["fields"]["U"])
+    # Fixed: slice must have shape (nx+1, ny, nz)
+    assert np.all(out["U_ext"][1:-1, 1:-1, 1:-1] == state["fields"]["U"])
     assert np.all(out["V_ext"][0:nx, 1:-2, 1:-1] == state["fields"]["V"])
     assert np.all(out["W_ext"][0:nx, 0:ny, 1:-2] == state["fields"]["W"])
 
