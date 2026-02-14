@@ -4,6 +4,44 @@ import numpy as np
 from src.step4.allocate_extended_fields import allocate_extended_fields
 
 
+def _normalize_mask(mask_raw, nx, ny, nz):
+    """
+    Normalize mask to shape (nx, ny, nz) by broadcasting or tiling.
+
+    This makes Step‑4 robust to minimal or degenerate masks coming from
+    earlier steps or tests (e.g. shape (1, ny, nz)).
+    """
+    mask = np.asarray(mask_raw, dtype=int)
+
+    # Already correct
+    if mask.shape == (nx, ny, nz):
+        return mask
+
+    # Try simple broadcasting
+    try:
+        return np.broadcast_to(mask, (nx, ny, nz)).copy()
+    except ValueError:
+        pass
+
+    # Fallback: tile along dimensions as needed
+    if mask.ndim != 3:
+        raise ValueError(f"Mask must be 3D or broadcastable to (nx, ny, nz); got shape {mask.shape}")
+
+    mx, my, mz = mask.shape
+
+    tx = nx // mx if mx != nx and mx != 0 else 1
+    ty = ny // my if my != ny and my != 0 else 1
+    tz = nz // mz if mz != nz and mz != 0 else 1
+
+    tiled = np.tile(mask, (tx, ty, tz))
+
+    # Final safety: broadcast if still not exact
+    if tiled.shape != (nx, ny, nz):
+        tiled = np.broadcast_to(tiled, (nx, ny, nz)).copy()
+
+    return tiled
+
+
 def initialize_staggered_fields(state):
     """
     Initialize the extended staggered fields (U_ext, V_ext, W_ext, P_ext)
@@ -31,10 +69,10 @@ def initialize_staggered_fields(state):
     ny = config["domain"]["ny"]
     nz = config["domain"]["nz"]
 
-    # Mask: ensure proper 3D NumPy shape (nx, ny, nz) if present
+    # Mask: normalize to proper 3D NumPy shape (nx, ny, nz) if present
     mask_raw = state.get("mask", None)
     if mask_raw is not None:
-        mask = np.asarray(mask_raw, dtype=int).reshape((nx, ny, nz))
+        mask = _normalize_mask(mask_raw, nx, ny, nz)
     else:
         mask = None
 
