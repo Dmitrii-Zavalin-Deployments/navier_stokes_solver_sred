@@ -13,37 +13,26 @@ from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_p
 from src.step3.update_health import update_health
 from src.step3.log_step_diagnostics import log_step_diagnostics
 
+from src.solver_state import SolverState
+
 validate_json_schema = None
 load_schema = None
 
-# ---------------------------------------------------------
-# Global debug flag for Step‑3
-# ---------------------------------------------------------
 DEBUG_STEP3 = True
 
 
-# ---------------------------------------------------------
-# Structured debug inspector for Step‑3
-# ---------------------------------------------------------
 def debug_state_step3(state):
     print("\n==================== DEBUG: STEP‑3 STATE SUMMARY ====================")
 
     for key, value in state.items():
         print(f"\n• {key}: {type(value)}")
 
-        # NumPy arrays
         if isinstance(value, np.ndarray):
             print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
-
-        # Dictionaries
         elif isinstance(value, dict):
             print(f"    dict keys={list(value.keys())}")
-
-        # Objects with attributes
         elif hasattr(value, "__dict__"):
             print(f"    object attributes={list(vars(value).keys())}")
-
-        # Everything else
         else:
             print(f"    value={value}")
 
@@ -80,9 +69,6 @@ def orchestrate_step3(
     Step 3 — Pressure projection and velocity correction.
     """
 
-    # ------------------------------------------------------------
-    # 0 — Validate Step‑2 output
-    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         try:
             step2_schema = load_schema("step2_output_schema.json")
@@ -97,20 +83,13 @@ def orchestrate_step3(
                 f"Validation error: {exc}\n"
             ) from exc
 
-    # Defensive shallow copy
     base_state = dict(state)
 
-    # ------------------------------------------------------------
-    # Ensure is_solid exists
-    # ------------------------------------------------------------
     try:
         base_state = _ensure_is_solid(base_state)
     except Exception as exc:
         raise RuntimeError("[Step 3] Cannot infer is_solid") from exc
 
-    # ------------------------------------------------------------
-    # 1 — Pre‑BC
-    # ------------------------------------------------------------
     try:
         fields0 = base_state["fields"]
     except KeyError:
@@ -120,31 +99,16 @@ def orchestrate_step3(
 
     fields_pre = apply_boundary_conditions_pre(base_state, fields0)
 
-    # ------------------------------------------------------------
-    # 2 — Predict velocity
-    # ------------------------------------------------------------
     U_star, V_star, W_star = predict_velocity(base_state, fields_pre)
 
-    # ------------------------------------------------------------
-    # 3 — PPE RHS
-    # ------------------------------------------------------------
     rhs = build_ppe_rhs(base_state, U_star, V_star, W_star)
 
-    # ------------------------------------------------------------
-    # 4 — Solve pressure
-    # ------------------------------------------------------------
     P_arr, _ppe_meta = solve_pressure(base_state, rhs)
 
-    # ------------------------------------------------------------
-    # 5 — Correct velocity
-    # ------------------------------------------------------------
     U_new, V_new, W_new = correct_velocity(
         base_state, U_star, V_star, W_star, P_arr
     )
 
-    # ------------------------------------------------------------
-    # 6 — Post‑BC
-    # ------------------------------------------------------------
     fields_post = apply_boundary_conditions_post(
         base_state, U_new, V_new, W_new, P_arr
     )
@@ -152,28 +116,16 @@ def orchestrate_step3(
     fields_out = dict(fields_post)
     fields_out["P"] = P_arr
 
-    # ------------------------------------------------------------
-    # 7 — Health
-    # ------------------------------------------------------------
     health = update_health(base_state, fields_out, P_arr)
 
-    # ------------------------------------------------------------
-    # 8 — Assemble Step‑3 state BEFORE diagnostics
-    # ------------------------------------------------------------
     new_state = dict(base_state)
     new_state["fields"] = fields_out
     new_state["health"] = health
 
-    # ------------------------------------------------------------
-    # 9 — Diagnostics (must use new_state)
-    # ------------------------------------------------------------
     diag_record = log_step_diagnostics(
         new_state, new_state["fields"], current_time, step_index
     )
 
-    # ------------------------------------------------------------
-    # 10 — History
-    # ------------------------------------------------------------
     hist = dict(
         base_state.get(
             "history",
@@ -195,9 +147,6 @@ def orchestrate_step3(
 
     new_state["history"] = hist
 
-    # ------------------------------------------------------------
-    # 11 — Output schema validation (tests only)
-    # ------------------------------------------------------------
     if validate_json_schema and load_schema:
         try:
             step3_schema = load_schema("step3_output_schema.json")
@@ -212,9 +161,6 @@ def orchestrate_step3(
                 f"Validation error: {exc}\n"
             ) from exc
 
-    # ------------------------------------------------------------
-    # 12 — Optional structured debug print
-    # ------------------------------------------------------------
     if DEBUG_STEP3:
         debug_state_step3(new_state)
 
@@ -223,3 +169,50 @@ def orchestrate_step3(
 
 def step3(state, current_time, step_index):
     return orchestrate_step3(state, current_time, step_index)
+
+
+# =====================================================================
+# NEW: STATE‑BASED STEP 3 ORCHESTRATOR (incremental migration)
+# =====================================================================
+
+def orchestrate_step3_state(
+    state: SolverState,
+    current_time: float,
+    step_index: int,
+) -> SolverState:
+    """
+    Modern Step 3 orchestrator: operates directly on SolverState.
+
+    During migration, this reuses the existing dict-based implementation
+    by converting to/from dict internally.
+    """
+
+    # Build dict view for legacy orchestrator
+    state_dict = {
+        "config": state.config,
+        "grid": state.grid,
+        "fields": state.fields,
+        "mask": state.mask,
+        "constants": state.constants,
+        "boundary_conditions": state.boundary_conditions,
+        "health": state.health,
+        "ppe_structure": state.ppe,
+        "operators": state.operators,
+    }
+
+    if getattr(state, "history", None):
+        state_dict["history"] = state.history
+
+    # Call legacy implementation
+    new_state_dict = orchestrate_step3(
+        state_dict,
+        current_time=current_time,
+        step_index=step_index,
+    )
+
+    # Write results back into SolverState
+    state.fields = new_state_dict["fields"]
+    state.health = new_state_dict["health"]
+    state.history = new_state_dict.get("history", {})
+
+    return state
