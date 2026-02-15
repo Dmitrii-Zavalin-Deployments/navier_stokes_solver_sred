@@ -23,6 +23,13 @@ def orchestrate_step4_state(state: SolverState) -> SolverState:
         - state.ready_for_time_loop
     """
 
+    # =====================================================================
+    # DEPRECATED: per-step schema validation
+    # Step 4 historically had no schema validation blocks.
+    # Documented here for consistency with Steps 1–3 after migration to
+    # SolverState + final_output_schema.json.
+    # =====================================================================
+
     # ---------------------------------------------------------
     # 1. Initialize extended fields
     # ---------------------------------------------------------
