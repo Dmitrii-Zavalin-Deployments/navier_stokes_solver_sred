@@ -13,15 +13,14 @@ def validate_final_state(state: SolverState) -> None:
     Raises:
         ValidationError: if the final state does not match the schema.
 
-    This function is optional during migration and can be enabled
-    in debug mode or after all steps are fully migrated.
+    This function is intended for end-of-pipeline validation.
+    It is safe to call during tests or debug mode.
     """
     schema = load_schema("final_output_schema.json")
     payload: Dict[str, Any] = state.to_json_safe()
 
-    # Optional context label improves error messages
     validate_json_schema(
         payload,
         schema,
-        context_label="Final SolverState validation"
+        context_label="Final SolverState validation after full pipeline"
     )

@@ -6,16 +6,15 @@ from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
+from src.common.final_schema_utils import validate_final_state
 
 
 def run_solver(config: Dict[str, Any]) -> SolverState:
     """
-    Transitional high-level solver pipeline.
+    High-level solver pipeline.
     Runs the existing dict-based step orchestrators and aggregates their
-    outputs into a unified SolverState object.
-
-    This preserves all existing behavior while introducing the new
-    architecture safely and incrementally.
+    outputs into a unified SolverState object, then validates the final
+    JSON-safe output against the final schema.
     """
 
     # ---------------------------------------------------------
@@ -62,12 +61,8 @@ def run_solver(config: Dict[str, Any]) -> SolverState:
     state.ready_for_time_loop = step4_out.get("ready_for_time_loop", False)
 
     # ---------------------------------------------------------
-    # Step 5 (future)
+    # Final schema validation (Step 6)
     # ---------------------------------------------------------
-    # state.step5_outputs = step5(state)
-
-    # Optional debug validation (disabled during migration)
-    # from src.common.final_schema_utils import validate_final_state
-    # validate_final_state(state)
+    validate_final_state(state)
 
     return state
