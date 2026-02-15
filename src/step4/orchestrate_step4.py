@@ -1,136 +1,109 @@
 # src/step4/orchestrate_step4.py
 
-import numpy as np
-from src.common.json_safe import to_json_safe
-
+from typing import Dict, Any
+from src.solver_state import SolverState
 from src.step4.initialize_extended_fields import initialize_extended_fields
 from src.step4.apply_boundary_conditions import apply_boundary_conditions
 from src.step4.assemble_diagnostics import assemble_diagnostics
 
 
-# ---------------------------------------------------------
-# Global debug flag for Step‑4
-# ---------------------------------------------------------
-DEBUG_STEP4 = True
-
-
-# ---------------------------------------------------------
-# Structured debug inspector for Step‑4
-# (limited to the most relevant keys)
-# ---------------------------------------------------------
-def debug_state_step4(state):
-    print("\n==================== DEBUG: STEP‑4 STATE SUMMARY ====================")
-
-    interesting_keys = [
-        "P_ext", "U_ext", "V_ext", "W_ext",
-        "diagnostics", "ready_for_time_loop",
-        "mask", "fields"
-    ]
-
-    for key in interesting_keys:
-        if key not in state:
-            continue
-
-        value = state[key]
-        print(f"\n• {key}: {type(value)}")
-
-        if isinstance(value, np.ndarray):
-            print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
-
-        elif isinstance(value, dict):
-            print(f"    dict keys={list(value.keys())}")
-
-        else:
-            print(f"    value={value}")
-
-    print("====================================================================\n")
-
-
-def orchestrate_step4(
-    state,
-    validate_json_schema=None,
-    load_schema=None,
-):
+def orchestrate_step4_state(state: SolverState) -> SolverState:
     """
-    Step 4 — Initialization of extended fields + boundary conditions.
+    Modern Step 4 orchestrator: operates directly on SolverState.
 
-    Simplified, production‑oriented responsibilities:
-    - Validate Step‑3 output schema (optional).
-    - Initialize extended staggered fields (allocate + fill + mask semantics).
-    - Apply boundary conditions (velocity + pressure).
-    - Assemble diagnostics (fluid cells, max velocity, divergence, BC violations).
-    - Mark ready_for_time_loop = True.
+    Reads:
+        - state.config
+        - state.fields
+        - state.mask
+        - state.health
 
-    All other metadata/history/RHS/priority/sync layers from the old Step‑4
-    architecture have been intentionally removed for clarity and maintainability.
+    Writes:
+        - state.P_ext, state.U_ext, state.V_ext, state.W_ext
+        - state.step4_diagnostics
+        - state.ready_for_time_loop
     """
 
-    # ------------------------------------------------------------
-    # 0 — Validate Step‑3 output (optional)
-    # ------------------------------------------------------------
-    if validate_json_schema and load_schema:
-        try:
-            step3_schema = load_schema("step3_output_schema.json")
-            validate_json_schema(
-                instance=to_json_safe(state),
-                schema=step3_schema,
-                context_label="[Step 4] Input schema validation",
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                "\n[Step 4] Input schema validation FAILED.\n"
-                f"Validation error: {exc}\n"
-            ) from exc
+    # ---------------------------------------------------------
+    # 1. Initialize extended fields
+    # ---------------------------------------------------------
+    extended = initialize_extended_fields(
+        fields=state.fields,
+        mask=state.mask,
+        config=state.config
+    )
 
-    # Defensive shallow copy
-    base_state = dict(state)
+    state.P_ext = extended["P_ext"]
+    state.U_ext = extended["U_ext"]
+    state.V_ext = extended["V_ext"]
+    state.W_ext = extended["W_ext"]
 
-    # ------------------------------------------------------------
-    # 1 — Initialize extended fields (allocate + fill + mask semantics)
-    # ------------------------------------------------------------
-    base_state = initialize_extended_fields(base_state)
+    # ---------------------------------------------------------
+    # 2. Apply boundary conditions
+    # ---------------------------------------------------------
+    bc_result = apply_boundary_conditions(
+        P_ext=state.P_ext,
+        U_ext=state.U_ext,
+        V_ext=state.V_ext,
+        W_ext=state.W_ext,
+        mask=state.mask,
+        config=state.config,
+        health=state.health,
+    )
 
-    # ------------------------------------------------------------
-    # 2 — Apply boundary conditions
-    # ------------------------------------------------------------
-    base_state = apply_boundary_conditions(base_state)
+    # Update fields if returned
+    state.P_ext = bc_result.get("P_ext", state.P_ext)
+    state.U_ext = bc_result.get("U_ext", state.U_ext)
+    state.V_ext = bc_result.get("V_ext", state.V_ext)
+    state.W_ext = bc_result.get("W_ext", state.W_ext)
+    state.health = bc_result.get("health", state.health)
 
-    # ------------------------------------------------------------
-    # 3 — Assemble diagnostics
-    # ------------------------------------------------------------
-    base_state = assemble_diagnostics(base_state)
+    # ---------------------------------------------------------
+    # 3. Assemble diagnostics
+    # ---------------------------------------------------------
+    diagnostics = assemble_diagnostics(
+        P_ext=state.P_ext,
+        U_ext=state.U_ext,
+        V_ext=state.V_ext,
+        W_ext=state.W_ext,
+        mask=state.mask,
+        health=state.health,
+        config=state.config,
+    )
+    state.step4_diagnostics = diagnostics
 
-    # ------------------------------------------------------------
-    # 4 — Optional structured debug print
-    # ------------------------------------------------------------
-    if DEBUG_STEP4:
-        debug_state_step4(base_state)
+    # ---------------------------------------------------------
+    # 4. Mark ready for time loop
+    # ---------------------------------------------------------
+    state.ready_for_time_loop = True
 
-    # ------------------------------------------------------------
-    # 5 — Output schema validation (optional)
-    # ------------------------------------------------------------
-    if validate_json_schema and load_schema:
-        try:
-            step4_schema = load_schema("step4_output_schema.json")
-            validate_json_schema(
-                instance=to_json_safe(base_state),
-                schema=step4_schema,
-                context_label="[Step 4] Output schema validation",
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                "\n[Step 4] Output schema validation FAILED.\n"
-                f"Validation error: {exc}\n"
-            ) from exc
-
-    # ------------------------------------------------------------
-    # 6 — Mark ready for time loop
-    # ------------------------------------------------------------
-    base_state["ready_for_time_loop"] = True
-
-    return base_state
+    return state
 
 
-def step4(state, **kwargs):
-    """Convenience wrapper."""
-    return orchestrate_step4(state, **kwargs)
+def orchestrate_step4(state_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Legacy dict-based Step 4 orchestrator.
+    Thin adapter around the new state-based implementation.
+    Keeps all existing code/tests working during migration.
+    """
+
+    required_keys = ["config", "fields", "mask", "health"]
+    for key in required_keys:
+        if key not in state_dict:
+            raise ValueError(f"Missing required key '{key}' for Step 4 adapter")
+
+    state = SolverState()
+    state.config = state_dict["config"]
+    state.fields = state_dict["fields"]
+    state.mask = state_dict["mask"]
+    state.health = state_dict["health"]
+
+    state = orchestrate_step4_state(state)
+
+    state_dict["P_ext"] = state.P_ext
+    state_dict["U_ext"] = state.U_ext
+    state_dict["V_ext"] = state.V_ext
+    state_dict["W_ext"] = state.W_ext
+    state_dict["diagnostics"] = state.step4_diagnostics
+    state_dict["ready_for_time_loop"] = state.ready_for_time_loop
+
+    return state_dict
