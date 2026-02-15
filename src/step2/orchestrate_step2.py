@@ -7,6 +7,7 @@ from typing import Any, Dict
 import numpy as np
 
 from src.common.json_safe import to_json_safe
+from src.solver_state import SolverState  # NEW
 
 from .enforce_mask_semantics import enforce_mask_semantics
 from .precompute_constants import precompute_constants
@@ -26,52 +27,31 @@ except Exception:
     load_schema = None
 
 
-# ---------------------------------------------------------
-# Global debug flag for Step‑2
-# ---------------------------------------------------------
 DEBUG_STEP2 = True
 
 
-# ---------------------------------------------------------
-# Structured debug inspector for Step‑2
-# ---------------------------------------------------------
 def debug_state_step2(state: Dict[str, Any]) -> None:
     print("\n==================== DEBUG: STEP‑2 STATE SUMMARY ====================")
-
     for key, value in state.items():
         print(f"\n• {key}: {type(value)}")
-
-        # NumPy arrays
         if isinstance(value, np.ndarray):
             print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
-
-        # Dictionaries
         elif isinstance(value, dict):
             print(f"    dict keys={list(value.keys())}")
-
-        # Objects with attributes
         elif hasattr(value, "__dict__"):
             print(f"    object attributes={list(vars(value).keys())}")
-
-        # Everything else
         else:
             print(f"    value={value}")
-
     print("====================================================================\n")
 
 
 def _extract_gradients(gradients: Any) -> Any:
-    """
-    Normalize gradient operator keys to schema-required names when possible.
-    """
     if not isinstance(gradients, dict):
         return gradients
-
     if "pressure_gradients" not in gradients:
         return gradients
 
     pg = gradients["pressure_gradients"]
-
     if "x" in pg:
         return pg["x"], pg["y"], pg["z"]
     if "px" in pg:
@@ -95,12 +75,8 @@ def orchestrate_step2(
     Step 2 — Numerical preprocessing.
     """
 
-    # Defensive copy — Step 2 must not mutate caller state
     state = deepcopy(state)
 
-    # ---------------------------------------------------------
-    # 1. Validate Step‑1 output (production safety)
-    # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step1_output_schema.json"
@@ -115,30 +91,13 @@ def orchestrate_step2(
                 f"Validation error: {exc}\n"
             ) from exc
 
-    # ---------------------------------------------------------
-    # 2. Precompute constants
-    # ---------------------------------------------------------
     constants = precompute_constants(state)
-
-    # ---------------------------------------------------------
-    # 3. Mask semantics
-    # ---------------------------------------------------------
     mask_semantics = enforce_mask_semantics(state)
-
-    # ---------------------------------------------------------
-    # 4. Fluid mask
-    # ---------------------------------------------------------
     is_fluid, is_boundary_cell = create_fluid_mask(state)
 
-    # ---------------------------------------------------------
-    # 5. Compute is_solid
-    # ---------------------------------------------------------
     mask_arr = np.asarray(state["mask_3d"])
     is_solid = (mask_arr == 0)
 
-    # ---------------------------------------------------------
-    # 6. Build operators
-    # ---------------------------------------------------------
     _ = build_divergence_operator(state)
     gradients = build_gradient_operators(state)
     _ = build_laplacian_operators(state)
@@ -146,14 +105,8 @@ def orchestrate_step2(
 
     _ = _extract_gradients(gradients)
 
-    # ---------------------------------------------------------
-    # 7. PPE structure
-    # ---------------------------------------------------------
     ppe = prepare_ppe_structure(state)
 
-    # ---------------------------------------------------------
-    # 8. Health diagnostics
-    # ---------------------------------------------------------
     health = compute_initial_health(
         {
             **state,
@@ -161,12 +114,9 @@ def orchestrate_step2(
         }
     )
 
-    # ---------------------------------------------------------
-    # 9. Assemble Step‑2 output
-    # ---------------------------------------------------------
     output: Dict[str, Any] = {
         "grid": state["grid"],
-        "fields": state["fields"],  # NumPy arrays (solver‑side)
+        "fields": state["fields"],
         "config": state["config"],
         "constants": constants,
         "mask": state["mask_3d"],
@@ -186,7 +136,7 @@ def orchestrate_step2(
             "advection_w": "advection_w",
         },
         "ppe": ppe,
-        "ppe_structure": ppe,  # test‑only extension
+        "ppe_structure": ppe,
         "health": health,
         "meta": {
             "step": 2,
@@ -194,16 +144,10 @@ def orchestrate_step2(
         },
     }
 
-    # ---------------------------------------------------------
-    # 10. JSON‑safe PPE: replace callable with string
-    # ---------------------------------------------------------
     ppe_out = output.get("ppe", {})
     if "rhs_builder" in ppe_out and "rhs_builder_name" in ppe_out:
         ppe_out["rhs_builder"] = ppe_out["rhs_builder_name"]
 
-    # ---------------------------------------------------------
-    # 11. Validate Step‑2 output
-    # ---------------------------------------------------------
     if validate_json_schema and load_schema:
         schema_path = (
             Path(__file__).resolve().parents[2] / "schema" / "step2_output_schema.json"
@@ -218,10 +162,40 @@ def orchestrate_step2(
                 f"Validation error: {exc}\n"
             ) from exc
 
-    # ---------------------------------------------------------
-    # 12. Optional structured debug print
-    # ---------------------------------------------------------
     if DEBUG_STEP2:
         debug_state_step2(output)
 
     return output
+
+
+# =====================================================================
+# NEW: STATE‑BASED STEP 2 ORCHESTRATOR (incremental migration)
+# =====================================================================
+
+def orchestrate_step2_state(state: SolverState) -> SolverState:
+    """
+    Modern Step 2 orchestrator: operates directly on SolverState.
+
+    During migration, reuses the existing dict-based implementation
+    by converting to/from dict internally.
+    """
+
+    state_dict = {
+        "config": state.config,
+        "grid": state.grid,
+        "fields": state.fields,
+        "mask_3d": state.mask,
+        "constants": state.constants,
+        "boundary_conditions": state.boundary_conditions,
+        "health": state.health,
+    }
+
+    new_state_dict = orchestrate_step2(state_dict)
+
+    state.operators = new_state_dict["operators"]
+    state.ppe = new_state_dict["ppe"]
+    state.health = new_state_dict["health"]
+    state.is_fluid = new_state_dict["is_fluid"]
+    state.is_boundary_cell = new_state_dict["is_boundary_cell"]
+
+    return state
