@@ -43,6 +43,9 @@ def orchestrate_step1(
     **_ignored_kwargs,
 ) -> Dict[str, Any]:
 
+    # ---------------------------------------------------------
+    # 1. Validate input JSON (KEEP)
+    # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
     try:
         validate_with_schema(json_input, input_schema)
@@ -52,12 +55,29 @@ def orchestrate_step1(
             f"Validation error: {exc}\n"
         ) from exc
 
+    # ---------------------------------------------------------
+    # 2. Physical constraints
+    # ---------------------------------------------------------
     validate_physical_constraints(json_input)
 
+    # ---------------------------------------------------------
+    # 3. Parse config
+    # ---------------------------------------------------------
     config = parse_config(json_input)
+
+    # ---------------------------------------------------------
+    # 4. Grid
+    # ---------------------------------------------------------
     grid = initialize_grid(config.domain)
+
+    # ---------------------------------------------------------
+    # 5. Allocate staggered fields
+    # ---------------------------------------------------------
     fields = allocate_staggered_fields(grid)
 
+    # ---------------------------------------------------------
+    # 6. Map geometry mask
+    # ---------------------------------------------------------
     geom = config.geometry_definition
     mask_flat = geom["geometry_mask_flat"]
     shape = tuple(geom["geometry_mask_shape"])
@@ -66,17 +86,29 @@ def orchestrate_step1(
     mask_3d = map_geometry_mask(mask_flat, shape, order_formula)
     fields.Mask[...] = mask_3d
 
+    # ---------------------------------------------------------
+    # 7. Apply initial conditions
+    # ---------------------------------------------------------
     from .apply_initial_conditions import apply_initial_conditions
     apply_initial_conditions(fields, json_input["initial_conditions"])
 
+    # ---------------------------------------------------------
+    # 8. Boundary conditions
+    # ---------------------------------------------------------
     bc_table = parse_boundary_conditions(config.boundary_conditions, grid)
 
+    # ---------------------------------------------------------
+    # 9. Derived constants
+    # ---------------------------------------------------------
     constants = compute_derived_constants(
         grid_config=grid,
         fluid_properties=config.fluid,
         simulation_parameters=config.simulation,
     )
 
+    # ---------------------------------------------------------
+    # 10. Assemble final Step 1 state
+    # ---------------------------------------------------------
     state_dict = assemble_simulation_state(
         config=config,
         grid=grid,
@@ -86,26 +118,48 @@ def orchestrate_step1(
         constants=constants,
     )
 
+    # ---------------------------------------------------------
+    # 11. Final shape verification
+    # ---------------------------------------------------------
     verify_staggered_shapes(state_dict)
 
+    # ---------------------------------------------------------
+    # 12. Insert Mask into fields
+    # ---------------------------------------------------------
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
+    # ---------------------------------------------------------
+    # 13. Create JSON‑safe mirror (KEEP — tests rely on this)
+    # ---------------------------------------------------------
     json_safe_state = to_json_safe(state_dict)
 
-    output_schema = load_schema("schema/step1_output_schema.json")
-    try:
-        validate_with_schema(json_safe_state, output_schema)
-    except Exception as exc:
-        raise RuntimeError(
-            "\n[Step 1] Output schema validation FAILED.\n"
-            f"Validation error: {exc}\n"
-        ) from exc
+    # =====================================================================
+    # DEPRECATED: per-step output schema validation
+    # Removed after full migration to SolverState + final_output_schema.json
+    # =====================================================================
+    # output_schema = load_schema("schema/step1_output_schema.json")
+    # try:
+    #     validate_with_schema(json_safe_state, output_schema)
+    # except Exception as exc:
+    #     raise RuntimeError(
+    #         "\n[Step 1] Output schema validation FAILED.\n"
+    #         f"Validation error: {exc}\n"
+    #     ) from exc
 
+    # ---------------------------------------------------------
+    # 14. Attach JSON‑safe mirror for serialization tests
+    # ---------------------------------------------------------
     state_dict["state_as_dict"] = json_safe_state
 
+    # ---------------------------------------------------------
+    # 15. Optional structured debug print
+    # ---------------------------------------------------------
     if DEBUG_STEP1:
         debug_state_step1(state_dict)
 
+    # ---------------------------------------------------------
+    # 16. Return REAL state (NumPy arrays)
+    # ---------------------------------------------------------
     return state_dict
 
 
@@ -119,12 +173,6 @@ def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
 
     During migration, reuses the existing dict-based implementation
     by converting to/from dict internally.
-
-    Args:
-        json_input: Raw user input config (validated inside legacy function)
-
-    Returns:
-        Initialized SolverState with Step 1 fields populated.
     """
 
     state_dict = orchestrate_step1(json_input)
