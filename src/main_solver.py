@@ -1,64 +1,48 @@
 # src/main_solver.py
 
 from typing import Dict, Any
+
 from src.solver_state import SolverState
-from src.step1.orchestrate_step1 import orchestrate_step1
-from src.step2.orchestrate_step2 import orchestrate_step2
-from src.step3.orchestrate_step3 import orchestrate_step3
-from src.step4.orchestrate_step4 import orchestrate_step4
+from src.step1.orchestrate_step1 import orchestrate_step1_state
+from src.step2.orchestrate_step2 import orchestrate_step2_state
+from src.step3.orchestrate_step3 import orchestrate_step3_state
+from src.step4.orchestrate_step4 import orchestrate_step4_state
+
 from src.common.final_schema_utils import validate_final_state
 
 
 def run_solver(config: Dict[str, Any]) -> SolverState:
     """
-    High-level solver pipeline.
-    Runs the existing dict-based step orchestrators and aggregates their
-    outputs into a unified SolverState object, then validates the final
-    JSON-safe output against the final schema.
+    High-level solver pipeline using the new state-based orchestrators.
+    Produces a fully-populated SolverState and validates it against the
+    final_output_schema.json.
+
+    This is the unified entry point for the solver after migration.
     """
 
     # ---------------------------------------------------------
-    # Step 1 (dict-based)
+    # Step 1 — initialize SolverState
     # ---------------------------------------------------------
-    step1_out = orchestrate_step1(config)
-
-    state = SolverState()
-    state.config = config
-    state.grid = step1_out["grid"]
-    state.fields = step1_out["fields"]
-    state.mask = step1_out["mask"]
-    state.constants = step1_out["constants"]
-    state.boundary_conditions = step1_out["boundary_conditions"]
-    state.health = step1_out["health"]
+    state = orchestrate_step1_state(config)
 
     # ---------------------------------------------------------
-    # Step 2 (dict-based)
+    # Step 2 — numerical preprocessing
     # ---------------------------------------------------------
-    step2_out = orchestrate_step2(step1_out)
-    state.operators = step2_out["operators"]
-    state.ppe = step2_out["ppe_structure"]
-    state.health = step2_out["health"]
-    state.is_fluid = step2_out.get("is_fluid")
-    state.is_boundary_cell = step2_out.get("is_boundary_cell")
+    state = orchestrate_step2_state(state)
 
     # ---------------------------------------------------------
-    # Step 3 (dict-based)
+    # Step 3 — pressure projection + velocity correction
     # ---------------------------------------------------------
-    step3_out = orchestrate_step3(step2_out)
-    state.fields = step3_out["fields"]
-    state.health = step3_out["health"]
-    state.step3_diagnostics = step3_out.get("diagnostics", {})
+    state = orchestrate_step3_state(
+        state,
+        current_time=0.0,   # placeholder until time loop is added
+        step_index=0        # placeholder until time loop is added
+    )
 
     # ---------------------------------------------------------
-    # Step 4 (dict-based)
+    # Step 4 — extended fields + diagnostics
     # ---------------------------------------------------------
-    step4_out = orchestrate_step4(step3_out)
-    state.P_ext = step4_out["P_ext"]
-    state.U_ext = step4_out["U_ext"]
-    state.V_ext = step4_out["V_ext"]
-    state.W_ext = step4_out["W_ext"]
-    state.step4_diagnostics = step4_out.get("diagnostics", {})
-    state.ready_for_time_loop = step4_out.get("ready_for_time_loop", False)
+    state = orchestrate_step4_state(state)
 
     # ---------------------------------------------------------
     # Final schema validation (Step 6)
