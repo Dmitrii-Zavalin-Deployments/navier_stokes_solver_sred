@@ -12,7 +12,8 @@ from tests.helpers.step4_schema_dummy_state import Step4SchemaDummyState
 
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
-from src.step3.orchestrate_step3 import step3 as orchestrate_step3
+from src.step3.orchestrate_step3 import orchestrate_step3_state
+from src.solver_state import SolverState as orchestrate_step3
 from src.step4.run_step4 import run_step4 as orchestrate_step4
 
 

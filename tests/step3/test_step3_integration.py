@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from src.step3.orchestrate_step3 import step3
+from src.step3.orchestrate_step3 import orchestrate_step3_state
+from src.solver_state import SolverState
 from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
 
 

@@ -2,7 +2,8 @@
 
 from typing import Dict, Any
 from src.solver_state import SolverState
-from src.step1.schema_utils import load_schema, validate_json_schema
+from src.step1.schema_utils import load_schema
+from src.step1.validate_json_schema import validate_json_schema
 
 
 def validate_final_state(state: SolverState) -> None:
