@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from src.common.json_safe import to_json_safe
+# Removed: from src.common.json_safe import to_json_safe  (unused after cleanup)
 
 from src.step3.apply_boundary_conditions_pre import apply_boundary_conditions_pre
 from src.step3.predict_velocity import predict_velocity
@@ -15,6 +15,7 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 
 from src.solver_state import SolverState
 
+# These were only used for per-step schema validation (now removed)
 validate_json_schema = None
 load_schema = None
 
@@ -69,19 +70,17 @@ def orchestrate_step3(
     Step 3 — Pressure projection and velocity correction.
     """
 
-    if validate_json_schema and load_schema:
-        try:
-            step2_schema = load_schema("step2_output_schema.json")
-            validate_json_schema(
-                instance=to_json_safe(state),
-                schema=step2_schema,
-                context_label="[Step 3] Input schema validation",
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                "\n[Step 3] Input schema validation FAILED.\n"
-                f"Validation error: {exc}\n"
-            ) from exc
+    # =====================================================================
+    # DEPRECATED: per-step INPUT schema validation removed
+    # After migration to SolverState + final_output_schema.json
+    # =====================================================================
+    # if validate_json_schema and load_schema:
+    #     step2_schema = load_schema("step2_output_schema.json")
+    #     validate_json_schema(
+    #         instance=to_json_safe(state),
+    #         schema=step2_schema,
+    #         context_label="[Step 3] Input schema validation",
+    #     )
 
     base_state = dict(state)
 
@@ -147,19 +146,17 @@ def orchestrate_step3(
 
     new_state["history"] = hist
 
-    if validate_json_schema and load_schema:
-        try:
-            step3_schema = load_schema("step3_output_schema.json")
-            validate_json_schema(
-                instance=to_json_safe(new_state),
-                schema=step3_schema,
-                context_label="[Step 3] Output schema validation",
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                "\n[Step 3] Output schema validation FAILED.\n"
-                f"Validation error: {exc}\n"
-            ) from exc
+    # =====================================================================
+    # DEPRECATED: per-step OUTPUT schema validation removed
+    # After migration to SolverState + final_output_schema.json
+    # =====================================================================
+    # if validate_json_schema and load_schema:
+    #     step3_schema = load_schema("step3_output_schema.json")
+    #     validate_json_schema(
+    #         instance=to_json_safe(new_state),
+    #         schema=step3_schema,
+    #         context_label="[Step 3] Output schema validation",
+    #     )
 
     if DEBUG_STEP3:
         debug_state_step3(new_state)
@@ -187,7 +184,6 @@ def orchestrate_step3_state(
     by converting to/from dict internally.
     """
 
-    # Build dict view for legacy orchestrator
     state_dict = {
         "config": state.config,
         "grid": state.grid,
@@ -203,14 +199,12 @@ def orchestrate_step3_state(
     if getattr(state, "history", None):
         state_dict["history"] = state.history
 
-    # Call legacy implementation
     new_state_dict = orchestrate_step3(
         state_dict,
         current_time=current_time,
         step_index=step_index,
     )
 
-    # Write results back into SolverState
     state.fields = new_state_dict["fields"]
     state.health = new_state_dict["health"]
     state.history = new_state_dict.get("history", {})
