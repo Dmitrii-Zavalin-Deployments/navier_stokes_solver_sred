@@ -2,8 +2,6 @@
 
 import numpy as np
 
-# Removed: from src.common.json_safe import to_json_safe  (unused after cleanup)
-
 from src.step3.apply_boundary_conditions_pre import apply_boundary_conditions_pre
 from src.step3.predict_velocity import predict_velocity
 from src.step3.build_ppe_rhs import build_ppe_rhs
@@ -15,19 +13,13 @@ from src.step3.log_step_diagnostics import log_step_diagnostics
 
 from src.solver_state import SolverState
 
-# These were only used for per-step schema validation (now removed)
-validate_json_schema = None
-load_schema = None
-
 DEBUG_STEP3 = True
 
 
 def debug_state_step3(state):
     print("\n==================== DEBUG: STEP‑3 STATE SUMMARY ====================")
-
     for key, value in state.items():
         print(f"\n• {key}: {type(value)}")
-
         if isinstance(value, np.ndarray):
             print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
         elif isinstance(value, dict):
@@ -36,7 +28,6 @@ def debug_state_step3(state):
             print(f"    object attributes={list(vars(value).keys())}")
         else:
             print(f"    value={value}")
-
     print("====================================================================\n")
 
 
@@ -71,16 +62,8 @@ def orchestrate_step3(
     """
 
     # =====================================================================
-    # DEPRECATED: per-step INPUT schema validation removed
-    # After migration to SolverState + final_output_schema.json
+    # DEPRECATED: per-step schema validation removed
     # =====================================================================
-    # if validate_json_schema and load_schema:
-    #     step2_schema = load_schema("step2_output_schema.json")
-    #     validate_json_schema(
-    #         instance=to_json_safe(state),
-    #         schema=step2_schema,
-    #         context_label="[Step 3] Input schema validation",
-    #     )
 
     base_state = dict(state)
 
@@ -146,43 +129,17 @@ def orchestrate_step3(
 
     new_state["history"] = hist
 
-    # =====================================================================
-    # DEPRECATED: per-step OUTPUT schema validation removed
-    # After migration to SolverState + final_output_schema.json
-    # =====================================================================
-    # if validate_json_schema and load_schema:
-    #     step3_schema = load_schema("step3_output_schema.json")
-    #     validate_json_schema(
-    #         instance=to_json_safe(new_state),
-    #         schema=step3_schema,
-    #         context_label="[Step 3] Output schema validation",
-    #     )
-
     if DEBUG_STEP3:
         debug_state_step3(new_state)
 
     return new_state
 
 
-def step3(state, current_time, step_index):
-    return orchestrate_step3(state, current_time, step_index)
-
-
-# =====================================================================
-# NEW: STATE‑BASED STEP 3 ORCHESTRATOR (incremental migration)
-# =====================================================================
-
 def orchestrate_step3_state(
     state: SolverState,
     current_time: float,
     step_index: int,
 ) -> SolverState:
-    """
-    Modern Step 3 orchestrator: operates directly on SolverState.
-
-    During migration, this reuses the existing dict-based implementation
-    by converting to/from dict internally.
-    """
 
     state_dict = {
         "config": state.config,

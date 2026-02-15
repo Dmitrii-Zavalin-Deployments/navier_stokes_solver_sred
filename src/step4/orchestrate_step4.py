@@ -10,17 +10,6 @@ from src.step4.assemble_diagnostics import assemble_diagnostics
 def orchestrate_step4_state(state: SolverState) -> SolverState:
     """
     Modern Step 4 orchestrator: operates directly on SolverState.
-
-    Reads:
-        - state.config
-        - state.fields
-        - state.mask
-        - state.health
-
-    Writes:
-        - state.P_ext, state.U_ext, state.V_ext, state.W_ext
-        - state.step4_diagnostics
-        - state.ready_for_time_loop
     """
 
     # =====================================================================
@@ -30,9 +19,6 @@ def orchestrate_step4_state(state: SolverState) -> SolverState:
     # SolverState + final_output_schema.json.
     # =====================================================================
 
-    # ---------------------------------------------------------
-    # 1. Initialize extended fields
-    # ---------------------------------------------------------
     extended = initialize_extended_fields(
         fields=state.fields,
         mask=state.mask,
@@ -44,9 +30,6 @@ def orchestrate_step4_state(state: SolverState) -> SolverState:
     state.V_ext = extended["V_ext"]
     state.W_ext = extended["W_ext"]
 
-    # ---------------------------------------------------------
-    # 2. Apply boundary conditions
-    # ---------------------------------------------------------
     bc_result = apply_boundary_conditions(
         P_ext=state.P_ext,
         U_ext=state.U_ext,
@@ -57,16 +40,12 @@ def orchestrate_step4_state(state: SolverState) -> SolverState:
         health=state.health,
     )
 
-    # Update fields if returned
     state.P_ext = bc_result.get("P_ext", state.P_ext)
     state.U_ext = bc_result.get("U_ext", state.U_ext)
     state.V_ext = bc_result.get("V_ext", state.V_ext)
     state.W_ext = bc_result.get("W_ext", state.W_ext)
     state.health = bc_result.get("health", state.health)
 
-    # ---------------------------------------------------------
-    # 3. Assemble diagnostics
-    # ---------------------------------------------------------
     diagnostics = assemble_diagnostics(
         P_ext=state.P_ext,
         U_ext=state.U_ext,
@@ -78,20 +57,12 @@ def orchestrate_step4_state(state: SolverState) -> SolverState:
     )
     state.step4_diagnostics = diagnostics
 
-    # ---------------------------------------------------------
-    # 4. Mark ready for time loop
-    # ---------------------------------------------------------
     state.ready_for_time_loop = True
 
     return state
 
 
 def orchestrate_step4(state_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Legacy dict-based Step 4 orchestrator.
-    Thin adapter around the new state-based implementation.
-    Keeps all existing code/tests working during migration.
-    """
 
     required_keys = ["config", "fields", "mask", "health"]
     for key in required_keys:
