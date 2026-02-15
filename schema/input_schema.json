@@ -1,173 +1,210 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Step 1 Input Schema",
+  "title": "Solver Input Schema",
   "type": "object",
-
   "required": [
-    "domain_definition",
+    "domain",
     "fluid_properties",
     "initial_conditions",
     "simulation_parameters",
     "boundary_conditions",
-    "geometry_definition",
+    "mask",
     "external_forces"
   ],
-
   "properties": {
-
-    "domain_definition": {
+    "domain": {
       "type": "object",
       "required": [
-        "x_min", "x_max",
-        "y_min", "y_max",
-        "z_min", "z_max",
-        "nx", "ny", "nz"
+        "x_min",
+        "x_max",
+        "y_min",
+        "y_max",
+        "z_min",
+        "z_max",
+        "nx",
+        "ny",
+        "nz"
       ],
       "properties": {
-        "x_min": { "type": "number" },
-        "x_max": { "type": "number" },
-        "y_min": { "type": "number" },
-        "y_max": { "type": "number" },
-        "z_min": { "type": "number" },
-        "z_max": { "type": "number" },
-
-        "nx": { "type": "integer", "minimum": 1 },
-        "ny": { "type": "integer", "minimum": 1 },
-        "nz": { "type": "integer", "minimum": 1 }
+        "x_min": {
+          "type": "number"
+        },
+        "x_max": {
+          "type": "number"
+        },
+        "y_min": {
+          "type": "number"
+        },
+        "y_max": {
+          "type": "number"
+        },
+        "z_min": {
+          "type": "number"
+        },
+        "z_max": {
+          "type": "number"
+        },
+        "nx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ny": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nz": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-
     "fluid_properties": {
       "type": "object",
-      "required": ["density", "viscosity"],
+      "required": [
+        "density",
+        "viscosity"
+      ],
       "properties": {
-        "density": { "type": "number", "exclusiveMinimum": 0 },
-        "viscosity": { "type": "number", "minimum": 0 }
+        "density": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "viscosity": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
-
     "initial_conditions": {
       "type": "object",
-      "required": ["initial_velocity", "initial_pressure"],
+      "required": [
+        "velocity",
+        "pressure"
+      ],
       "properties": {
-        "initial_velocity": {
+        "velocity": {
           "type": "array",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 3,
           "maxItems": 3
         },
-        "initial_pressure": { "type": "number" }
+        "pressure": {
+          "type": "number"
+        }
       }
     },
-
     "simulation_parameters": {
       "type": "object",
-      "required": ["time_step", "total_time", "output_interval"],
+      "required": [
+        "time_step",
+        "total_time",
+        "output_interval"
+      ],
       "properties": {
-        "time_step": { "type": "number", "exclusiveMinimum": 0 },
-        "total_time": { "type": "number", "exclusiveMinimum": 0 },
-        "output_interval": { "type": "integer", "minimum": 1 }
+        "time_step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "total_time": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "output_interval": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-
     "boundary_conditions": {
       "type": "array",
       "items": {
         "type": "object",
         "required": [
-          "role",
-          "type",
-          "faces",
-          "apply_to",
-          "velocity",
-          "pressure",
-          "pressure_gradient",
-          "no_slip"
+          "location",
+          "type"
         ],
         "properties": {
-          "role": {
+          "location": {
             "type": "string",
-            "enum": ["inlet", "outlet", "wall", "symmetry"]
+            "enum": [
+              "x_min",
+              "x_max",
+              "y_min",
+              "y_max",
+              "z_min",
+              "z_max"
+            ]
           },
           "type": {
             "type": "string",
-            "enum": ["dirichlet", "neumann", "robin"]
+            "enum": [
+              "no-slip",
+              "free-slip",
+              "inflow",
+              "outflow",
+              "pressure"
+            ]
           },
-          "faces": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "x_min", "x_max",
-                "y_min", "y_max",
-                "z_min", "z_max"
-              ]
+          "values": {
+            "type": "object",
+            "properties": {
+              "u": {
+                "type": "number"
+              },
+              "v": {
+                "type": "number"
+              },
+              "w": {
+                "type": "number"
+              },
+              "p": {
+                "type": "number"
+              }
             }
           },
-          "apply_to": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["velocity", "pressure"]
-            }
-          },
-          "velocity": {
-            "type": "array",
-            "items": { "type": "number" },
-            "minItems": 3,
-            "maxItems": 3
-          },
-          "pressure": { "type": "number" },
-          "pressure_gradient": { "type": "number" },
-          "no_slip": { "type": "boolean" },
-          "comment": { "type": "string" }
+          "comment": {
+            "type": "string"
+          }
         }
       }
     },
-
-    "geometry_definition": {
-      "type": "object",
-      "required": [
-        "geometry_mask_flat",
-        "geometry_mask_shape",
-        "mask_encoding",
-        "flattening_order"
-      ],
-      "properties": {
-        "geometry_mask_flat": {
+    "mask": {
+      "type": "array",
+      "description": "3D array of -1/0/1 values: 1 = fluid, 0 = solid, -1 = boundary-fluid",
+      "items": {
+        "type": "array",
+        "items": {
           "type": "array",
-          "items": { "type": "integer" }
-        },
-        "geometry_mask_shape": {
-          "type": "array",
-          "items": { "type": "integer", "minimum": 1 },
-          "minItems": 3,
-          "maxItems": 3
-        },
-        "mask_encoding": {
-          "type": "object",
-          "required": ["fluid", "solid"],
-          "properties": {
-            "fluid": { "type": "integer" },
-            "solid": { "type": "integer" }
+          "items": {
+            "type": "integer",
+            "enum": [
+              -1,
+              0,
+              1
+            ]
           }
-        },
-        "flattening_order": { "type": "string" }
+        }
       }
     },
-
     "external_forces": {
       "type": "object",
-      "required": ["force_vector", "units"],
+      "required": [
+        "force_vector"
+      ],
       "properties": {
         "force_vector": {
           "type": "array",
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "minItems": 3,
           "maxItems": 3
         },
-        "units": { "type": "string" },
-        "comment": { "type": "string" }
+        "comment": {
+          "type": "string"
+        }
       }
     }
   }
