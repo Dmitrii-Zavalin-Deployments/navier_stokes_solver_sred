@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Final Solver Output Schema",
+  "description": "JSON-safe representation of the complete SolverState after all solver steps.",
+  "type": "object",
+
+  "properties": {
+    "config": { "type": "object" },
+
+    "grid": { "type": "object" },
+
+    "fields": {
+      "type": "object",
+      "properties": {
+        "P": { "type": "array" },
+        "U": { "type": "array" },
+        "V": { "type": "array" },
+        "W": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+
+    "mask": { "type": ["array", "null"] },
+
+    "constants": { "type": "object" },
+
+    "boundary_conditions": { "type": "object" },
+
+    "health": { "type": "object" },
+
+    "operators": {
+      "type": "object",
+      "description": "Runtime-only operators (callables). Skipped or empty in JSON-safe output.",
+      "additionalProperties": true
+    },
+
+    "ppe": { "type": "object" },
+
+    "is_fluid": { "type": ["array", "null"] },
+
+    "is_boundary_cell": { "type": ["array", "null"] },
+
+    "step3_diagnostics": { "type": "object" },
+
+    "P_ext": { "type": ["array", "null"] },
+    "U_ext": { "type": ["array", "null"] },
+    "V_ext": { "type": ["array", "null"] },
+    "W_ext": { "type": ["array", "null"] },
+
+    "step4_diagnostics": { "type": "object" },
+
+    "step5_outputs": { "type": "object" },
+
+    "ready_for_time_loop": { "type": "boolean" }
+  },
+
+  "required": [
+    "config",
+    "grid",
+    "fields",
+    "mask",
+    "constants",
+    "boundary_conditions",
+    "health",
+    "ppe",
+    "P_ext",
+    "U_ext",
+    "V_ext",
+    "W_ext",
+    "ready_for_time_loop"
+  ],
+
+  "additionalProperties": false
+}
