@@ -1,4 +1,5 @@
 # tests/step1/test_compute_derived_constants.py
+
 from src.step1.compute_derived_constants import compute_derived_constants
 from src.step1.types import GridConfig
 
@@ -17,9 +18,12 @@ def test_compute_constants():
 
     c = compute_derived_constants(grid, fluid, sim)
 
+    # Basic passthrough values
     assert c.rho == 1.2
     assert c.mu == 0.05
     assert c.dt == 0.01
+
+    # Derived inverse spacings
     assert c.inv_dx == 2.0
     assert c.inv_dy == 1.0
     assert c.inv_dz == 0.5

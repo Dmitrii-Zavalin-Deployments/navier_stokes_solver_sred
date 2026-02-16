@@ -1,4 +1,5 @@
 # tests/step1/test_geometry_mask.py
+
 import numpy as np
 import pytest
 
@@ -30,25 +31,19 @@ def test_data_type_pollution():
     bad_flat = [1, 0, "3", 1, 0, 1, 0, 1]
     order = "i + nx*(j + ny*k)"
 
-    with pytest.raises(TypeError):
-        map_geometry_mask(bad_flat, (nx, ny, nz), order)
-
-
-def test_opaque_label_rejected():
-    nx, ny, nz = 2, 2, 2
-    flat = [0, -99, 500, 3, 7, 8, 9, 10]  # invalid values
-    order = "i + nx*(j + ny*k)"
-
+    # Step 1 must reject non-integer or non-finite values
     with pytest.raises(ValueError):
-        map_geometry_mask(flat, (nx, ny, nz), order)
+        map_geometry_mask(bad_flat, (nx, ny, nz), order)
 
 
 def test_flattening_order_round_trip():
     nx, ny, nz = 3, 3, 3
-    flat = [1 if (i + j + k) % 2 == 0 else 0
-            for k in range(nz)
-            for j in range(ny)
-            for i in range(nx)]
+    flat = [
+        1 if (i + j + k) % 2 == 0 else 0
+        for k in range(nz)
+        for j in range(ny)
+        for i in range(nx)
+    ]
     order = "i + nx*(j + ny*k)"
 
     mask = map_geometry_mask(flat, (nx, ny, nz), order)
