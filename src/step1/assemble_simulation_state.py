@@ -21,11 +21,17 @@ def assemble_simulation_state(
     constants: DerivedConstants,
 ) -> Dict[str, Any]:
     """
-    Assemble a schema‑compliant Step 1 output state.
+    Assemble a solver-ready Step 1 state (dict form).
 
-    All objects (GridConfig, Fields, Config, DerivedConstants)
-    are converted into plain dictionaries so that the result
-    matches the Step 1 Output Schema exactly.
+    All structured objects (Config, GridConfig, Fields, DerivedConstants)
+    are converted into plain dictionaries so that the result is JSON-safe
+    and compatible with the Step 1 orchestrator and migration adapter.
+
+    This version is aligned with the cell-centered solver architecture:
+      - U, V, W, P, Mask are all (nx, ny, nz)
+      - No staggered fields
+      - No ghost layers
+      - Mask semantics are not interpreted here (Step 2 handles semantics)
     """
 
     # -----------------------------
@@ -77,7 +83,6 @@ def assemble_simulation_state(
 
     # -----------------------------
     # Convert config → dict
-    # (Step 1 Input Schema already validated it)
     # -----------------------------
     config_dict = {
         "domain": config.domain,
@@ -95,7 +100,7 @@ def assemble_simulation_state(
         "grid": grid_dict,
         "fields": fields_dict,
         "mask_3d": mask_3d,
-        "boundary_table": bc_table,
+        "bc_table": bc_table,     # FIXED: correct key name
         "constants": constants_dict,
         "config": config_dict,
     }

@@ -7,17 +7,19 @@ from .types import GridConfig
 
 def initialize_grid(domain: dict) -> GridConfig:
     """
-    Initialize grid metadata from validated Step 1 input.
+    Initialize grid metadata for the cell-centered solver.
 
-    Enforces all constraints required by the Step 1 Output Schema:
-    - nx, ny, nz >= 1
-    - x_max > x_min, etc.
-    - dx, dy, dz > 0
-    - all values finite
+    Step 1 responsibilities:
+      - validate domain extents and resolution
+      - compute dx, dy, dz for a uniform Cartesian grid
+      - ensure all values are finite and physically meaningful
+
+    This function is intentionally simple: it does not allocate fields,
+    interpret geometry semantics, or apply boundary conditions.
     """
 
     # -----------------------------
-    # Validate required keys
+    # Required keys
     # -----------------------------
     required_keys = [
         "nx", "ny", "nz",
@@ -31,7 +33,7 @@ def initialize_grid(domain: dict) -> GridConfig:
             raise KeyError(f"Missing required domain key: {key}")
 
     # -----------------------------
-    # Extract and validate integer dimensions
+    # Grid resolution (must be >= 1)
     # -----------------------------
     nx = int(domain["nx"])
     ny = int(domain["ny"])
@@ -42,7 +44,7 @@ def initialize_grid(domain: dict) -> GridConfig:
             raise ValueError(f"{name} must be >= 1, got {val}")
 
     # -----------------------------
-    # Extract and validate extents
+    # Domain extents (finite, ordered)
     # -----------------------------
     x_min = float(domain["x_min"])
     x_max = float(domain["x_max"])
@@ -59,9 +61,6 @@ def initialize_grid(domain: dict) -> GridConfig:
         if not math.isfinite(val):
             raise ValueError(f"{name} must be a finite number, got {val}")
 
-    # -----------------------------
-    # Validate extents ordering
-    # -----------------------------
     if x_max <= x_min:
         raise ValueError(f"x_max must be greater than x_min, got {x_min} .. {x_max}")
     if y_max <= y_min:
@@ -70,7 +69,7 @@ def initialize_grid(domain: dict) -> GridConfig:
         raise ValueError(f"z_max must be greater than z_min, got {z_min} .. {z_max}")
 
     # -----------------------------
-    # Compute spacings
+    # Uniform cell-centered spacing
     # -----------------------------
     dx = (x_max - x_min) / nx
     dy = (y_max - y_min) / ny

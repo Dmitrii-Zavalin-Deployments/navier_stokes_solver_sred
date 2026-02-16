@@ -28,7 +28,16 @@ def _ensure_finite(name: str, value: float) -> None:
 def validate_physical_constraints(data: Dict[str, Any]) -> None:
     """
     Fatal physical checks before any allocation.
-    Structural + basic physical only.
+
+    Step 1 responsibilities:
+      - structural validation only
+      - no geometry semantics
+      - no BC logic
+      - no ghost-layer logic
+      - no solver-level constraints (e.g., CFL)
+
+    This ensures the input is physically meaningful and internally consistent
+    before Step 1 allocates fields or constructs SolverState.
     """
 
     domain = data["domain_definition"]
@@ -78,7 +87,7 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
         raise ValueError("z_max must be > z_min")
 
     # ---------------------------------------------------------
-    # Geometry mask consistency
+    # Geometry mask consistency (STRUCTURAL ONLY)
     # ---------------------------------------------------------
     mask_flat = geom["geometry_mask_flat"]
     mask_shape = geom["geometry_mask_shape"]
@@ -98,15 +107,13 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
             f"geometry_mask_shape product {expected_len}"
         )
 
-    # Validate mask values
+    # Structural validation only — NO semantic enforcement
     for i, v in enumerate(mask_flat):
         if not isinstance(v, int) or not math.isfinite(v):
             raise ValueError(f"Mask entry at index {i} must be a finite integer, got {v}")
-        if v not in (-1, 0, 1):
-            raise ValueError(f"Mask entry at index {i} must be -1, 0, or 1, got {v}")
 
     # ---------------------------------------------------------
-    # Validate mask_encoding
+    # Validate mask_encoding (structural only)
     # ---------------------------------------------------------
     encoding = geom.get("mask_encoding", {})
     if not isinstance(encoding, dict):
@@ -153,7 +160,6 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     if not isinstance(forces, dict):
         raise ValueError("external_forces must be a dictionary")
 
-    # Schema: force_vector is a length‑3 array of numbers; units/comment are strings.
     fv = forces.get("force_vector", None)
     if fv is None:
         raise ValueError("external_forces must contain 'force_vector'")
@@ -168,8 +174,6 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
             raise ValueError(
                 f"external_forces['force_vector'][{i}] must be a finite number, got {comp}"
             )
-
-    # Do NOT enforce numeric type on 'units' or 'comment'
 
     # ---------------------------------------------------------
     # NOTE: CFL pre-check removed (belongs to Step 3/4)

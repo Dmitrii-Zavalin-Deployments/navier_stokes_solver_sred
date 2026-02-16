@@ -9,12 +9,11 @@ from .types import Fields
 
 def apply_initial_conditions(fields: Fields, initial_conditions: Dict[str, object]) -> None:
     """
-    Populate P, U, V, W with uniform initial values.
+    Populate P, U, V, W with uniform initial values (cell-centered).
     In-place operation.
 
-    This function assumes that Step 1 input has already been validated
-    against the Step 1 Input Schema. Here we enforce additional
-    numerical safety (finite values, correct vector length).
+    Step 1 has already validated the input schema, so here we enforce
+    only numerical safety (finite values, correct vector length).
     """
 
     # --- Validate presence of required keys ---
@@ -44,7 +43,7 @@ def apply_initial_conditions(fields: Fields, initial_conditions: Dict[str, objec
         if not math.isfinite(val):
             raise ValueError(f"Initial velocity must contain finite numbers, got {name}={val}")
 
-    # --- Apply initial conditions ---
+    # --- Apply initial conditions (cell-centered arrays) ---
     fields.P[...] = p0
     fields.U[...] = u0
     fields.V[...] = v0

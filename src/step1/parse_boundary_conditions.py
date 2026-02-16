@@ -9,6 +9,11 @@ from .types import GridConfig
 
 _VALID_ROLES = {"inlet", "outlet", "wall", "symmetry"}
 _VALID_FACES = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}
+
+# In the cell-centered solver, BCs may apply to:
+#   - velocity (Dirichlet)
+#   - pressure (Dirichlet)
+#   - pressure_gradient (Neumann)
 _VALID_APPLY_TO = {"velocity", "pressure", "pressure_gradient"}
 
 
@@ -17,7 +22,13 @@ def parse_boundary_conditions(
     grid_config: GridConfig,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Normalize BCs into solver-ready structures.
+    Normalize boundary-condition definitions into a solver-ready table.
+
+    Step 1 responsibilities:
+      - structural validation only
+      - no BC application
+      - no ghost-layer logic
+      - no geometry semantics
 
     Enforces:
       • valid roles
@@ -27,9 +38,10 @@ def parse_boundary_conditions(
       • velocity BC must have 3 finite components
       • pressure BC must have a finite scalar
       • pressure_gradient BC must have a finite scalar
-      • allows optional 'comment' field (schema‑approved)
+      • optional 'comment' field allowed
     """
 
+    # Table keyed by face: each face may have 0 or 1 BC entries
     table: Dict[str, List[Dict[str, Any]]] = {f: [] for f in _VALID_FACES}
     seen_faces: Dict[str, bool] = {}
 
@@ -69,7 +81,7 @@ def parse_boundary_conditions(
                 )
 
         # ---------------------------------------------------------
-        # Validate velocity BC
+        # Validate velocity BC (Dirichlet)
         # ---------------------------------------------------------
         if "velocity" in apply_to:
             vel = bc.get("velocity")
@@ -80,7 +92,7 @@ def parse_boundary_conditions(
                     raise ValueError(f"Velocity component {idx} must be finite, got {v}")
 
         # ---------------------------------------------------------
-        # Validate pressure BC
+        # Validate pressure BC (Dirichlet)
         # ---------------------------------------------------------
         if "pressure" in apply_to:
             p = bc.get("pressure")
@@ -88,7 +100,7 @@ def parse_boundary_conditions(
                 raise ValueError("Pressure BC must provide a finite scalar")
 
         # ---------------------------------------------------------
-        # Validate pressure gradient BC
+        # Validate pressure-gradient BC (Neumann)
         # ---------------------------------------------------------
         if "pressure_gradient" in apply_to:
             pg = bc.get("pressure_gradient")
@@ -96,13 +108,13 @@ def parse_boundary_conditions(
                 raise ValueError("pressure_gradient must be a finite scalar")
 
         # ---------------------------------------------------------
-        # Validate allowed keys (now includes 'comment')
+        # Validate allowed keys (schema-aligned)
         # ---------------------------------------------------------
         allowed_keys = {
             "role", "faces", "apply_to",
             "velocity", "pressure", "pressure_gradient",
             "no_slip", "type",
-            "comment",   # <-- added to match schema
+            "comment",
         }
 
         for key in bc.keys():

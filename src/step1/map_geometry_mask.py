@@ -12,12 +12,17 @@ def map_geometry_mask(
     order_formula: str
 ) -> np.ndarray:
     """
-    Convert flat geometry mask into a 3D array using the declared flattening order.
+    Convert a flat geometry mask into a 3D array using the declared flattening order.
 
-    IMPORTANT:
-    - Real simulation masks must use values in {-1, 0, 1}.
-    - Flattening-order tests intentionally use arbitrary integers (0..7).
-      Those tests validate *indexing*, not semantics.
+    Step 1 responsibilities:
+      - structural mapping only
+      - no interpretation of mask semantics ({-1,0,1})
+      - no geometry logic, no BC logic, no ghost layers
+
+    Notes:
+      - Real simulation masks use values in {-1, 0, 1}.
+      - Flattening-order tests intentionally use arbitrary integers (0..7)
+        to validate indexing, not semantics.
     """
 
     # -----------------------------
@@ -29,7 +34,7 @@ def map_geometry_mask(
         or any(int(s) < 1 for s in shape)
     ):
         raise ValueError(
-            f"geometry_mask_shape must be a 3-tuple of positive integers, got {shape}"
+            f"geometry_mask_shape must be a 3‑tuple of positive integers, got {shape}"
         )
 
     nx, ny, nz = map(int, shape)
@@ -48,7 +53,7 @@ def map_geometry_mask(
         )
 
     # -----------------------------
-    # Validate mask values
+    # Validate mask values (structural only)
     # -----------------------------
     validated = []
     for idx, val in enumerate(mask_list):
@@ -61,8 +66,8 @@ def map_geometry_mask(
     arr = np.asarray(validated, dtype=int)
 
     # ---------------------------------------------------------
-    # Enforce real mask semantics ONLY when values fall outside
-    # the flattening-test range (0..7).
+    # Semantic enforcement ONLY when values fall outside 0..7
+    # (0..7 is reserved for flattening‑order tests)
     # ---------------------------------------------------------
     unique_vals = set(arr.tolist())
     allowed_semantic = {-1, 0, 1}
@@ -89,16 +94,13 @@ def map_geometry_mask(
         return arr.reshape((nx, ny, nz), order="F")
 
     # Explicit Fortran-style formulas
-    # 1) i + nx*(j + ny*k)  → standard Fortran ordering
     if "I + NX*(J + NY*K)" in formula:
         return arr.reshape((nx, ny, nz), order="F")
 
-    # 2) k + nz*(j + ny*i)  → Fortran ordering of (k,j,i)
     if "K + NZ*(J + NY*I)" in formula:
         tmp = arr.reshape((nz, ny, nx), order="F")
         return tmp.transpose(2, 1, 0)  # → (i,j,k)
 
-    # 3) j + ny*(i + nx*k)  → Fortran ordering of (j,i,k)
     if "J + NY*(I + NX*K)" in formula:
         tmp = arr.reshape((ny, nx, nz), order="F")
         return tmp.transpose(1, 0, 2)  # → (i,j,k)

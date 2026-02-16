@@ -16,11 +16,14 @@ def compute_derived_constants(
     """
     Compute physical and numerical constants for Step 1.
 
-    This function enforces all constraints required by the
-    Step 1 Output Schema:
-    - positivity of dx, dy, dz, dt, rho
-    - non-negativity of viscosity
-    - finiteness of all values
+    Step 1 responsibilities:
+      - validate positivity / finiteness of physical parameters
+      - compute dx, dy, dz and their inverses
+      - compute dt and its inverses
+      - produce a DerivedConstants object used by all later steps
+
+    This function is fully aligned with the cell-centered solver architecture.
+    No MAC-grid or staggered assumptions appear here.
     """
 
     # -----------------------------
@@ -69,7 +72,7 @@ def compute_derived_constants(
     return DerivedConstants(
         rho=rho,
         mu=mu,
-        dt=dt,          # <-- REQUIRED BY STEP‑2 SCHEMA
+        dt=dt,
         dx=dx,
         dy=dy,
         dz=dz,
