@@ -1,20 +1,26 @@
-"""
-final_output_dummy_state.py
+# tests/helpers/solver_output_schema_dummy.py
 
-Provides a canonical JSON‑safe dummy final output state that fully satisfies
-final_output_schema.json. Used for schema validation tests and end‑to‑end
-contract tests.
+"""
+solver_output_schema_dummy.py
+
+Canonical JSON‑safe dummy final output state that fully satisfies
+solver_output_schema.json. Used for schema validation tests and
+end‑to‑end contract tests.
 """
 
-def final_output_dummy():
-    # Small test grid
+def solver_output_schema_dummy():
     nx, ny, nz = 2, 2, 2
 
-    # Helper to build 3D arrays as nested lists
-    def zeros(shape):
+    # Helper to build nested lists
+    def zeros(shape, value=0.0):
         if len(shape) == 1:
-            return [0.0] * shape[0]
-        return [zeros(shape[1:]) for _ in range(shape[0])]
+            return [value for _ in range(shape[0])]
+        return [zeros(shape[1:], value) for _ in range(shape[0])]
+
+    def ints(shape, value=0):
+        if len(shape) == 1:
+            return [value for _ in range(shape[0])]
+        return [ints(shape[1:], value) for _ in range(shape[0])]
 
     return {
         "config": {
@@ -38,16 +44,19 @@ def final_output_dummy():
             "dz": 1.0,
         },
 
+        # Cell-centered fields
         "fields": {
             "P": zeros((nx, ny, nz)),
-            "U": zeros((nx+1, ny, nz)),
-            "V": zeros((nx, ny+1, nz)),
-            "W": zeros((nx, ny, nz+1)),
+            "U": zeros((nx, ny, nz)),
+            "V": zeros((nx, ny, nz)),
+            "W": zeros((nx, ny, nz)),
         },
 
-        "mask": zeros((nx, ny, nz)),
-        "is_fluid": [[ [True]*nz for _ in range(ny) ] for _ in range(nx)],
-        "is_boundary_cell": [[ [False]*nz for _ in range(ny) ] for _ in range(nx)],
+        # Integer mask
+        "mask": ints((nx, ny, nz), value=1),
+
+        "is_fluid": ints((nx, ny, nz), value=1),
+        "is_boundary_cell": ints((nx, ny, nz), value=0),
 
         "constants": {
             "rho": 1.0,
@@ -66,7 +75,7 @@ def final_output_dummy():
             "cfl_advection_estimate": 0.0,
         },
 
-        "operators": {},  # runtime-only, empty in JSON-safe output
+        "operators": {},
 
         "ppe": {
             "singularity_detected": False,
@@ -78,11 +87,11 @@ def final_output_dummy():
             "max_velocity": 0.0,
         },
 
-        # Extended fields with ghost layers
+        # Extended fields (shapes arbitrary but consistent)
         "P_ext": zeros((nx+2, ny+2, nz+2)),
-        "U_ext": zeros((nx+3, ny+2, nz+2)),
-        "V_ext": zeros((nx,   ny+3, nz+2)),
-        "W_ext": zeros((nx,   ny,   nz+3)),
+        "U_ext": zeros((nx+2, ny+2, nz+2)),
+        "V_ext": zeros((nx+2, ny+2, nz+2)),
+        "W_ext": zeros((nx+2, ny+2, nz+2)),
 
         "step4_diagnostics": {
             "total_fluid_cells": nx * ny * nz,
