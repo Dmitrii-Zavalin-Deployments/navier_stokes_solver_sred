@@ -1,109 +1,39 @@
 # src/step2/build_gradient_operators.py
-
 from __future__ import annotations
-from typing import Any, Dict
 import numpy as np
+from src.solver_state import SolverState
 
 
-def _to_numpy(arr):
-    return np.asarray(arr, dtype=float)
-
-
-def _to_list(arr):
-    return arr.tolist()
-
-
-def build_gradient_operators(state: Dict[str, Any]):
+def build_gradient_operators(state: SolverState) -> None:
     """
-    Return (grad_x, grad_y, grad_z) callables.
-
-    Tests expect:
-        grad_x, grad_y, grad_z = build_gradient_operators(state)
-        gx = grad_x(P)
-        gy = grad_y(P)
-        gz = grad_z(P)
-
-    NOT a dict. NOT precomputed gradients.
+    Build pressure gradient operators for MAC-grid velocities.
     """
 
-    grid = state["grid"]
-    nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+    nx, ny, nz = state.grid.nx, state.grid.ny, state.grid.nz
+    dx, dy, dz = state.constants.dx, state.constants.dy, state.constants.dz
+    is_fluid = state.is_fluid
 
-    const = state["constants"]
-    dx, dy, dz = float(const["dx"]), float(const["dy"]), float(const["dz"])
-
-    # Canonical mask from Step‑1
-    mask = _to_numpy(state["mask_3d"])
-    is_fluid = (mask != 0)
-
-    # ----------------------------------------------------------------------
-    # ∂p/∂x at U faces → shape (nx+1, ny, nz)
-    # ----------------------------------------------------------------------
     def grad_x(P):
-        P = _to_numpy(P)
-
-        if P.shape != (nx, ny, nz):
-            raise ValueError(f"P must have shape {(nx, ny, nz)}, got {P.shape}")
-
-        gx = np.zeros((nx + 1, ny, nz), float)
-
-        if nx > 0:
-            gx[1:nx] = (P[1:] - P[:-1]) / dx
-
-        # Masking: U-face is fluid only if both adjacent cells are fluid
-        fluid_u = np.zeros_like(gx, bool)
-        if nx > 0:
-            fluid_u[1:nx] = is_fluid[:-1] & is_fluid[1:]
-        fluid_u[0] = is_fluid[0]
-        fluid_u[nx] = is_fluid[-1]
-
-        gx[~fluid_u] = 0.0
+        P = np.asarray(P)
+        gx = np.zeros((nx + 1, ny, nz))
+        gx[1:nx] = (P[1:] - P[:-1]) / dx
+        gx[~(is_fluid[:-1] & is_fluid[1:])] = 0.0
         return gx
 
-    # ----------------------------------------------------------------------
-    # ∂p/∂y at V faces → shape (nx, ny+1, nz)
-    # ----------------------------------------------------------------------
     def grad_y(P):
-        P = _to_numpy(P)
-
-        if P.shape != (nx, ny, nz):
-            raise ValueError(f"P must have shape {(nx, ny, nz)}, got {P.shape}")
-
-        gy = np.zeros((nx, ny + 1, nz), float)
-
-        if ny > 0:
-            gy[:, 1:ny] = (P[:, 1:] - P[:, :-1]) / dy
-
-        fluid_v = np.zeros_like(gy, bool)
-        if ny > 0:
-            fluid_v[:, 1:ny] = is_fluid[:, :-1] & is_fluid[:, 1:]
-        fluid_v[:, 0] = is_fluid[:, 0]
-        fluid_v[:, ny] = is_fluid[:, -1]
-
-        gy[~fluid_v] = 0.0
+        P = np.asarray(P)
+        gy = np.zeros((nx, ny + 1, nz))
+        gy[:, 1:ny] = (P[:, 1:] - P[:, :-1]) / dy
+        gy[:, ~(is_fluid[:, :-1] & is_fluid[:, 1:])] = 0.0
         return gy
 
-    # ----------------------------------------------------------------------
-    # ∂p/∂z at W faces → shape (nx, ny, nz+1)
-    # ----------------------------------------------------------------------
     def grad_z(P):
-        P = _to_numpy(P)
-
-        if P.shape != (nx, ny, nz):
-            raise ValueError(f"P must have shape {(nx, ny, nz)}, got {P.shape}")
-
-        gz = np.zeros((nx, ny, nz + 1), float)
-
-        if nz > 0:
-            gz[:, :, 1:nz] = (P[:, :, 1:] - P[:, :, :-1]) / dz
-
-        fluid_w = np.zeros_like(gz, bool)
-        if nz > 0:
-            fluid_w[:, :, 1:nz] = is_fluid[:, :, :-1] & is_fluid[:, :, 1:]
-        fluid_w[:, :, 0] = is_fluid[:, :, 0]
-        fluid_w[:, :, nz] = is_fluid[:, :, -1]
-
-        gz[~fluid_w] = 0.0
+        P = np.asarray(P)
+        gz = np.zeros((nx, ny, nz + 1))
+        gz[:, :, 1:nz] = (P[:, :, 1:] - P[:, :, :-1]) / dz
+        gz[:, :, ~(is_fluid[:, :, :-1] & is_fluid[:, :, 1:])] = 0.0
         return gz
 
-    return grad_x, grad_y, grad_z
+    state.operators["gradient_p_x"] = grad_x
+    state.operators["gradient_p_y"] = grad_y
+    state.operators["gradient_p_z"] = grad_z
