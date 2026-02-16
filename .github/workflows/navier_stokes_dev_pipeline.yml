@@ -1,6 +1,6 @@
 # .github/workflows/navier_stokes_dev_pipeline.yml
 
-name: Navier–Stokes Solver (Development Pipeline)
+name: Navier–Stokes Solver
 
 on:
   push:
