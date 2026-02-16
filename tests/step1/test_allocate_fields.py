@@ -16,7 +16,8 @@ def test_cell_centered_field_shapes():
 
     fields = allocate_fields(grid)
 
-    expected = (4, 5, 6)
-    for name in ["U", "V", "W", "P"]:
-        assert isinstance(fields[name], np.ndarray)
-        assert fields[name].shape == expected
+    expected_shape = (4, 5, 6)
+    for name in ("U", "V", "W", "P"):
+        arr = fields[name]
+        assert isinstance(arr, np.ndarray)
+        assert arr.shape == expected_shape

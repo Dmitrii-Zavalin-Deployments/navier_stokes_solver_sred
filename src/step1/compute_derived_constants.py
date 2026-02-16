@@ -1,4 +1,4 @@
-# file: step1/compute_derived_constants.py
+# src/step1/compute_derived_constants.py
 
 from __future__ import annotations
 
@@ -16,14 +16,16 @@ def compute_derived_constants(
     """
     Compute physical and numerical constants for Step 1.
 
-    Step 1 responsibilities:
-      - validate positivity / finiteness of physical parameters
-      - compute dx, dy, dz and their inverses
-      - compute dt and its inverses
-      - produce a DerivedConstants object used by all later steps
+    Responsibilities:
+      • extract validated physical parameters (density, viscosity)
+      • extract validated numerical parameters (time_step)
+      • compute dx, dy, dz and their inverses
+      • compute dt and its inverses
+      • return a DerivedConstants object for downstream steps
 
-    This function is fully aligned with the cell-centered solver architecture.
-    No MAC-grid or staggered assumptions appear here.
+    All schema validation is performed earlier in the orchestrator.
+    This function assumes the presence of required keys and enforces
+    only numerical safety (finite, positive, non-negative).
     """
 
     # -----------------------------

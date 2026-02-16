@@ -1,4 +1,4 @@
-# file: src/common/json_safe.py
+# src/common/json_safe.py
 """
 Shared JSON‑safe conversion utility.
 
@@ -8,14 +8,15 @@ that recursively converts:
     • dicts → dicts with JSON‑safe values
     • lists/tuples → lists with JSON‑safe values
 
-It is used by orchestrators (Steps 1–4) and by schema tests.
+It is used by orchestrators (Steps 1–4) and by schema validation.
 """
 
 from __future__ import annotations
+from typing import Any
 import numpy as np
 
 
-def to_json_safe(obj):
+def to_json_safe(obj: Any) -> Any:
     """
     Recursively convert solver state objects into JSON‑safe structures.
 

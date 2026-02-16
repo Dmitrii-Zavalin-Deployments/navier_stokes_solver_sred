@@ -1,4 +1,4 @@
-# file: src/step1/validate_physical_constraints.py
+# src/step1/validate_physical_constraints.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -30,21 +30,25 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     Fatal physical checks before any allocation.
 
     Step 1 responsibilities:
-      - structural validation only
-      - no geometry semantics
-      - no BC logic
-      - no ghost-layer logic
-      - no solver-level constraints (e.g., CFL)
+      • structural validation only
+      • no geometry semantics
+      • no BC logic
+      • no ghost-layer logic
+      • no solver-level constraints (e.g., CFL)
 
-    This ensures the input is physically meaningful and internally consistent
+    Ensures the input is physically meaningful and internally consistent
     before Step 1 allocates fields or constructs SolverState.
     """
 
-    domain = data["domain_definition"]
+    # ---------------------------------------------------------
+    # Extract sections (new schema)
+    # ---------------------------------------------------------
+    domain = data["domain"]
     fluid = data["fluid_properties"]
     init = data["initial_conditions"]
-    geom = data["geometry_definition"]
+    geom = data["geometry"]
     forces = data.get("external_forces", {})
+    sim = data["simulation_parameters"]
 
     # ---------------------------------------------------------
     # Fluid properties
@@ -89,22 +93,22 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     # ---------------------------------------------------------
     # Geometry mask consistency (STRUCTURAL ONLY)
     # ---------------------------------------------------------
-    mask_flat = geom["geometry_mask_flat"]
-    mask_shape = geom["geometry_mask_shape"]
+    mask_flat = geom["mask_flat"]
+    mask_shape = geom["mask_shape"]
 
     if len(mask_shape) != 3:
-        raise ValueError("geometry_mask_shape must have 3 dimensions")
+        raise ValueError("mask_shape must have 3 dimensions")
 
     expected_len = mask_shape[0] * mask_shape[1] * mask_shape[2]
     if expected_len != nx * ny * nz:
         raise ValueError(
-            f"geometry_mask_shape {mask_shape} does not match nx*ny*nz={nx*ny*nz}"
+            f"mask_shape {mask_shape} does not match nx*ny*nz={nx*ny*nz}"
         )
 
     if len(mask_flat) != expected_len:
         raise ValueError(
-            f"geometry_mask_flat length {len(mask_flat)} does not match "
-            f"geometry_mask_shape product {expected_len}"
+            f"mask_flat length {len(mask_flat)} does not match "
+            f"mask_shape product {expected_len}"
         )
 
     # Structural validation only — NO semantic enforcement
@@ -113,20 +117,7 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
             raise ValueError(f"Mask entry at index {i} must be a finite integer, got {v}")
 
     # ---------------------------------------------------------
-    # Validate mask_encoding (structural only)
-    # ---------------------------------------------------------
-    encoding = geom.get("mask_encoding", {})
-    if not isinstance(encoding, dict):
-        raise ValueError("mask_encoding must be a dictionary")
-
-    for key in ["fluid", "solid"]:
-        if key not in encoding:
-            raise ValueError(f"mask_encoding missing required key: {key}")
-        if not isinstance(encoding[key], int):
-            raise ValueError(f"mask_encoding[{key}] must be an integer")
-
-    # ---------------------------------------------------------
-    # Validate flattening_order
+    # Validate flattening_order (string only)
     # ---------------------------------------------------------
     order = geom.get("flattening_order")
     if not isinstance(order, str):
@@ -135,22 +126,21 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     # ---------------------------------------------------------
     # Initial velocity
     # ---------------------------------------------------------
-    vel = init["initial_velocity"]
-    if len(vel) != 3:
-        raise ValueError("initial_velocity must have exactly 3 components")
+    vel = init["velocity"]
+    if not isinstance(vel, (list, tuple)) or len(vel) != 3:
+        raise ValueError("initial_conditions.velocity must have exactly 3 components")
 
     for i, v in enumerate(vel):
-        _ensure_finite(f"initial_velocity[{i}]", float(v))
+        _ensure_finite(f"velocity[{i}]", float(v))
 
     # ---------------------------------------------------------
     # Initial pressure
     # ---------------------------------------------------------
-    _ensure_finite("initial_pressure", float(init["initial_pressure"]))
+    _ensure_finite("pressure", float(init["pressure"]))
 
     # ---------------------------------------------------------
     # Time step
     # ---------------------------------------------------------
-    sim = data["simulation_parameters"]
     dt = float(sim["time_step"])
     _ensure_positive("time_step", dt)
 
@@ -160,19 +150,17 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     if not isinstance(forces, dict):
         raise ValueError("external_forces must be a dictionary")
 
-    fv = forces.get("force_vector", None)
+    fv = forces.get("force_vector")
     if fv is None:
         raise ValueError("external_forces must contain 'force_vector'")
 
     if not isinstance(fv, (list, tuple)) or len(fv) != 3:
-        raise ValueError(
-            f"external_forces['force_vector'] must be a length‑3 vector, got {fv}"
-        )
+        raise ValueError("external_forces.force_vector must be a length‑3 vector")
 
     for i, comp in enumerate(fv):
         if not isinstance(comp, (int, float)) or not math.isfinite(comp):
             raise ValueError(
-                f"external_forces['force_vector'][{i}] must be a finite number, got {comp}"
+                f"external_forces.force_vector[{i}] must be a finite number, got {comp}"
             )
 
     # ---------------------------------------------------------

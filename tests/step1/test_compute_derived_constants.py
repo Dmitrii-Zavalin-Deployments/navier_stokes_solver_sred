@@ -8,9 +8,9 @@ def test_compute_constants():
     grid = GridConfig(
         nx=2, ny=2, nz=2,
         dx=0.5, dy=1.0, dz=2.0,
-        x_min=0, x_max=1,
-        y_min=0, y_max=2,
-        z_min=0, z_max=4,
+        x_min=0.0, x_max=1.0,
+        y_min=0.0, y_max=2.0,
+        z_min=0.0, z_max=4.0,
     )
 
     fluid = {"density": 1.2, "viscosity": 0.05}
@@ -24,6 +24,6 @@ def test_compute_constants():
     assert c.dt == 0.01
 
     # Derived inverse spacings
-    assert c.inv_dx == 2.0
-    assert c.inv_dy == 1.0
-    assert c.inv_dz == 0.5
+    assert c.inv_dx == 2.0      # 1 / 0.5
+    assert c.inv_dy == 1.0      # 1 / 1.0
+    assert c.inv_dz == 0.5      # 1 / 2.0

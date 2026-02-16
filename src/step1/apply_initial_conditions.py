@@ -1,4 +1,4 @@
-# file: step1/apply_initial_conditions.py
+# src/step1/apply_initial_conditions.py
 from __future__ import annotations
 
 from typing import Dict
@@ -16,23 +16,23 @@ def apply_initial_conditions(fields: Fields, initial_conditions: Dict[str, objec
     only numerical safety (finite values, correct vector length).
     """
 
-    # --- Validate presence of required keys ---
-    if "initial_pressure" not in initial_conditions:
-        raise KeyError("Missing required key: initial_pressure")
+    # --- Validate presence of required keys (updated schema) ---
+    if "pressure" not in initial_conditions:
+        raise KeyError("Missing required key: pressure")
 
-    if "initial_velocity" not in initial_conditions:
-        raise KeyError("Missing required key: initial_velocity")
+    if "velocity" not in initial_conditions:
+        raise KeyError("Missing required key: velocity")
 
-    velocity = initial_conditions["initial_velocity"]
+    velocity = initial_conditions["velocity"]
 
     # --- Validate velocity vector shape ---
     if not isinstance(velocity, (list, tuple)) or len(velocity) != 3:
         raise ValueError(
-            f"initial_velocity must be a 3-element list or tuple, got {velocity}"
+            f"velocity must be a 3-element list or tuple, got {velocity}"
         )
 
     # --- Extract and validate values ---
-    p0 = float(initial_conditions["initial_pressure"])
+    p0 = float(initial_conditions["pressure"])
     u0, v0, w0 = [float(x) for x in velocity]
 
     # Finite checks

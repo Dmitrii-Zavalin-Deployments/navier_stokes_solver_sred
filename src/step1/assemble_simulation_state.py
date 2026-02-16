@@ -1,4 +1,4 @@
-# file: step1/assemble_simulation_state.py
+# src/step1/assemble_simulation_state.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -25,13 +25,7 @@ def assemble_simulation_state(
 
     All structured objects (Config, GridConfig, Fields, DerivedConstants)
     are converted into plain dictionaries so that the result is JSON-safe
-    and compatible with the Step 1 orchestrator and migration adapter.
-
-    This version is aligned with the cell-centered solver architecture:
-      - U, V, W, P, Mask are all (nx, ny, nz)
-      - No staggered fields
-      - No ghost layers
-      - Mask semantics are not interpreted here (Step 2 handles semantics)
+    and compatible with the Step 1 orchestrator and output schema.
     """
 
     # -----------------------------
@@ -82,15 +76,15 @@ def assemble_simulation_state(
     }
 
     # -----------------------------
-    # Convert config → dict
+    # Convert config → dict (updated schema)
     # -----------------------------
     config_dict = {
         "domain": config.domain,
-        "fluid": config.fluid,
-        "simulation": config.simulation,
-        "forces": config.forces,
+        "fluid_properties": config.fluid_properties,
+        "simulation_parameters": config.simulation_parameters,
+        "external_forces": config.external_forces,
         "boundary_conditions": config.boundary_conditions,
-        "geometry_definition": config.geometry_definition,
+        "geometry": config.geometry,
     }
 
     # -----------------------------
@@ -99,8 +93,8 @@ def assemble_simulation_state(
     state = {
         "grid": grid_dict,
         "fields": fields_dict,
-        "mask_3d": mask_3d,
-        "bc_table": bc_table,     # FIXED: correct key name
+        "mask": mask_3d,          # UPDATED: correct key name
+        "boundary_conditions": bc_table,
         "constants": constants_dict,
         "config": config_dict,
     }

@@ -1,11 +1,11 @@
-# file: step1/allocate_cell_centered_fields.py
+# src/step1/allocate_fields.py
 from __future__ import annotations
 
 import numpy as np
 from .types import Fields, GridConfig
 
 
-def allocate_cell_centered_fields(grid_config: GridConfig) -> Fields:
+def allocate_fields(grid_config: GridConfig) -> Fields:
     """
     Allocate cell-centered fields for the solver.
 

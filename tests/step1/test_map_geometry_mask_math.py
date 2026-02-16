@@ -50,7 +50,7 @@ def test_mask_entries_must_be_finite_integers():
     bad_values = [1.5, "x", float("nan"), float("inf")]
 
     for bad in bad_values:
-        with pytest.raises(ValueError):   # UPDATED
+        with pytest.raises(ValueError):
             map_geometry_mask([bad], shape=(1, 1, 1), order_formula="C")
 
 
@@ -62,13 +62,9 @@ def test_semantic_validation_allows_flattening_test_values():
     arr = map_geometry_mask(
         [0, 1, 2, 3, 4, 5, 6, 7],
         shape=(2, 2, 2),
-        order_formula="C"
+        order_formula="C",
     )
     assert arr.shape == (2, 2, 2)
-
-
-# REMOVED:
-# test_semantic_validation_rejects_invalid_real_mask_values
 
 
 # ---------------------------------------------------------

@@ -86,7 +86,7 @@ def test_dx_dy_dz_must_be_positive_and_finite():
     # dx = (x_max - x_min) / nx
     domain = {
         "nx": 1, "ny": 1, "nz": 1,
-        "x_min": 0.0, "x_max": 0.0,  # dx = 0
+        "x_min": 0.0, "x_max": 0.0,  # dx = 0 → invalid
         "y_min": 0.0, "y_max": 1.0,
         "z_min": 0.0, "z_max": 1.0,
     }

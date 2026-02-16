@@ -28,7 +28,7 @@ def test_length_mismatch():
 
 def test_data_type_pollution():
     nx, ny, nz = 2, 2, 2
-    bad_flat = [1, 0, "3", 1, 0, 1, 0, 1]
+    bad_flat = [1, 0, "3", 1, 0, 1, 0, 1]  # contains a string
     order = "i + nx*(j + ny*k)"
 
     # Step 1 must reject non-integer or non-finite values
@@ -38,6 +38,8 @@ def test_data_type_pollution():
 
 def test_flattening_order_round_trip():
     nx, ny, nz = 3, 3, 3
+
+    # Generate a flat mask using the same flattening order
     flat = [
         1 if (i + j + k) % 2 == 0 else 0
         for k in range(nz)
@@ -48,6 +50,7 @@ def test_flattening_order_round_trip():
 
     mask = map_geometry_mask(flat, (nx, ny, nz), order)
 
+    # Verify round-trip correctness
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):

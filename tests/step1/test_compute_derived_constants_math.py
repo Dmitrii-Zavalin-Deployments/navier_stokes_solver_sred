@@ -11,8 +11,9 @@ def make_grid(dx=1.0, dy=1.0, dz=1.0):
     return GridConfig(
         nx=4, ny=4, nz=4,
         dx=dx, dy=dy, dz=dz,
-        x_min=0.0, y_min=0.0, z_min=0.0,
-        x_max=4.0, y_max=4.0, z_max=4.0,
+        x_min=0.0, x_max=4.0,
+        y_min=0.0, y_max=4.0,
+        z_min=0.0, z_max=4.0,
     )
 
 

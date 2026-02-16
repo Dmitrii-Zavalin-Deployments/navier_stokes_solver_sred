@@ -1,4 +1,4 @@
-# file: src/step1/parse_config.py
+# src/step1/parse_config.py
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -15,24 +15,25 @@ def _ensure_dict(name: str, value: Any) -> Dict[str, Any]:
 
 def parse_config(data: Dict[str, Any]) -> Config:
     """
-    Extract domain, fluid, simulation, forces, BCs, and geometry into a structured Config.
+    Extract domain, fluid_properties, simulation_parameters,
+    external_forces, boundary_conditions, and geometry into a structured Config.
 
     Enforces:
       • all sections are dictionaries
       • no unknown top-level keys
-      • geometry_definition contains required keys
+      • geometry contains required keys
       • boundary_conditions is a list
       • external_forces.force_vector is a finite 3‑vector
     """
 
     # ---------------------------------------------------------
-    # Validate top-level keys
+    # Validate top-level keys (new schema)
     # ---------------------------------------------------------
     required_keys = {
-        "domain_definition",
+        "domain",
         "fluid_properties",
         "simulation_parameters",
-        "geometry_definition",
+        "geometry",
     }
 
     for key in required_keys:
@@ -42,24 +43,23 @@ def parse_config(data: Dict[str, Any]) -> Config:
     # ---------------------------------------------------------
     # Extract and validate dict sections
     # ---------------------------------------------------------
-    domain = _ensure_dict("domain_definition", data["domain_definition"])
+    domain = _ensure_dict("domain", data["domain"])
     fluid = _ensure_dict("fluid_properties", data["fluid_properties"])
     simulation = _ensure_dict("simulation_parameters", data["simulation_parameters"])
-    geometry = _ensure_dict("geometry_definition", data["geometry_definition"])
+    geometry = _ensure_dict("geometry", data["geometry"])
 
     # ---------------------------------------------------------
-    # Validate geometry_definition structure
+    # Validate geometry structure (new schema)
     # ---------------------------------------------------------
     required_geom_keys = {
-        "geometry_mask_flat",
-        "geometry_mask_shape",
-        "mask_encoding",
+        "mask_flat",
+        "mask_shape",
         "flattening_order",
     }
 
     for key in required_geom_keys:
         if key not in geometry:
-            raise KeyError(f"geometry_definition missing required key: {key}")
+            raise KeyError(f"geometry missing required key: {key}")
 
     # ---------------------------------------------------------
     # Validate boundary_conditions
@@ -75,14 +75,10 @@ def parse_config(data: Dict[str, Any]) -> Config:
     forces_raw = data.get("external_forces", {})
     forces = _ensure_dict("external_forces", forces_raw)
 
-    # Accept either force_vector or gravity
     fv = forces.get("force_vector")
 
     if fv is None:
-        if "gravity" in forces:
-            fv = forces["gravity"]
-        else:
-            raise KeyError("external_forces must contain 'force_vector' or 'gravity'")
+        raise KeyError("external_forces must contain 'force_vector'")
 
     # Validate force vector
     if not isinstance(fv, (list, tuple)) or len(fv) != 3:
@@ -96,20 +92,18 @@ def parse_config(data: Dict[str, Any]) -> Config:
                 f"external_forces['force_vector'] entries must be finite numbers, got {fv}"
             )
 
-    # ---------------------------------------------------------
-    # Preserve original keys (e.g., gravity) AND add force_vector
-    # ---------------------------------------------------------
+    # Normalize force_vector
     forces_out = dict(forces)
     forces_out["force_vector"] = list(fv)
 
     # ---------------------------------------------------------
-    # Construct Config object
+    # Construct Config object (new schema fields)
     # ---------------------------------------------------------
     return Config(
         domain=domain,
-        fluid=fluid,
-        simulation=simulation,
-        forces=forces_out,
+        fluid_properties=fluid,
+        simulation_parameters=simulation,
+        external_forces=forces_out,
         boundary_conditions=bcs,
-        geometry_definition=geometry,
+        geometry=geometry,
     )

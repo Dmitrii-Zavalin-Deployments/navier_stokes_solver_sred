@@ -1,4 +1,4 @@
-# file: src/step1/initialize_grid.py
+# src/step1/initialize_grid.py
 from __future__ import annotations
 
 import math
@@ -9,13 +9,13 @@ def initialize_grid(domain: dict) -> GridConfig:
     """
     Initialize grid metadata for the cell-centered solver.
 
-    Step 1 responsibilities:
-      - validate domain extents and resolution
-      - compute dx, dy, dz for a uniform Cartesian grid
-      - ensure all values are finite and physically meaningful
+    Responsibilities:
+      • validate domain extents and resolution
+      • compute dx, dy, dz for a uniform Cartesian grid
+      • ensure all values are finite and physically meaningful
 
-    This function is intentionally simple: it does not allocate fields,
-    interpret geometry semantics, or apply boundary conditions.
+    This function does not allocate fields, interpret geometry,
+    or apply boundary conditions. It only constructs GridConfig.
     """
 
     # -----------------------------

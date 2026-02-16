@@ -8,10 +8,10 @@ from src.step1.types import GridConfig
 
 GRID = GridConfig(
     nx=4, ny=4, nz=4,
-    dx=1, dy=1, dz=1,
-    x_min=0, x_max=1,
-    y_min=0, y_max=1,
-    z_min=0, z_max=1,
+    dx=1.0, dy=1.0, dz=1.0,
+    x_min=0.0, x_max=1.0,
+    y_min=0.0, y_max=1.0,
+    z_min=0.0, z_max=1.0,
 )
 
 

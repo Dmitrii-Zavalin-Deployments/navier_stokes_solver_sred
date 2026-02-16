@@ -8,10 +8,11 @@ from src.step1.validate_json_schema import validate_json_schema
 
 def validate_final_state(state) -> None:
     """
-    Validate the final SolverState against final_output_schema.json.
+    Validate the final SolverState against the Step 1 output schema.
     """
 
-    schema = load_schema("final_output_schema.json")
+    # Updated schema name
+    schema = load_schema("step1_output_schema.json")
 
     payload: Dict[str, Any] = state.to_json_safe()
 

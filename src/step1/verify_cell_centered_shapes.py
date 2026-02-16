@@ -1,4 +1,4 @@
-# file: src/step1/verify_cell_centered_shapes.py
+# src/step1/verify_cell_centered_shapes.py
 from __future__ import annotations
 
 from typing import Dict, Any
@@ -12,8 +12,9 @@ def verify_cell_centered_shapes(state: Dict[str, Any]) -> None:
     Works on the Step 1 output dict (schema-compliant), not on dataclasses.
 
     IMPORTANT:
-    - If "grid" is missing (e.g., in negative schema tests), skip verification.
-    - Step 1 uses ONLY cell-centered fields (no staggered, no ghost layers).
+      • If "grid" is missing (e.g., in negative schema tests), skip verification.
+      • Step 1 uses ONLY cell-centered fields (no staggered, no ghost layers).
+      • Mask is validated structurally only (no semantics).
     """
 
     # ---------------------------------------------------------
