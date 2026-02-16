@@ -5,19 +5,19 @@ from typing import Any, Dict
 import numpy as np
 
 from src.common.json_safe import to_json_safe
-from src.solver_state import SolverState  # NEW
+from src.solver_state import SolverState
 
 from .assemble_simulation_state import assemble_simulation_state
-from .allocate_staggered_fields import allocate_staggered_fields
 from .compute_derived_constants import compute_derived_constants
 from .initialize_grid import initialize_grid
 from .map_geometry_mask import map_geometry_mask
 from .parse_boundary_conditions import parse_boundary_conditions
 from .parse_config import parse_config
 from .validate_physical_constraints import validate_physical_constraints
-from .verify_staggered_shapes import verify_staggered_shapes
 from .schema_utils import load_schema, validate_with_schema
 
+# NEW: cell-centered shape verification
+from .verify_cell_centered_shapes import verify_cell_centered_shapes
 
 DEBUG_STEP1 = True
 
@@ -37,14 +37,52 @@ def debug_state_step1(state: Dict[str, Any]) -> None:
     print("====================================================================\n")
 
 
+def _allocate_cell_centered_fields(grid: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """
+    Allocate cell-centered fields (no ghost layers, no staggered shapes).
+
+    Shapes:
+        U, V, W, P, Mask: (nx, ny, nz)
+    """
+    nx = grid["nx"]
+    ny = grid["ny"]
+    nz = grid["nz"]
+
+    fields: Dict[str, np.ndarray] = {
+        "U": np.zeros((nx, ny, nz), dtype=float),
+        "V": np.zeros((nx, ny, nz), dtype=float),
+        "W": np.zeros((nx, ny, nz), dtype=float),
+        "P": np.zeros((nx, ny, nz), dtype=float),
+        "Mask": np.zeros((nx, ny, nz), dtype=int),
+    }
+    return fields
+
+
 def orchestrate_step1(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
     **_ignored_kwargs,
 ) -> Dict[str, Any]:
+    """
+    Step 1 — Parse, validate, and initialize a solver-ready state (dict form).
+
+    Responsibilities:
+      - Validate input JSON against input_schema.json
+      - Check physical constraints
+      - Parse config into a structured object
+      - Initialize grid (nx, ny, nz, dx, dy, dz, bounds, ...)
+      - Allocate cell-centered fields (U, V, W, P, Mask)
+      - Map geometry mask (structural only, no semantics)
+      - Apply initial conditions to fields
+      - Parse boundary conditions into a normalized table
+      - Compute derived constants
+      - Assemble a simulation state dict
+      - Verify shapes for cell-centered layout
+      - Attach JSON-safe mirror for tests
+    """
 
     # ---------------------------------------------------------
-    # 1. Validate input JSON (KEEP)
+    # 1. Validate input JSON
     # ---------------------------------------------------------
     input_schema = load_schema("schema/input_schema.json")
     try:
@@ -66,17 +104,17 @@ def orchestrate_step1(
     config = parse_config(json_input)
 
     # ---------------------------------------------------------
-    # 4. Grid
+    # 4. Grid (cell-centered)
     # ---------------------------------------------------------
     grid = initialize_grid(config.domain)
 
     # ---------------------------------------------------------
-    # 5. Allocate staggered fields
+    # 5. Allocate cell-centered fields
     # ---------------------------------------------------------
-    fields = allocate_staggered_fields(grid)
+    fields = _allocate_cell_centered_fields(grid)
 
     # ---------------------------------------------------------
-    # 6. Map geometry mask
+    # 6. Map geometry mask (structural only)
     # ---------------------------------------------------------
     geom = config.geometry_definition
     mask_flat = geom["geometry_mask_flat"]
@@ -84,16 +122,18 @@ def orchestrate_step1(
     order_formula = geom["flattening_order"]
 
     mask_3d = map_geometry_mask(mask_flat, shape, order_formula)
-    fields.Mask[...] = mask_3d
+    # Step 1: structural mapping only, no semantics
+    fields["Mask"][...] = mask_3d
 
     # ---------------------------------------------------------
-    # 7. Apply initial conditions
+    # 7. Apply initial conditions (cell-centered)
     # ---------------------------------------------------------
     from .apply_initial_conditions import apply_initial_conditions
+
     apply_initial_conditions(fields, json_input["initial_conditions"])
 
     # ---------------------------------------------------------
-    # 8. Boundary conditions
+    # 8. Boundary conditions (normalized table)
     # ---------------------------------------------------------
     bc_table = parse_boundary_conditions(config.boundary_conditions, grid)
 
@@ -107,7 +147,7 @@ def orchestrate_step1(
     )
 
     # ---------------------------------------------------------
-    # 10. Assemble final Step 1 state
+    # 10. Assemble final Step 1 state (dict)
     # ---------------------------------------------------------
     state_dict = assemble_simulation_state(
         config=config,
@@ -119,32 +159,19 @@ def orchestrate_step1(
     )
 
     # ---------------------------------------------------------
-    # 11. Final shape verification
+    # 11. Shape & consistency verification (cell-centered)
     # ---------------------------------------------------------
-    verify_staggered_shapes(state_dict)
+    verify_cell_centered_shapes(state_dict)
 
     # ---------------------------------------------------------
-    # 12. Insert Mask into fields
+    # 12. Ensure Mask is present in fields
     # ---------------------------------------------------------
     state_dict["fields"]["Mask"] = state_dict["mask_3d"]
 
     # ---------------------------------------------------------
-    # 13. Create JSON‑safe mirror (KEEP — tests rely on this)
+    # 13. Create JSON‑safe mirror (tests rely on this)
     # ---------------------------------------------------------
     json_safe_state = to_json_safe(state_dict)
-
-    # =====================================================================
-    # DEPRECATED: per-step output schema validation
-    # Removed after full migration to SolverState + final_output_schema.json
-    # =====================================================================
-    # output_schema = load_schema("schema/step1_output_schema.json")
-    # try:
-    #     validate_with_schema(json_safe_state, output_schema)
-    # except Exception as exc:
-    #     raise RuntimeError(
-    #         "\n[Step 1] Output schema validation FAILED.\n"
-    #         f"Validation error: {exc}\n"
-    #     ) from exc
 
     # ---------------------------------------------------------
     # 14. Attach JSON‑safe mirror for serialization tests
@@ -164,15 +191,14 @@ def orchestrate_step1(
 
 
 # =====================================================================
-# NEW: STATE‑BASED STEP 1 ORCHESTRATOR (incremental migration)
+# STATE‑BASED STEP 1 ORCHESTRATOR
 # =====================================================================
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
     """
     Modern Step 1 orchestrator: operates directly on SolverState.
 
-    During migration, reuses the existing dict-based implementation
-    by converting to/from dict internally.
+    Uses the dict-based implementation internally, then maps to SolverState.
     """
 
     state_dict = orchestrate_step1(json_input)
