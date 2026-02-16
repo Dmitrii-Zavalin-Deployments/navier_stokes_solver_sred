@@ -12,3 +12,5 @@ This test will validate:
 def test_projection_method_placeholder():
     # TODO: implement projection method test
     assert True
+
+pass
