@@ -2,12 +2,12 @@
 
 def apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new):
     """
-    Pure Step‑3 boundary‑condition reapplication.
+    Step‑3 boundary‑condition reapplication.
     Takes corrected fields and returns new fields with BCs enforced.
     Does not mutate the input state.
     """
 
-    # Step‑2 stores fields under state["fields"]
+    # Pack corrected fields into a temporary structure
     fields = {
         "U": U_new,
         "V": V_new,
@@ -15,10 +15,11 @@ def apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new):
         "P": P_new,
     }
 
-    # Boundary conditions are applied via pure functions
-    bc = state.get("boundary_conditions_post", None)
+    # Boundary conditions are stored in state.boundary_conditions
+    bc_handler = state.boundary_conditions
 
-    if callable(bc):
-        fields = bc(state, fields)
+    # If a callable BC handler exists, apply it
+    if callable(bc_handler):
+        fields = bc_handler(state, fields)
 
     return fields
