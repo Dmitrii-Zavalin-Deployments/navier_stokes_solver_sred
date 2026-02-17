@@ -1,43 +1,21 @@
 # tests/helpers/solver_step1_output_schema.py
 
-"""
-Internal schema describing the expected structure of a SolverState
-immediately after Step 1 completes.
-
-This is NOT an external JSON schema.
-It is used only for internal validation of:
-  • the Step 1 dummy
-  • the relationship between Step 1 output and the final output schema
-"""
-
-STEP1_OUTPUT_SCHEMA = {
-    "grid": {
-        "nx": int,
-        "ny": int,
-        "nz": int,
-        "dx": float,
-        "dy": float,
-        "dz": float,
-    },
-
-    "config": {
-        "dt": float,
-    },
-
-    "constants": {
-        "rho": float,
-    },
-
-    "mask": "ndarray",
-
+EXPECTED_STEP1_SCHEMA = {
+    "config": dict,
+    "grid": dict,
     "fields": {
         "P": "ndarray",
         "U": "ndarray",
         "V": "ndarray",
         "W": "ndarray",
     },
-
-    "boundary_conditions": dict,
-
-    "health": dict,
+    "mask": "ndarray",
+    "is_fluid": "ndarray",
+    "is_boundary_cell": "ndarray",
+    "constants": dict,
+    "boundary_conditions": (type(None), object),
+    "operators": dict,   # empty at Step 1
+    "ppe": dict,         # empty at Step 1
+    "health": dict,      # empty at Step 1
+    "history": dict,     # empty at Step 1
 }

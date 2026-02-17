@@ -4,16 +4,7 @@ import numpy as np
 from src.solver_state import SolverState
 
 
-def make_step1_dummy_state(
-    nx=4,
-    ny=4,
-    nz=4,
-    dx=1.0,
-    dy=None,
-    dz=None,
-    dt=0.1,
-    rho=1.0,
-):
+def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     Canonical dummy representing the EXACT structure of a real post‑Step‑1 SolverState.
 
@@ -25,55 +16,91 @@ def make_step1_dummy_state(
       - fields
       - boundary_conditions
       - health (empty)
+      - history (empty)
+      - is_fluid (derived from mask)
+      - is_boundary_cell (all False)
 
     Step 1 does NOT fill:
-      - is_fluid
-      - is_boundary_cell
       - operators
-      - PPE structure
-      - Step‑2 health diagnostics
+      - ppe
     """
 
-    dy = dy if dy is not None else dx
-    dz = dz if dz is not None else dx
-
-    state = SolverState()
-
+    # ------------------------------------------------------------------
     # Grid
-    state.grid = type(
-        "Grid",
-        (),
-        {
-            "nx": nx,
-            "ny": ny,
-            "nz": nz,
-            "dx": dx,
-            "dy": dy,
-            "dz": dz,
-        },
-    )()
+    # ------------------------------------------------------------------
+    grid = {
+        "nx": nx,
+        "ny": ny,
+        "nz": nz,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+    }
 
+    # ------------------------------------------------------------------
     # Config
-    state.config = type("Config", (), {"dt": dt})()
+    # ------------------------------------------------------------------
+    config = {
+        "dt": 0.1,
+        "external_forces": {},  # Step 1 may define this
+    }
 
+    # ------------------------------------------------------------------
     # Constants
-    state.constants = {"rho": rho}
+    # ------------------------------------------------------------------
+    constants = {
+        "rho": 1.0,
+        "mu": 1.0,
+        "dt": config["dt"],
+        "dx": grid["dx"],
+        "dy": grid["dy"],
+        "dz": grid["dz"],
+    }
 
+    # ------------------------------------------------------------------
     # Mask (all fluid)
-    state.mask = np.ones((nx, ny, nz), dtype=int)
+    # ------------------------------------------------------------------
+    mask = np.ones((nx, ny, nz), dtype=int)
+    is_fluid = mask == 1
+    is_boundary_cell = np.zeros_like(mask, dtype=bool)
 
+    # ------------------------------------------------------------------
     # Fields (staggered)
-    state.fields = {
+    # ------------------------------------------------------------------
+    fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
         "W": np.zeros((nx, ny, nz + 1)),
     }
 
-    # Boundary conditions
-    state.boundary_conditions = {}
+    # ------------------------------------------------------------------
+    # Boundary conditions (Step 1 sets this to None or {})
+    # ------------------------------------------------------------------
+    boundary_conditions = None
 
-    # Health (empty)
-    state.health = {}
+    # ------------------------------------------------------------------
+    # Empty structures Step 1 does NOT fill
+    # ------------------------------------------------------------------
+    operators = {}
+    ppe = {}
+    health = {}
+    history = {}
 
-    return state
+    # ------------------------------------------------------------------
+    # Construct SolverState
+    # ------------------------------------------------------------------
+    return SolverState(
+        config=config,
+        grid=grid,
+        fields=fields,
+        mask=mask,
+        is_fluid=is_fluid,
+        is_boundary_cell=is_boundary_cell,
+        constants=constants,
+        boundary_conditions=boundary_conditions,
+        operators=operators,
+        ppe=ppe,
+        health=health,
+        history=history,
+    )
