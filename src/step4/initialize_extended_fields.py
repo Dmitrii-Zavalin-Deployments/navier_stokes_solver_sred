@@ -24,12 +24,12 @@ def initialize_extended_fields(state):
     nz = state.config["domain"]["nz"]
 
     # ---------------------------------------------------------
-    # Allocate extended fields
+    # Allocate extended fields (documentation‑accurate shapes)
     # ---------------------------------------------------------
     state.P_ext = np.zeros((nx + 2, ny + 2, nz + 2), dtype=float)
     state.U_ext = np.zeros((nx + 3, ny + 2, nz + 2), dtype=float)
-    state.V_ext = np.zeros((nx + 2, ny + 3, nz + 2), dtype=float)
-    state.W_ext = np.zeros((nx + 2, ny + 2, nz + 3), dtype=float)
+    state.V_ext = np.zeros((nx,     ny + 3, nz + 2), dtype=float)
+    state.W_ext = np.zeros((nx,     ny,     nz + 3), dtype=float)
 
     P_ext = state.P_ext
     U_ext = state.U_ext
@@ -39,10 +39,14 @@ def initialize_extended_fields(state):
     # ---------------------------------------------------------
     # Interior fields from Step‑3
     # ---------------------------------------------------------
-    P = state.fields["P"]
-    U = state.fields["U"]
-    V = state.fields["V"]
-    W = state.fields["W"]
+    P = state.fields["P"]          # (nx, ny, nz)
+    U = state.fields["U"]          # (nx+1, ny, nz)
+    V = state.fields["V"]          # (nx, ny+1, nz)
+    W = state.fields["W"]          # (nx, ny, nz+1)
+
+    # ---------------------------------------------------------
+    # Copy interior values into extended fields
+    # ---------------------------------------------------------
 
     # Pressure interior
     P_ext[1:nx+1, 1:ny+1, 1:nz+1] = P
@@ -51,10 +55,12 @@ def initialize_extended_fields(state):
     U_ext[1:nx+2, 1:ny+1, 1:nz+1] = U
 
     # V interior (nx, ny+1, nz)
-    V_ext[1:nx+1, 1:ny+2, 1:nz+1] = V
+    # V_ext shape: (nx, ny+3, nz+2)
+    V_ext[:, 1:ny+2, 1:nz+1] = V
 
     # W interior (nx, ny, nz+1)
-    W_ext[1:nx+1, 1:ny+1, 1:nz+2] = W
+    # W_ext shape: (nx, ny, nz+3)
+    W_ext[:, :, 1:nz+2] = W
 
     # ---------------------------------------------------------
     # Solid zeroing using state.is_fluid
@@ -71,11 +77,11 @@ def initialize_extended_fields(state):
         U_ext[2:nx+2, 1:ny+1, 1:nz+1][solid] = 0.0
 
         # V faces adjacent to solid cells
-        V_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
-        V_ext[1:nx+1, 2:ny+2, 1:nz+1][solid] = 0.0
+        V_ext[:, 1:ny+1, 1:nz+1][solid] = 0.0
+        V_ext[:, 2:ny+2, 1:nz+1][solid] = 0.0
 
         # W faces adjacent to solid cells
-        W_ext[1:nx+1, 1:ny+1, 1:nz+1][solid] = 0.0
-        W_ext[1:nx+1, 1:ny+1, 2:nz+2][solid] = 0.0
+        W_ext[:, :, 1:nz+1][solid] = 0.0
+        W_ext[:, :, 2:nz+2][solid] = 0.0
 
     return state
