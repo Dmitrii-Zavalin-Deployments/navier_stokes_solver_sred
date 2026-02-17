@@ -2,41 +2,12 @@
 
 import numpy as np
 from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_post
-from src.solver_state import SolverState
-
-
-def make_state(nx=3, ny=3, nz=3):
-    """Construct a minimal valid SolverState for Step 3 tests."""
-    fields = {
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-        "P": np.zeros((nx, ny, nz)),
-    }
-
-    mask = np.ones((nx, ny, nz), dtype=int)
-    is_fluid = mask == 1
-    is_boundary_cell = np.zeros_like(mask, dtype=bool)
-
-    return SolverState(
-        config={"external_forces": {}},
-        grid={"nx": nx, "ny": ny, "nz": nz},
-        fields=fields,
-        mask=mask,
-        is_fluid=is_fluid,
-        is_boundary_cell=is_boundary_cell,
-        constants={"rho": 1.0, "mu": 1.0, "dt": 0.1, "dx": 1.0, "dy": 1.0, "dz": 1.0},
-        boundary_conditions=None,
-        operators={},
-        ppe={},
-        health={},
-        history={},
-    )
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 
 def test_state_update():
     """apply_boundary_conditions_post must return fields identical to inputs."""
-    state = make_state()
+    state = make_step2_output_dummy(nx=3, ny=3, nz=3)
 
     U_new = np.ones_like(state.fields["U"])
     V_new = np.ones_like(state.fields["V"])
@@ -53,7 +24,7 @@ def test_state_update():
 
 def test_bc_handler_called():
     """BC handler must be invoked exactly once."""
-    state = make_state()
+    state = make_step2_output_dummy(nx=3, ny=3, nz=3)
 
     calls = {"count": 0}
 
@@ -78,8 +49,10 @@ def test_bc_handler_called():
 
 def test_solid_mask_zeroing():
     """Velocities adjacent to solid cells must be zeroed."""
-    state = make_state()
-    state.is_fluid[:] = False  # everything solid
+    state = make_step2_output_dummy(nx=3, ny=3, nz=3)
+
+    # Mark everything as solid
+    state.is_fluid[:] = False
 
     U = np.ones_like(state.fields["U"])
     V = np.ones_like(state.fields["V"])
@@ -95,7 +68,7 @@ def test_solid_mask_zeroing():
 
 def test_minimal_grid_no_crash():
     """Function must not crash on minimal grid."""
-    state = make_state(nx=1, ny=1, nz=1)
+    state = make_step2_output_dummy(nx=1, ny=1, nz=1)
 
     U = state.fields["U"]
     V = state.fields["V"]

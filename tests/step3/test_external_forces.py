@@ -2,7 +2,7 @@
 
 import numpy as np
 from src.step3.predict_velocity import predict_velocity
-from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 
 def _wire_zero_ops(state):
@@ -27,41 +27,38 @@ def _wire_zero_ops(state):
     def lap_w(W):
         return np.zeros_like(W)
 
-    state["advection"] = {
-        "u": {"op": adv_u},
-        "v": {"op": adv_v},
-        "w": {"op": adv_w},
-    }
+    # Step 2 operators live in state.operators
+    state.operators["adv_u"] = adv_u
+    state.operators["adv_v"] = adv_v
+    state.operators["adv_w"] = adv_w
 
-    state["laplacians"] = {
-        "u": {"op": lap_u},
-        "v": {"op": lap_v},
-        "w": {"op": lap_w},
-    }
+    state.operators["lap_u"] = lap_u
+    state.operators["lap_v"] = lap_v
+    state.operators["lap_w"] = lap_w
 
 
 def test_external_forces_modify_velocity():
     """
     External forces must modify predicted velocity.
     """
-    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
+    state = make_step2_output_dummy(nx=3, ny=3, nz=3)
 
     # Wire zero advection/diffusion so only forces act
-    _wire_zero_ops(s2)
+    _wire_zero_ops(state)
 
     # Apply a simple force in x-direction
-    s2["config"]["external_forces"] = {"fx": 1.0, "fy": 0.0, "fz": 0.0}
+    state.config["external_forces"] = {"fx": 1.0, "fy": 0.0, "fz": 0.0}
 
     fields = {
-        "U": np.asarray(s2["fields"]["U"]),
-        "V": np.asarray(s2["fields"]["V"]),
-        "W": np.asarray(s2["fields"]["W"]),
-        "P": np.asarray(s2["fields"]["P"]),
+        "U": state.fields["U"].copy(),
+        "V": state.fields["V"].copy(),
+        "W": state.fields["W"].copy(),
+        "P": state.fields["P"].copy(),
     }
 
     U0 = fields["U"].copy()
 
-    U_star, V_star, W_star = predict_velocity(s2, fields)
+    U_star, V_star, W_star = predict_velocity(state, fields)
 
     # U* must increase due to fx
     assert np.any(U_star > U0)

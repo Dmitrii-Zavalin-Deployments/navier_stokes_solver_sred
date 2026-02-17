@@ -3,7 +3,7 @@
 import numpy as np
 from src.step3.build_ppe_rhs import build_ppe_rhs
 from src.step3.predict_velocity import predict_velocity
-from tests.helpers.step2_schema_dummy_state import Step2SchemaDummyState
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 
 def _wire_zero_ops(state):
@@ -29,29 +29,26 @@ def _wire_zero_ops(state):
         return np.zeros_like(W)
 
     def div(U, V, W):
-        return np.zeros_like(state["fields"]["P"])
+        return np.zeros_like(state.fields["P"])
 
-    state["advection"] = {
-        "u": {"op": adv_u},
-        "v": {"op": adv_v},
-        "w": {"op": adv_w},
-    }
+    # Step 2 operator API
+    state.operators["adv_u"] = adv_u
+    state.operators["adv_v"] = adv_v
+    state.operators["adv_w"] = adv_w
 
-    state["laplacians"] = {
-        "u": {"op": lap_u},
-        "v": {"op": lap_v},
-        "w": {"op": lap_w},
-    }
+    state.operators["lap_u"] = lap_u
+    state.operators["lap_v"] = lap_v
+    state.operators["lap_w"] = lap_w
 
-    state["divergence"] = {"op": div}
+    state.operators["divergence"] = div
 
 
-def _make_fields(s2):
+def _make_fields(state):
     return {
-        "U": np.asarray(s2["fields"]["U"]),
-        "V": np.asarray(s2["fields"]["V"]),
-        "W": np.asarray(s2["fields"]["W"]),
-        "P": np.asarray(s2["fields"]["P"]),
+        "U": state.fields["U"].copy(),
+        "V": state.fields["V"].copy(),
+        "W": state.fields["W"].copy(),
+        "P": state.fields["P"].copy(),
     }
 
 
@@ -59,18 +56,18 @@ def test_ppe_rhs_shape():
     """
     RHS of PPE must have the same shape as the pressure field.
     """
-    s2 = Step2SchemaDummyState(nx=3, ny=3, nz=3)
+    state = make_step2_output_dummy(nx=3, ny=3, nz=3)
 
     # Wire zero operators so only shape matters
-    _wire_zero_ops(s2)
+    _wire_zero_ops(state)
 
-    fields = _make_fields(s2)
+    fields = _make_fields(state)
 
     # Predict velocity
-    U_star, V_star, W_star = predict_velocity(s2, fields)
+    U_star, V_star, W_star = predict_velocity(state, fields)
 
     # Build RHS
-    rhs = build_ppe_rhs(s2, U_star, V_star, W_star)
+    rhs = build_ppe_rhs(state, U_star, V_star, W_star)
 
     # Shape must match pressure field
     assert rhs.shape == fields["P"].shape
