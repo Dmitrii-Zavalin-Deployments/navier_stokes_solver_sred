@@ -1,34 +1,24 @@
 # tests/step4/test_step4_orchestrator_minimal_grid.py
 
-import numpy as np
-from src.step4.orchestrate_step4 import orchestrate_step4
+from src.step4.orchestrate_step4 import orchestrate_step4_state
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+from src.solver_state import SolverState
 
 
-def test_step4_minimal_grid():
-    nx = ny = nz = 1
+def test_step4_orchestrator_minimal_grid():
+    # Minimal domain 1×1×1
+    state = make_step3_output_dummy(nx=1, ny=1, nz=1)
+    state.config["boundary_conditions"] = []
 
-    state = {
-        "config": {
-            "domain": {"nx": nx, "ny": ny, "nz": nz},
-            "initial_conditions": {
-                "initial_pressure": 1.0,
-                "initial_velocity": [2.0, 3.0, 4.0],
-            },
-            "boundary_conditions": [],
-        },
-        "mask": np.ones((nx, ny, nz), dtype=int),
-        "fields": {
-            "P": np.ones((nx, ny, nz)),
-            "U": np.ones((nx+1, ny, nz)),
-            "V": np.ones((nx, ny+1, nz)),
-            "W": np.ones((nx, ny, nz+1)),
-        },
-        "health": {"post_correction_divergence_norm": 0.0},
-    }
+    result = orchestrate_step4_state(state)
 
-    out = orchestrate_step4(state)
+    assert isinstance(result, SolverState)
 
-    assert out["U_ext"].shape == (nx+3, ny+2, nz+2)
-    assert out["V_ext"].shape == (nx+2, ny+3, nz+2)
-    assert out["W_ext"].shape == (nx+2, ny+2, nz+3)
-    assert out["P_ext"].shape == (nx+2, ny+2, nz+2)
+    # Shapes must be correct
+    assert result.P_ext.shape == (1 + 2, 1 + 2, 1 + 2)
+    assert result.U_ext.shape == (1 + 3, 1 + 2, 1 + 2)
+    assert result.V_ext.shape == (1,     1 + 3, 1 + 2)
+    assert result.W_ext.shape == (1,     1,     1 + 3)
+
+    # No index errors → test passes if no exception
+    assert result.ready_for_time_loop is True

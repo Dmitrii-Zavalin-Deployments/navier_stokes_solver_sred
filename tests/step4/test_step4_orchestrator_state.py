@@ -1,13 +1,13 @@
 # tests/step4/test_step4_orchestrator_state.py
 
-from tests.helpers.step3_minimal_state import make_step3_minimal_state
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from src.step4.orchestrate_step4 import orchestrate_step4_state
 from src.solver_state import SolverState
 
 
 def test_orchestrate_step4_state_minimal():
     # Create a minimal valid SolverState coming out of Step 3
-    state = make_step3_minimal_state()
+    state = make_step3_output_dummy(nx=2, ny=2, nz=2)
 
     # Run Step 4
     result = orchestrate_step4_state(state)
