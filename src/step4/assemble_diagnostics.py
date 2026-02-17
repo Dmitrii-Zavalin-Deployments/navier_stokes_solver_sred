@@ -5,7 +5,7 @@ import numpy as np
 
 def assemble_diagnostics(state):
     """
-    Build the schema-compliant diagnostics block for Step 4 output.
+    Compute the Step‑4 diagnostics block.
 
     Required fields:
         - total_fluid_cells
@@ -17,35 +17,37 @@ def assemble_diagnostics(state):
     """
 
     # ---------------------------------------------------------
-    # total_fluid_cells (vectorized)
+    # total_fluid_cells
+    # Step‑4 uses state.is_fluid (boolean array), not state.mask
     # ---------------------------------------------------------
-    mask_raw = state.get("mask", None)
-
-    if mask_raw is None:
-        total_fluid_cells = 0
+    if hasattr(state, "is_fluid") and state.is_fluid is not None:
+        total_fluid_cells = int(np.sum(state.is_fluid))
     else:
-        mask_arr = np.asarray(mask_raw)
-        total_fluid_cells = int(np.sum(mask_arr == 1))
+        total_fluid_cells = 0
 
     # ---------------------------------------------------------
     # grid_volume_per_cell
-    # (unit grid for now; refine later if dx, dy, dz vary)
+    # Step‑4 uses dx, dy, dz from state.constants
     # ---------------------------------------------------------
-    grid_volume_per_cell = 1.0
+    dx = state.constants.get("dx", 1.0)
+    dy = state.constants.get("dy", 1.0)
+    dz = state.constants.get("dz", 1.0)
+    grid_volume_per_cell = float(dx * dy * dz)
 
     # ---------------------------------------------------------
     # initialized
-    # True if extended fields exist (uppercase keys)
+    # True if extended fields exist
     # ---------------------------------------------------------
     initialized = (
-        "U_ext" in state and
-        "V_ext" in state and
-        "W_ext" in state
+        hasattr(state, "U_ext")
+        and hasattr(state, "V_ext")
+        and hasattr(state, "W_ext")
+        and hasattr(state, "P_ext")
     )
 
     # ---------------------------------------------------------
     # post_bc_max_velocity
-    # Use NumPy for fast absolute max over extended fields
+    # Max absolute velocity across all extended fields
     # ---------------------------------------------------------
     def max_abs(field):
         if isinstance(field, np.ndarray):
@@ -53,32 +55,31 @@ def assemble_diagnostics(state):
         return 0.0
 
     post_bc_max_velocity = max(
-        max_abs(state.get("U_ext")),
-        max_abs(state.get("V_ext")),
-        max_abs(state.get("W_ext")),
+        max_abs(getattr(state, "U_ext", None)),
+        max_abs(getattr(state, "V_ext", None)),
+        max_abs(getattr(state, "W_ext", None)),
     )
 
     # ---------------------------------------------------------
     # post_bc_divergence_norm
+    # Step‑4 uses the divergence norm computed in Step‑3 health
     # ---------------------------------------------------------
-    health = state.get("health", {})
     post_bc_divergence_norm = float(
-        health.get("post_correction_divergence_norm", 0.0)
+        state.health.get("post_correction_divergence_norm", 0.0)
     )
 
     # ---------------------------------------------------------
     # bc_violation_count
-    #
-    # In the simplified Step‑4 architecture, we no longer track
-    # per-face BC application statuses. To preserve schema
-    # compatibility, we return 0 and document this explicitly.
+    # Step‑4 BC module increments this counter
     # ---------------------------------------------------------
     bc_violation_count = 0
+    if hasattr(state, "step4_diagnostics"):
+        bc_violation_count = state.step4_diagnostics.get("bc_violation_count", 0)
 
     # ---------------------------------------------------------
     # Assemble final diagnostics block
     # ---------------------------------------------------------
-    state["diagnostics"] = {
+    state.step4_diagnostics = {
         "total_fluid_cells": total_fluid_cells,
         "grid_volume_per_cell": grid_volume_per_cell,
         "initialized": initialized,

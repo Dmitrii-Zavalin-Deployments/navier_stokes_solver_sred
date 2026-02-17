@@ -1,6 +1,5 @@
 # src/step4/orchestrate_step4.py
 
-from typing import Dict, Any
 from src.solver_state import SolverState
 from src.step4.initialize_extended_fields import initialize_extended_fields
 from src.step4.apply_boundary_conditions import apply_boundary_conditions
@@ -9,79 +8,68 @@ from src.step4.assemble_diagnostics import assemble_diagnostics
 
 def orchestrate_step4_state(state: SolverState) -> SolverState:
     """
-    Modern Step 4 orchestrator: operates directly on SolverState.
+    Step‑4 orchestrator.
+    Prepares the SolverState for repeated Step‑3 time stepping by:
+      • allocating extended fields
+      • applying boundary conditions to ghost layers
+      • computing Step‑4 diagnostics
+      • marking the state as ready for the time loop
     """
 
-    # =====================================================================
-    # DEPRECATED: per-step schema validation
-    # Step 4 historically had no schema validation blocks.
-    # Documented here for consistency with Steps 1–3 after migration to
-    # SolverState + final_output_schema.json.
-    # =====================================================================
+    # ---------------------------------------------------------
+    # 1. Allocate extended fields
+    # ---------------------------------------------------------
+    initialize_extended_fields(state)
 
-    extended = initialize_extended_fields(
-        fields=state.fields,
-        mask=state.mask,
-        config=state.config
-    )
+    # ---------------------------------------------------------
+    # 2. Apply boundary conditions to extended fields
+    # ---------------------------------------------------------
+    apply_boundary_conditions(state)
 
-    state.P_ext = extended["P_ext"]
-    state.U_ext = extended["U_ext"]
-    state.V_ext = extended["V_ext"]
-    state.W_ext = extended["W_ext"]
+    # ---------------------------------------------------------
+    # 3. Compute Step‑4 diagnostics
+    # ---------------------------------------------------------
+    assemble_diagnostics(state)
 
-    bc_result = apply_boundary_conditions(
-        P_ext=state.P_ext,
-        U_ext=state.U_ext,
-        V_ext=state.V_ext,
-        W_ext=state.W_ext,
-        mask=state.mask,
-        config=state.config,
-        health=state.health,
-    )
-
-    state.P_ext = bc_result.get("P_ext", state.P_ext)
-    state.U_ext = bc_result.get("U_ext", state.U_ext)
-    state.V_ext = bc_result.get("V_ext", state.V_ext)
-    state.W_ext = bc_result.get("W_ext", state.W_ext)
-    state.health = bc_result.get("health", state.health)
-
-    diagnostics = assemble_diagnostics(
-        P_ext=state.P_ext,
-        U_ext=state.U_ext,
-        V_ext=state.V_ext,
-        W_ext=state.W_ext,
-        mask=state.mask,
-        health=state.health,
-        config=state.config,
-    )
-    state.step4_diagnostics = diagnostics
-
+    # ---------------------------------------------------------
+    # 4. Mark state as ready for time loop
+    # ---------------------------------------------------------
     state.ready_for_time_loop = True
 
     return state
 
 
-def orchestrate_step4(state_dict: Dict[str, Any]) -> Dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Legacy adapter (kept only for backward compatibility)
+# ---------------------------------------------------------------------------
 
-    required_keys = ["config", "fields", "mask", "health"]
-    for key in required_keys:
+def orchestrate_step4(state_dict):
+    """
+    Legacy adapter for dict‑based pipelines.
+    Converts a dict into a SolverState, runs Step‑4, and writes results back.
+    """
+
+    required = ["config", "fields", "is_fluid", "health"]
+    for key in required:
         if key not in state_dict:
-            raise ValueError(f"Missing required key '{key}' for Step 4 adapter")
+            raise ValueError(f"Missing required key '{key}' for Step‑4 adapter")
 
+    # Build SolverState
     state = SolverState()
     state.config = state_dict["config"]
     state.fields = state_dict["fields"]
-    state.mask = state_dict["mask"]
+    state.is_fluid = state_dict["is_fluid"]
     state.health = state_dict["health"]
 
-    state = orchestrate_step4_state(state)
+    # Run Step‑4
+    orchestrate_step4_state(state)
 
+    # Write back results
     state_dict["P_ext"] = state.P_ext
     state_dict["U_ext"] = state.U_ext
     state_dict["V_ext"] = state.V_ext
     state_dict["W_ext"] = state.W_ext
-    state_dict["diagnostics"] = state.step4_diagnostics
+    state_dict["step4_diagnostics"] = state.step4_diagnostics
     state_dict["ready_for_time_loop"] = state.ready_for_time_loop
 
     return state_dict
