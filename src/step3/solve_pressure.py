@@ -5,64 +5,78 @@ import numpy as np
 
 def solve_pressure(state, rhs_ppe):
     """
-    Pure Step‑3 pressure solve.
-
-    Solves:
+    Step‑3 pressure solve.
+    Solves the PPE:
         ∇² p = rhs
-
-    Handles singularity by subtracting the mean over fluid cells.
-
-    Inputs:
-        state    – Step‑2 output dict or Step‑3 dummy state
-        rhs_ppe  – ndarray, RHS of PPE
-
-    Returns:
-        P_new          – pressure field
-        ppe_metadata   – dict with solver diagnostics:
-                         {
-                             "converged": bool,
-                             "last_iterations": int
-                         }
+    using the solver configuration provided in Step‑2.
+    Pure function: does not mutate state.
     """
 
-    # ------------------------------------------------------------
-    # Step‑3 dummy states do NOT include ppe_structure.
-    # Step‑2 output DOES include ppe_structure.
-    # Provide a safe fallback so contract tests pass.
-    # ------------------------------------------------------------
-    ppe = state.get("ppe_structure", {"rhs_builder": "rhs_builder"})
-
-    solver = ppe.get("solver", None)
-    is_singular = ppe.get("ppe_is_singular", False)
+    ppe = state.ppe
+    solver_type = ppe["solver_type"]
+    tolerance = ppe["tolerance"]
+    max_iter = ppe["max_iterations"]
+    is_singular = ppe["ppe_is_singular"]
 
     # ------------------------------------------------------------
-    # 1. Solve PPE
+    # 1. Select solver implementation
     # ------------------------------------------------------------
-    if solver is None:
-        # No solver provided → zero pressure
-        P_new = np.zeros_like(rhs_ppe)
-        metadata = {
-            "converged": True,
-            "last_iterations": 0,
-        }
+    if solver_type == "SOR":
+        solver = _solve_pressure_sor
+    elif solver_type == "PCG":
+        solver = _solve_pressure_pcg
     else:
-        # Solver returns (pressure, info_dict)
-        P_new, info = solver(rhs_ppe)
-        metadata = {
-            "converged": info.get("converged", True),
-            "last_iterations": info.get("iterations", -1),
-        }
+        raise ValueError(f"Unknown PPE solver_type: {solver_type}")
 
     # ------------------------------------------------------------
-    # 2. Handle singularity (subtract mean over fluid cells)
+    # 2. Solve PPE
+    # ------------------------------------------------------------
+    P_new, iterations = solver(
+        state,
+        rhs_ppe,
+        tolerance=tolerance,
+        max_iterations=max_iter,
+    )
+
+    # ------------------------------------------------------------
+    # 3. Handle singularity (subtract mean over fluid cells)
     # ------------------------------------------------------------
     if is_singular:
-        # Step‑3 dummy state may not have mask_semantics
-        mask_sem = state.get("mask_semantics", {})
-        is_fluid = np.asarray(mask_sem.get("is_fluid", np.ones_like(P_new)), dtype=bool)
-
+        is_fluid = state.is_fluid
         if np.any(is_fluid):
             P_new = np.array(P_new, copy=True)
             P_new[is_fluid] -= P_new[is_fluid].mean()
 
+    # ------------------------------------------------------------
+    # 4. Return pressure + metadata
+    # ------------------------------------------------------------
+    metadata = {
+        "converged": iterations < max_iter,
+        "last_iterations": iterations,
+    }
+
     return P_new, metadata
+
+
+# ----------------------------------------------------------------------
+# Internal solver implementations
+# ----------------------------------------------------------------------
+
+def _solve_pressure_sor(state, rhs, tolerance, max_iterations):
+    """
+    Simple SOR PPE solver.
+    Placeholder implementation — replace with your real SOR.
+    """
+    P = np.zeros_like(rhs)
+    # TODO: real SOR implementation
+    return P, 0
+
+
+def _solve_pressure_pcg(state, rhs, tolerance, max_iterations):
+    """
+    Simple PCG PPE solver.
+    Placeholder implementation — replace with your real PCG.
+    """
+    P = np.zeros_like(rhs)
+    # TODO: real PCG implementation
+    return P, 0

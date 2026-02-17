@@ -1,97 +1,73 @@
-# src/step3/predict_velocity.py
+# file: src/step3/predict_velocity.py
 
 import numpy as np
 
 
 def predict_velocity(state, fields):
     """
-    Pure Step‑3 velocity prediction.
-
-    Computes intermediate velocity u* using:
-        • diffusion (if laplacian operators are callable)
+    Step‑3 velocity prediction.
+    Computes intermediate velocity U* using:
+        • diffusion (via Step‑2 Laplacian operators)
         • external forces (optional)
-
-    Rules enforced:
-      • Zero faces adjacent to solid cells (OR logic).
-      • Do NOT zero anything when all cells are fluid.
+    Pure function: does not mutate state.
     """
 
-    constants = state["constants"]
-    rho = constants["rho"]
-    mu = constants["mu"]
-    dt = constants["dt"]
+    rho = state.constants["rho"]
+    mu = state.constants["mu"]
+    dt = state.constants["dt"]
 
     U = np.asarray(fields["U"])
     V = np.asarray(fields["V"])
     W = np.asarray(fields["W"])
 
-    # ------------------------------------------------------------------
-    # Diffusion operators
-    # ------------------------------------------------------------------
-    ops = state.get("operators", {})
-
-    def get_lap_op(key):
-        op = ops.get(key)
-        if callable(op):
-            return op
-        if isinstance(op, dict) and callable(op.get("op")):
-            return op["op"]
-        return lambda arr: np.zeros_like(arr)
-
-    lap_u = get_lap_op("laplacian_u")
-    lap_v = get_lap_op("laplacian_v")
-    lap_w = get_lap_op("laplacian_w")
+    # ------------------------------------------------------------
+    # 1. Diffusion operators from Step‑2
+    # ------------------------------------------------------------
+    lap_u = state.operators["lap_u"]
+    lap_v = state.operators["lap_v"]
+    lap_w = state.operators["lap_w"]
 
     Du = lap_u(U)
     Dv = lap_v(V)
     Dw = lap_w(W)
 
-    # ------------------------------------------------------------------
-    # External forces
-    # ------------------------------------------------------------------
-    forces = state["config"].get("external_forces", {})
+    # ------------------------------------------------------------
+    # 2. External forces (optional)
+    # ------------------------------------------------------------
+    forces = state.config.get("external_forces", {})
     fx = forces.get("fx", 0.0)
     fy = forces.get("fy", 0.0)
     fz = forces.get("fz", 0.0)
 
-    # ------------------------------------------------------------------
-    # Compute U*, V*, W*
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
+    # 3. Compute U*, V*, W*
+    # ------------------------------------------------------------
     U_star = U + dt * ((mu / rho) * Du + fx)
     V_star = V + dt * ((mu / rho) * Dv + fy)
     W_star = W + dt * ((mu / rho) * Dw + fz)
 
-    # ------------------------------------------------------------------
-    # Solid mask resolution (mask_semantics is authoritative)
-    # ------------------------------------------------------------------
-    if "mask_semantics" in state and "is_solid" in state["mask_semantics"]:
-        is_solid = np.asarray(state["mask_semantics"]["is_solid"], dtype=bool)
-    elif "is_solid" in state:
-        is_solid = np.asarray(state["is_solid"], dtype=bool)
-    else:
-        raise KeyError("Step‑3 requires is_solid or mask_semantics.is_solid")
+    # ------------------------------------------------------------
+    # 4. Zero faces adjacent to solid cells
+    # ------------------------------------------------------------
+    is_fluid = state.is_fluid
+    is_solid = ~is_fluid
 
-    # ------------------------------------------------------------------
-    # Zero faces adjacent to solids (OR logic)
-    # ------------------------------------------------------------------
-    if np.any(is_solid):
+    # U faces: between i-1 and i
+    solid_u = np.zeros_like(U_star, dtype=bool)
+    solid_u[1:-1, :, :] = is_solid[:-1, :, :] | is_solid[1:, :, :]
+    U_star = np.array(U_star, copy=True)
+    U_star[solid_u] = 0.0
 
-        # U faces
-        solid_u = np.zeros_like(U_star, dtype=bool)
-        solid_u[1:-1, :, :] = is_solid[:-1, :, :] | is_solid[1:, :, :]
-        U_star = np.array(U_star, copy=True)
-        U_star[solid_u] = 0.0
+    # V faces: between j-1 and j
+    solid_v = np.zeros_like(V_star, dtype=bool)
+    solid_v[:, 1:-1, :] = is_solid[:, :-1, :] | is_solid[:, 1:, :]
+    V_star = np.array(V_star, copy=True)
+    V_star[solid_v] = 0.0
 
-        # V faces
-        solid_v = np.zeros_like(V_star, dtype=bool)
-        solid_v[:, 1:-1, :] = is_solid[:, :-1, :] | is_solid[:, 1:, :]
-        V_star = np.array(V_star, copy=True)
-        V_star[solid_v] = 0.0
-
-        # W faces
-        solid_w = np.zeros_like(W_star, dtype=bool)
-        solid_w[:, :, 1:-1] = is_solid[:, :, :-1] | is_solid[:, :, 1:]
-        W_star = np.array(W_star, copy=True)
-        W_star[solid_w] = 0.0
+    # W faces: between k-1 and k
+    solid_w = np.zeros_like(W_star, dtype=bool)
+    solid_w[:, :, 1:-1] = is_solid[:, :, :-1] | is_solid[:, :, 1:]
+    W_star = np.array(W_star, copy=True)
+    W_star[solid_w] = 0.0
 
     return U_star, V_star, W_star
