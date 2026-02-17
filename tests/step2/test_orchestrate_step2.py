@@ -3,43 +3,40 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.orchestrate_step2 import orchestrate_step2
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_minimal_state(nx=2, ny=2, nz=2, dx=1.0, dt=0.1, rho=1.0):
     """
-    Construct a minimal valid SolverState for orchestrator tests.
-    This mimics the output of Step 1.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for the Step 2 orchestrator tests.
     """
-    state = SolverState()
+    # Create Step‑1 dummy
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz, dx=dx, dt=dt, rho=rho)
 
-    # Grid
-    state.grid = type(
-        "Grid", (), {"nx": nx, "ny": ny, "nz": nz, "dx": dx, "dy": dx, "dz": dx}
-    )()
+    # Override grid spacing (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dx
+    state.grid.dz = dx
 
-    # Config
-    state.config = type("Config", (), {"dt": dt})()
+    # Override dt and rho
+    state.config.dt = dt
+    state.constants["rho"] = rho
 
-    # Constants (Step 1 provides rho; Step 2 fills inv_dx etc.)
-    state.constants = {"rho": rho}
-
-    # Mask (all fluid)
+    # Ensure mask is all fluid
     state.mask = np.ones((nx, ny, nz), dtype=int)
 
-    # Fields (staggered)
-    state.fields = {
-        "P": np.zeros((nx, ny, nz)),
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-    }
+    # Override fields (dummy already has correct shapes)
+    state.fields["P"] = np.zeros((nx, ny, nz))
+    state.fields["U"] = np.zeros((nx + 1, ny, nz))
+    state.fields["V"] = np.zeros((nx, ny + 1, nz))
+    state.fields["W"] = np.zeros((nx, ny, nz + 1))
 
     # Boundary conditions (empty but valid)
     state.boundary_conditions = {}
 
-    # Health block
+    # Health block (Step‑1 sets empty dict, but we ensure it)
     state.health = {}
 
     return state

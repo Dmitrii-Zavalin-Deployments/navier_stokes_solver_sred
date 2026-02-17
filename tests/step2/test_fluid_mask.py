@@ -3,19 +3,17 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.create_fluid_mask import create_fluid_mask
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
-def make_state(mask: np.ndarray) -> SolverState:
+def make_state_with_mask(mask: np.ndarray):
     """
-    Construct a minimal valid SolverState for fluid-mask tests.
-    Only grid + mask are required for create_fluid_mask.
+    Create a canonical Step‑1 dummy state and override only the mask.
+    This ensures the state is structurally identical to real Step‑1 output.
     """
     nx, ny, nz = mask.shape
-
-    state = SolverState()
-    state.grid = type("Grid", (), {"nx": nx, "ny": ny, "nz": nz})()
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz)
     state.mask = mask
     return state
 
@@ -31,7 +29,7 @@ def test_fluid_mask_mixed():
         ],
         dtype=int,
     )
-    state = make_state(mask)
+    state = make_state_with_mask(mask)
 
     is_fluid, is_boundary = create_fluid_mask(state)
 
@@ -54,7 +52,7 @@ def test_fluid_mask_mixed():
 # ------------------------------------------------------------
 def test_fluid_mask_all_fluid():
     mask = np.ones((2, 2, 2), dtype=int)
-    state = make_state(mask)
+    state = make_state_with_mask(mask)
 
     is_fluid, is_boundary = create_fluid_mask(state)
 
@@ -67,7 +65,7 @@ def test_fluid_mask_all_fluid():
 # ------------------------------------------------------------
 def test_fluid_mask_all_boundary_fluid():
     mask = -np.ones((2, 2, 2), dtype=int)
-    state = make_state(mask)
+    state = make_state_with_mask(mask)
 
     is_fluid, is_boundary = create_fluid_mask(state)
 
@@ -80,7 +78,7 @@ def test_fluid_mask_all_boundary_fluid():
 # ------------------------------------------------------------
 def test_fluid_mask_shape_preserved():
     mask = np.zeros((3, 4, 5), dtype=int)
-    state = make_state(mask)
+    state = make_state_with_mask(mask)
 
     is_fluid, is_boundary = create_fluid_mask(state)
 
@@ -93,7 +91,7 @@ def test_fluid_mask_shape_preserved():
 # ------------------------------------------------------------
 def test_fluid_mask_float_rejected():
     mask = np.ones((2, 2, 2), dtype=float)
-    state = make_state(mask)
+    state = make_state_with_mask(mask)
 
     with pytest.raises(ValueError):
         create_fluid_mask(state)

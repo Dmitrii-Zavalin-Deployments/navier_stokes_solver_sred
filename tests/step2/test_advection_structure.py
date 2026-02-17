@@ -3,37 +3,37 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.build_advection_structure import build_advection_structure
 from src.step2.create_fluid_mask import create_fluid_mask
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0, scheme="upwind"):
     """
-    Construct a minimal valid SolverState for advection structure tests.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for advection structure tests.
     """
-    state = SolverState()
+    # Create Step‑1 dummy
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz, dx=dx)
 
-    # Grid
-    state.grid = type(
-        "Grid", (), {"nx": nx, "ny": ny, "nz": nz, "dx": dx, "dy": dx, "dz": dx}
-    )()
+    # Override grid spacing (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dx
+    state.grid.dz = dx
 
-    # Minimal valid mask (all fluid)
+    # Ensure mask is all fluid
     state.mask = np.ones((nx, ny, nz), dtype=int)
 
-    # Compute fluid masks
+    # Recompute fluid masks
     state.is_fluid, state.is_boundary_cell = create_fluid_mask(state)
 
-    # Staggered velocity fields
-    state.fields = {
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-    }
+    # Override staggered velocity fields (dummy already has correct shapes)
+    state.fields["U"] = np.zeros((nx + 1, ny, nz))
+    state.fields["V"] = np.zeros((nx, ny + 1, nz))
+    state.fields["W"] = np.zeros((nx, ny, nz + 1))
 
-    # Advection scheme selection
-    state.config = type("Config", (), {"advection_scheme": scheme})()
+    # Override advection scheme (Step‑1 normally sets only dt)
+    state.config.advection_scheme = scheme
 
     return state
 
@@ -113,7 +113,6 @@ def test_advection_upwind_vs_central():
     adv_u_central, _, _ = build_advection_structure(state_central)
     result_central = adv_u_central(state_central.fields)
 
-    # Expect different results
     assert not np.allclose(result_upwind, result_central)
 
 

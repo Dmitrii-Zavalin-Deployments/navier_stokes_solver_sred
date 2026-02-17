@@ -3,41 +3,43 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.compute_initial_health import compute_initial_health
 from src.step2.build_divergence_operator import build_divergence_operator
 from src.step2.create_fluid_mask import create_fluid_mask
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0, dt=0.1):
     """
-    Construct a minimal valid SolverState for health diagnostics tests.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for health diagnostics tests.
     """
-    state = SolverState()
+    # Create Step‑1 dummy
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz, dx=dx, dt=dt)
 
-    # Grid
-    state.grid = type(
-        "Grid", (), {"nx": nx, "ny": ny, "nz": nz, "dx": dx, "dy": dx, "dz": dx}
-    )()
+    # Override grid spacing (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dx
+    state.grid.dz = dx
 
-    # Config
-    state.config = type("Config", (), {"dt": dt})()
+    # Override dt
+    state.config.dt = dt
 
-    # Mask (all fluid)
+    # Ensure mask is all fluid
     state.mask = np.ones((nx, ny, nz), dtype=int)
+
+    # Recompute fluid masks
     state.is_fluid, state.is_boundary_cell = create_fluid_mask(state)
 
-    # Staggered velocity fields
-    state.fields = {
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-    }
+    # Override staggered velocity fields (dummy already has correct shapes)
+    state.fields["U"] = np.zeros((nx + 1, ny, nz))
+    state.fields["V"] = np.zeros((nx, ny + 1, nz))
+    state.fields["W"] = np.zeros((nx, ny, nz + 1))
 
     # Pressure field (needed for divergence operator)
     state.fields["P"] = np.zeros((nx, ny, nz))
 
-    # Health block
+    # Health block (Step‑1 sets empty dict, but we ensure it)
     state.health = {}
 
     return state

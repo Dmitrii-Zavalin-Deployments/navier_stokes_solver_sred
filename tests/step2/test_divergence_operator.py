@@ -3,32 +3,34 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.build_divergence_operator import build_divergence_operator
 from src.step2.create_fluid_mask import create_fluid_mask
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0):
     """
-    Construct a minimal valid SolverState for divergence operator tests.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for divergence operator tests.
     """
-    state = SolverState()
+    # Create Step‑1 dummy
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz, dx=dx)
 
-    # Grid
-    state.grid = type("Grid", (), {"nx": nx, "ny": ny, "nz": nz, "dx": dx, "dy": dx, "dz": dx})()
+    # Override grid spacing (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dx
+    state.grid.dz = dx
 
-    # Minimal valid mask (all fluid)
+    # Ensure mask is all fluid
     state.mask = np.ones((nx, ny, nz), dtype=int)
 
-    # Compute fluid masks
+    # Recompute fluid masks
     state.is_fluid, state.is_boundary_cell = create_fluid_mask(state)
 
-    # Staggered velocity fields
-    state.fields = {
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-    }
+    # Override staggered velocity fields (dummy already has correct shapes)
+    state.fields["U"] = np.zeros((nx + 1, ny, nz))
+    state.fields["V"] = np.zeros((nx, ny + 1, nz))
+    state.fields["W"] = np.zeros((nx, ny, nz + 1))
 
     return state
 
@@ -75,7 +77,6 @@ def test_divergence_linear_u_field():
     divergence = build_divergence_operator(state)
     div = divergence(state.fields)
 
-    # Expected divergence = dU/dx = 1
     assert np.allclose(div, 1.0, atol=1e-6)
 
 
@@ -117,7 +118,6 @@ def test_divergence_boundary_fluid_treated_as_fluid():
     divergence = build_divergence_operator(state)
     div = divergence(state.fields)
 
-    # Boundary-fluid is treated as fluid → divergence computed normally
     assert np.isfinite(div[1, 1, 1])
 
 
@@ -139,7 +139,6 @@ def test_divergence_no_through_mask():
     divergence = build_divergence_operator(state)
     div = divergence(state.fields)
 
-    # No neighbors → divergence must be zero
     assert div[1, 1, 1] == 0.0
 
 

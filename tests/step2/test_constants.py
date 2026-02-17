@@ -3,47 +3,33 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.orchestrate_step2 import orchestrate_step2
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_state(*, dx=1.0, dy=1.0, dz=1.0, dt=0.1, rho=1.0):
     """
-    Construct a minimal valid SolverState for constant precomputation tests.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for constant precomputation tests.
+
     Step 2 expects Step 1 to have produced:
-      - grid (with dx, dy, dz)
-      - config (with dt)
-      - constants (with rho)
+      - grid (dx, dy, dz)
+      - config (dt)
+      - constants (rho)
       - mask (valid tri-state)
       - fields (P, U, V, W)
     """
-    state = SolverState()
+    # Create a minimal 1×1×1 Step‑1 dummy
+    state = make_step1_dummy_state(nx=1, ny=1, nz=1, dx=dx, dy=dy, dz=dz, dt=dt, rho=rho)
 
-    # Grid
-    state.grid = type("Grid", (), {"dx": dx, "dy": dy, "dz": dz})()
+    # Override grid spacings (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dy
+    state.grid.dz = dz
 
-    # Config
-    state.config = type("Config", (), {"dt": dt})()
-
-    # Constants (Step 1 normally fills these)
-    state.constants = {"rho": rho}
-
-    # Minimal valid mask (1 fluid cell)
-    state.mask = np.ones((1, 1, 1), dtype=int)
-
-    # Minimal fields
-    state.fields = {
-        "P": np.zeros((1, 1, 1)),
-        "U": np.zeros((2, 1, 1)),
-        "V": np.zeros((1, 2, 1)),
-        "W": np.zeros((1, 1, 2)),
-    }
-
-    # Boundary conditions (empty but valid)
-    state.boundary_conditions = {}
-
-    # Health block
-    state.health = {}
+    # Override dt and rho
+    state.config.dt = dt
+    state.constants["rho"] = rho
 
     return state
 

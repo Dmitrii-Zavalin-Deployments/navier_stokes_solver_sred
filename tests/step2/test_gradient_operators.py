@@ -3,32 +3,32 @@
 import numpy as np
 import pytest
 
-from src.solver_state import SolverState
 from src.step2.build_gradient_operators import build_gradient_operators
 from src.step2.create_fluid_mask import create_fluid_mask
+from tests.helpers.solver_step1_output_dummy import make_step1_dummy_state
 
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0):
     """
-    Construct a minimal valid SolverState for gradient operator tests.
+    Create a canonical Step‑1 dummy state and override only the fields
+    relevant for gradient operator tests.
     """
-    state = SolverState()
+    # Create Step‑1 dummy
+    state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz, dx=dx)
 
-    # Grid
-    state.grid = type(
-        "Grid", (), {"nx": nx, "ny": ny, "nz": nz, "dx": dx, "dy": dx, "dz": dx}
-    )()
+    # Override grid spacing (dummy uses dx for all unless overridden)
+    state.grid.dx = dx
+    state.grid.dy = dx
+    state.grid.dz = dx
 
-    # Minimal valid mask (all fluid)
+    # Ensure mask is all fluid
     state.mask = np.ones((nx, ny, nz), dtype=int)
 
-    # Compute fluid masks
+    # Recompute fluid masks
     state.is_fluid, state.is_boundary_cell = create_fluid_mask(state)
 
-    # Pressure field (cell-centered)
-    state.fields = {
-        "P": np.zeros((nx, ny, nz)),
-    }
+    # Override pressure field (dummy already has correct shape)
+    state.fields["P"] = np.zeros((nx, ny, nz))
 
     return state
 
@@ -66,7 +66,6 @@ def test_gradient_linear_pressure_x():
     grad_x, grad_y, grad_z = build_gradient_operators(state)
     gx = grad_x(state.fields["P"])
 
-    # Expected gradient = 1
     assert np.allclose(gx, 1.0, atol=1e-6)
 
 
