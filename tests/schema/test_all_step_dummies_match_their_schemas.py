@@ -40,6 +40,10 @@ from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
 from tests.helpers.solver_step5_output_schema import EXPECTED_STEP5_SCHEMA
 
 
+# ---------------------------------------------------------------------------
+# Type helpers
+# ---------------------------------------------------------------------------
+
 def _is_ndarray_type_spec(t):
     """Return True if the schema type spec means 'numpy ndarray'."""
     if t == "ndarray":
@@ -80,28 +84,53 @@ def _matches_type(value, type_spec):
     return False
 
 
-def _matches_schema(value_dict, schema_dict):
+# ---------------------------------------------------------------------------
+# Schema validator (supports dict schemas AND list schemas)
+# ---------------------------------------------------------------------------
+
+def _matches_schema(value_dict, schema):
     """
-    Recursively validate that `value_dict` matches the Python schema dict:
-      - all schema keys are present in value_dict
-      - types/structures match the type specs
-    Extra keys in value_dict are allowed (you can tighten this if you want).
+    Validate dummy against schema.
+
+    schema may be:
+      - dict: {key: type_spec}
+      - list: [key1, key2, ...]
     """
-    for key, type_spec in schema_dict.items():
-        assert key in value_dict, f"Missing key '{key}' in value: keys={list(value_dict.keys())}"
+
+    # Case A: schema is a list of required keys
+    if isinstance(schema, list):
+        for key in schema:
+            assert key in value_dict, (
+                f"Missing key '{key}' in value: keys={list(value_dict.keys())}"
+            )
+        return True
+
+    # Case B: schema is a dict of type specs
+    assert isinstance(schema, dict), (
+        f"Schema must be dict or list, got {type(schema)}"
+    )
+
+    for key, type_spec in schema.items():
+        assert key in value_dict, (
+            f"Missing key '{key}' in value: keys={list(value_dict.keys())}"
+        )
         v = value_dict[key]
-        assert _matches_type(
-            v, type_spec
-        ), f"Key '{key}' has wrong type: got {type(v)}, expected {type_spec}"
+        assert _matches_type(v, type_spec), (
+            f"Key '{key}' has wrong type: got {type(v)}, expected {type_spec}"
+        )
+
     return True
 
 
-def _validate_step_dummy(step_name: str, dummy, expected_schema: dict):
+# ---------------------------------------------------------------------------
+# Step dummy validator
+# ---------------------------------------------------------------------------
+
+def _validate_step_dummy(step_name: str, dummy, expected_schema):
     """
     Validate a single step dummy against its EXPECTED_STEPX_SCHEMA.
     """
     # SolverState-like object: assume attributes match schema keys
-    # If dummy is a dataclass / object, use vars() or __dict__.
     if hasattr(dummy, "__dict__"):
         value_dict = vars(dummy)
     else:
@@ -113,6 +142,10 @@ def _validate_step_dummy(step_name: str, dummy, expected_schema: dict):
 
     _matches_schema(value_dict, expected_schema)
 
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 def test_step1_dummy_matches_schema():
     dummy = make_step1_output_dummy()
@@ -134,6 +167,6 @@ def test_step4_dummy_matches_schema():
     _validate_step_dummy("Step 4", dummy, EXPECTED_STEP4_SCHEMA)
 
 
-# def test_step5_dummy_matches_schema():
-#     dummy = make_step5_output_dummy()
-#     _validate_step_dummy("Step 5", dummy, EXPECTED_STEP5_SCHEMA)
+def test_step5_dummy_matches_schema():
+    dummy = make_step5_output_dummy()
+    _validate_step_dummy("Step 5", dummy, EXPECTED_STEP5_SCHEMA)
