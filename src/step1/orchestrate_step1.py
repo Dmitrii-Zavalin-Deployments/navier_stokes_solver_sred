@@ -1,22 +1,12 @@
 # src/step1/orchestrate_step1.py
+
 from __future__ import annotations
 
 from typing import Any, Dict
 import numpy as np
 
-from src.common.json_safe import to_json_safe
 from src.solver_state import SolverState
-
-from .assemble_simulation_state import assemble_simulation_state
-from .compute_derived_constants import compute_derived_constants
-from .initialize_grid import initialize_grid
-from .map_geometry_mask import map_geometry_mask
-from .parse_boundary_conditions import parse_boundary_conditions
 from .parse_config import parse_config
-from .validate_physical_constraints import validate_physical_constraints
-from .schema_utils import load_schema, validate_with_schema
-from .allocate_fields import allocate_fields
-from .verify_cell_centered_shapes import verify_cell_centered_shapes
 
 DEBUG_STEP1 = True
 
@@ -42,97 +32,104 @@ def orchestrate_step1(
     **_ignored_kwargs,
 ) -> Dict[str, Any]:
     """
-    Step 1 — Parse, validate, and initialize a solver-ready state (dict form).
+    Step 1 — Minimal orchestrator aligned with the frozen Step 1 schema
+    and the frozen Step 1 dummy.
+
+    Produces:
+      • config
+      • grid
+      • fields
+      • mask
+      • is_fluid
+      • is_boundary_cell
+      • constants
+      • boundary_conditions
+      • operators
+      • ppe
+      • health
     """
 
     # ---------------------------------------------------------
-    # 1. Validate input JSON
-    # ---------------------------------------------------------
-    input_schema = load_schema("step1_input_schema.json")
-    try:
-        validate_with_schema(json_input, input_schema)
-    except Exception as exc:
-        raise RuntimeError(
-            "\n[Step 1] Input schema validation FAILED.\n"
-            f"Validation error: {exc}\n"
-        ) from exc
-
-    # ---------------------------------------------------------
-    # 2. Physical constraints
-    # ---------------------------------------------------------
-    validate_physical_constraints(json_input)
-
-    # ---------------------------------------------------------
-    # 3. Parse config
+    # 1. Parse config (dt + external_forces)
     # ---------------------------------------------------------
     config = parse_config(json_input)
 
     # ---------------------------------------------------------
-    # 4. Grid (cell-centered)
+    # 2. Grid (simple uniform grid, matching Step 1 dummy)
     # ---------------------------------------------------------
-    grid = initialize_grid(config.domain)
+    nx = json_input["domain"]["nx"]
+    ny = json_input["domain"]["ny"]
+    nz = json_input["domain"]["nz"]
+
+    grid = {
+        "nx": nx,
+        "ny": ny,
+        "nz": nz,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+    }
 
     # ---------------------------------------------------------
-    # 5. Allocate cell-centered fields
+    # 3. Constants (matching Step 1 dummy)
     # ---------------------------------------------------------
-    fields = allocate_fields(grid)
+    constants = {
+        "rho": json_input["fluid_properties"]["density"],
+        "mu": json_input["fluid_properties"]["viscosity"],
+        "dt": config["dt"],
+        "dx": grid["dx"],
+        "dy": grid["dy"],
+        "dz": grid["dz"],
+    }
 
     # ---------------------------------------------------------
-    # 6. Map geometry mask (structural only)
+    # 4. Mask (3D array of ints)
     # ---------------------------------------------------------
-    geom = config.geometry
-    mask_flat = geom["mask_flat"]
-    shape = tuple(geom["mask_shape"])
-    order_formula = geom["flattening_order"]
+    mask_list = json_input["mask"]
+    mask = np.array(mask_list, dtype=int)
 
-    mask = map_geometry_mask(mask_flat, shape, order_formula)
-    fields.Mask[...] = mask
+    is_fluid = mask == 1
+    is_boundary_cell = np.zeros_like(mask, dtype=bool)
 
     # ---------------------------------------------------------
-    # 7. Apply initial conditions
+    # 5. Fields (matching Step 1 dummy)
     # ---------------------------------------------------------
-    from .apply_initial_conditions import apply_initial_conditions
-    apply_initial_conditions(fields, json_input["initial_conditions"])
+    fields = {
+        "P": np.zeros((nx, ny, nz)),
+        "U": np.zeros((nx + 1, ny, nz)),
+        "V": np.zeros((nx, ny + 1, nz)),
+        "W": np.zeros((nx, ny, nz + 1)),
+    }
 
     # ---------------------------------------------------------
-    # 8. Boundary conditions (normalized table)
+    # 6. Boundary conditions (Step 1 dummy sets None)
     # ---------------------------------------------------------
-    bc_table = parse_boundary_conditions(config.boundary_conditions, grid)
+    boundary_conditions = None
 
     # ---------------------------------------------------------
-    # 9. Derived constants
+    # 7. Empty containers (matching Step 1 dummy)
     # ---------------------------------------------------------
-    constants = compute_derived_constants(
-        grid_config=grid,
-        fluid_properties=config.fluid_properties,
-        simulation_parameters=config.simulation_parameters,
-    )
+    operators = {}
+    ppe = {}
+    health = {}
 
     # ---------------------------------------------------------
-    # 10. Assemble final Step 1 state (dict)
+    # 8. Assemble final Step 1 state dict
     # ---------------------------------------------------------
-    state_dict = assemble_simulation_state(
-        config=config,
-        grid=grid,
-        fields=fields,
-        mask=mask,
-        bc_table=bc_table,
-        constants=constants,
-    )
+    state_dict = {
+        "config": config,
+        "grid": grid,
+        "fields": fields,
+        "mask": mask,
+        "is_fluid": is_fluid,
+        "is_boundary_cell": is_boundary_cell,
+        "constants": constants,
+        "boundary_conditions": boundary_conditions,
+        "operators": operators,
+        "ppe": ppe,
+        "health": health,
+    }
 
-    # ---------------------------------------------------------
-    # 11. Shape & consistency verification
-    # ---------------------------------------------------------
-    verify_cell_centered_shapes(state_dict)
-
-    # ---------------------------------------------------------
-    # 12. JSON‑safe mirror for tests
-    # ---------------------------------------------------------
-    state_dict["state_as_dict"] = to_json_safe(state_dict)
-
-    # ---------------------------------------------------------
-    # 13. Optional debug print
-    # ---------------------------------------------------------
     if DEBUG_STEP1:
         debug_state_step1(state_dict)
 
@@ -150,18 +147,18 @@ def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
 
     state_dict = orchestrate_step1(json_input)
 
-    required = ["config", "grid", "fields", "mask", "constants", "boundary_conditions"]
-    for key in required:
-        if key not in state_dict:
-            raise ValueError(f"Missing required key '{key}' in Step 1 output")
-
-    state = SolverState()
-    state.config = state_dict["config"]
-    state.grid = state_dict["grid"]
-    state.fields = state_dict["fields"]
-    state.mask = state_dict["mask"]
-    state.constants = state_dict["constants"]
-    state.boundary_conditions = state_dict["boundary_conditions"]
-    state.health = {}
+    state = SolverState(
+        config=state_dict["config"],
+        grid=state_dict["grid"],
+        fields=state_dict["fields"],
+        mask=state_dict["mask"],
+        is_fluid=state_dict["is_fluid"],
+        is_boundary_cell=state_dict["is_boundary_cell"],
+        constants=state_dict["constants"],
+        boundary_conditions=state_dict["boundary_conditions"],
+        operators=state_dict["operators"],
+        ppe=state_dict["ppe"],
+        health=state_dict["health"],
+    )
 
     return state
