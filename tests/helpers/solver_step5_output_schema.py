@@ -2,6 +2,8 @@
 
 step5_output_schema = {
     "type": "object",
+
+    # Step 5 internal state requirements
     "required": [
         "time",
         "step_index",
@@ -48,9 +50,10 @@ step5_output_schema = {
         "ppe": {"type": "object"},
         "health": {"type": "object"},
 
-        # Step 5 structured outputs (replaces old 'history')
+        # Step 5 structured outputs
         "step5_outputs": {"type": "object"},
 
+        # Final health summary
         "final_health": {"type": "object"},
 
         "ready_for_time_loop": {"type": "boolean"},
