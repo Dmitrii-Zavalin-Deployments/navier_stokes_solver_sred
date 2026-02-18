@@ -29,15 +29,15 @@ def make_step5_output_dummy():
 
         "fields": {
             "P": np.zeros((nx, ny, nz)),
-            "U": np.zeros((nx+1, ny, nz)),
-            "V": np.zeros((nx, ny+1, nz)),
-            "W": np.zeros((nx, ny, nz+1)),
+            "U": np.zeros((nx + 1, ny, nz)),
+            "V": np.zeros((nx, ny + 1, nz)),
+            "W": np.zeros((nx, ny, nz + 1)),
         },
 
-        "P_ext": np.zeros((nx+2, ny+2, nz+2)),
-        "U_ext": np.zeros((nx+3, ny+2, nz+2)),
-        "V_ext": np.zeros((nx, ny+3, nz+2)),
-        "W_ext": np.zeros((nx, ny, nz+3)),
+        "P_ext": np.zeros((nx + 2, ny + 2, nz + 2)),
+        "U_ext": np.zeros((nx + 3, ny + 2, nz + 2)),
+        "V_ext": np.zeros((nx + 2, ny + 3, nz + 2)),
+        "W_ext": np.zeros((nx + 2, ny + 2, nz + 3)),
 
         "ppe": {
             "iterations": 7,
@@ -50,7 +50,10 @@ def make_step5_output_dummy():
             "cfl_advection_estimate": 0.4,
         },
 
-        "history": {
+        # ---------------------------------------------------------
+        # Step 5 structured outputs (replaces old 'history')
+        # ---------------------------------------------------------
+        "step5_outputs": {
             "times": [0.0, 0.02, 0.04, 0.06, 0.08, 0.10],
             "steps": [0, 1, 2, 3, 4, 5],
             "divergence_norms": [0.01, 0.005, 0.002, 0.001, 0.0006, 0.0003],
@@ -74,6 +77,9 @@ def make_step5_output_dummy():
             "simulation_success": True,
             "termination_reason": "normal",
         },
+
+        # Step 5 must set this to True
+        "ready_for_time_loop": True,
     }
 
     return dummy
