@@ -1,6 +1,6 @@
 # tests/helpers/solver_step5_output_schema.py
 
-step5_output_schema = {
+EXPECTED_STEP5_SCHEMA = {
     "type": "object",
 
     # Step 5 required fields must be a subset of final schema required fields
