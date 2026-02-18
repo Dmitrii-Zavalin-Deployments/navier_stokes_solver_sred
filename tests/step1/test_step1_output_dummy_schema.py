@@ -1,35 +1,41 @@
 # tests/step1/test_step1_output_dummy_schema.py
 
 import numpy as np
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+from tests.helpers.solver_input_schema_dummy import make_solver_input_dummy
 from tests.helpers.solver_step1_output_schema import EXPECTED_STEP1_SCHEMA
+from src.step1.orchestrate_step1 import orchestrate_step1
 
 
-def test_step1_dummy_matches_schema():
-    state = make_step1_output_dummy()
+def test_step1_output_matches_schema():
+    # 1. Build canonical input
+    input_state = make_solver_input_dummy()
 
-    # Top-level keys
+    # 2. Run real Step 1
+    state = orchestrate_step1(input_state)
+
+    # 3. Check top-level keys match schema
     for key in EXPECTED_STEP1_SCHEMA:
         assert hasattr(state, key), f"Missing key: {key}"
 
-    # Fields
+    # 4. Validate fields
     for f in ["P", "U", "V", "W"]:
         assert f in state.fields
         assert isinstance(state.fields[f], np.ndarray)
 
-    # Mask semantics
+    # 5. Mask semantics
     assert isinstance(state.mask, np.ndarray)
     assert isinstance(state.is_fluid, np.ndarray)
     assert isinstance(state.is_boundary_cell, np.ndarray)
 
-    # Constants
+    # 6. Constants
     assert isinstance(state.constants, dict)
 
-    # Boundary conditions
+    # 7. Boundary conditions
     assert state.boundary_conditions is None or callable(state.boundary_conditions)
 
-    # Operators, PPE, health, history must exist (empty)
+    # 8. Empty containers Step 1 must initialize
     assert isinstance(state.operators, dict)
     assert isinstance(state.ppe, dict)
     assert isinstance(state.health, dict)
-    assert isinstance(state.history, dict)
+
+    # ❌ No history check — Step 1 no longer defines it
