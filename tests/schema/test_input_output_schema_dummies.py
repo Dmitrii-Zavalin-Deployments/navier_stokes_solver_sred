@@ -1,4 +1,4 @@
-# tests/schema/test_schema_dummies.py
+# tests/schema/test_input_output_schema_dummies.py
 
 """
 test_schema_dummies.py
