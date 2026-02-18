@@ -1,29 +1,44 @@
 # tests/step1/test_compute_derived_constants.py
 
-from src.step1.compute_derived_constants import compute_derived_constants
-from src.step1.types import GridConfig
+from src.step1.orchestrate_step1 import orchestrate_step1
 
 
-def test_compute_constants():
-    grid = GridConfig(
-        nx=2, ny=2, nz=2,
-        dx=0.5, dy=1.0, dz=2.0,
-        x_min=0.0, x_max=1.0,
-        y_min=0.0, y_max=2.0,
-        z_min=0.0, z_max=4.0,
-    )
+def test_step1_constants_match_dummy():
+    """
+    Step 1 no longer computes mathematical derived constants.
+    It simply forwards density, viscosity, dt, and uses unit spacing (dx=dy=dz=1.0),
+    exactly as defined in the frozen Step 1 dummy.
+    """
 
-    fluid = {"density": 1.2, "viscosity": 0.05}
-    sim = {"time_step": 0.01}
+    json_input = {
+        "domain": {"nx": 2, "ny": 2, "nz": 2},
 
-    c = compute_derived_constants(grid, fluid, sim)
+        "fluid_properties": {
+            "density": 5.0,
+            "viscosity": 0.2,
+        },
 
-    # Basic passthrough values
-    assert c.rho == 1.2
-    assert c.mu == 0.05
-    assert c.dt == 0.01
+        # Step 1 parser still expects simulation_parameters.time_step
+        "simulation_parameters": {"time_step": 0.05},
 
-    # Derived inverse spacings
-    assert c.inv_dx == 2.0      # 1 / 0.5
-    assert c.inv_dy == 1.0      # 1 / 1.0
-    assert c.inv_dz == 0.5      # 1 / 2.0
+        "external_forces": {"force_vector": [0.0, 0.0, 0.0]},
+
+        # Simple 2×2×2 mask
+        "mask": [
+            [[1, 1], [1, 1]],
+            [[1, 1], [1, 1]],
+        ],
+    }
+
+    state = orchestrate_step1(json_input)
+    constants = state["constants"]
+
+    # Frozen Step 1 dummy rules:
+    assert constants["rho"] == 5.0
+    assert constants["mu"] == 0.2
+    assert constants["dt"] == 0.05
+
+    # Step 1 dummy uses unit spacing
+    assert constants["dx"] == 1.0
+    assert constants["dy"] == 1.0
+    assert constants["dz"] == 1.0
