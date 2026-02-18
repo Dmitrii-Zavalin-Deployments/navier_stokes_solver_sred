@@ -1,3 +1,5 @@
+# tests/helpers/solver_step1_output_schema.py
+
 EXPECTED_STEP1_SCHEMA = {
     "config": dict,
     "grid": dict,
