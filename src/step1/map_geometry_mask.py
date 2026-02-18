@@ -55,9 +55,9 @@ def map_geometry_mask(
     validated = []
     for idx, val in enumerate(mask_list):
         if not isinstance(val, int):
-            raise TypeError(f"Mask entries must be integers, got {val!r} at index {idx}")
+            raise ValueError(f"Mask entries must be integers, got {val!r} at index {idx}")
         if not math.isfinite(val):
-            raise TypeError(f"Mask entries must be finite integers, got {val!r} at index {idx}")
+            raise ValueError(f"Mask entries must be finite integers, got {val!r} at index {idx}")
         validated.append(int(val))
 
     arr = np.asarray(validated, dtype=int)
