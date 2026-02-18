@@ -1,17 +1,17 @@
 # tests/step1/test_step1_output_dummy_schema.py
 
 import numpy as np
-from tests.helpers.solver_input_schema_dummy import make_solver_input_dummy
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 from tests.helpers.solver_step1_output_schema import EXPECTED_STEP1_SCHEMA
 from src.step1.orchestrate_step1 import orchestrate_step1
 
 
 def test_step1_output_matches_schema():
-    # 1. Build canonical input
-    input_state = make_solver_input_dummy()
+    # 1. Build canonical input (frozen dummy)
+    input_dict = solver_input_schema_dummy()
 
     # 2. Run real Step 1
-    state = orchestrate_step1(input_state)
+    state = orchestrate_step1(input_dict)
 
     # 3. Check top-level keys match schema
     for key in EXPECTED_STEP1_SCHEMA:
