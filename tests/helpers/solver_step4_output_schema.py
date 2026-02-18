@@ -7,8 +7,7 @@ step4_output_schema = {
         "grid",
         "fields",
 
-        "is_fluid",
-        "is_boundary_cell",
+        # Final schema requires mask, not is_fluid/is_boundary_cell
         "mask",
         "constants",
         "boundary_conditions",

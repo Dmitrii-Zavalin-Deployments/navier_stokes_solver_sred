@@ -18,7 +18,7 @@ step5_output_schema = {
         "ppe",
         "health",
 
-        # Step 5 replaces old 'history' with structured final outputs
+        # Step 5 structured outputs (replaces old 'history')
         "step5_outputs",
 
         # Final health summary after all corrections
