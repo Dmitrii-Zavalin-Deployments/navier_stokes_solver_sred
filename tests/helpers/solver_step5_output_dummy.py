@@ -28,16 +28,16 @@ def make_step5_output_dummy():
         },
 
         "fields": {
-            "P": np.zeros((nx, ny, nz)),
-            "U": np.zeros((nx + 1, ny, nz)),
-            "V": np.zeros((nx, ny + 1, nz)),
-            "W": np.zeros((nx, ny, nz + 1)),
+            "P": np.zeros((nx, ny, nz)).tolist(),
+            "U": np.zeros((nx + 1, ny, nz)).tolist(),
+            "V": np.zeros((nx, ny + 1, nz)).tolist(),
+            "W": np.zeros((nx, ny, nz + 1)).tolist(),
         },
 
-        "P_ext": np.zeros((nx + 2, ny + 2, nz + 2)),
-        "U_ext": np.zeros((nx + 3, ny + 2, nz + 2)),
-        "V_ext": np.zeros((nx + 2, ny + 3, nz + 2)),
-        "W_ext": np.zeros((nx + 2, ny + 2, nz + 3)),
+        "P_ext": np.zeros((nx + 2, ny + 2, nz + 2)).tolist(),
+        "U_ext": np.zeros((nx + 3, ny + 2, nz + 2)).tolist(),
+        "V_ext": np.zeros((nx + 2, ny + 3, nz + 2)).tolist(),
+        "W_ext": np.zeros((nx + 2, ny + 2, nz + 3)).tolist(),
 
         "ppe": {
             "iterations": 7,
