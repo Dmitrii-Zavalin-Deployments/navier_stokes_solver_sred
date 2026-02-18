@@ -14,12 +14,28 @@ def make_step5_output_dummy():
         "time": 0.12,
         "step_index": 6,
 
+        # ---------------------------------------------------------
+        # Required by final schema
+        # ---------------------------------------------------------
         "config": {
             "domain": {"nx": nx, "ny": ny, "nz": nz},
             "total_time": 0.12,
             "max_steps": 100,
             "output_interval": 2,
         },
+
+        "grid": {
+            "nx": nx,
+            "ny": ny,
+            "nz": nz,
+            "dx": 1.0,
+            "dy": 1.0,
+            "dz": 1.0,
+        },
+
+        "mask": np.ones((nx, ny, nz)).tolist(),
+
+        "boundary_conditions": {},
 
         "constants": {
             "dt": 0.02,
