@@ -12,12 +12,18 @@ def test_compute_derived_constants_matches_dummy():
 
     json_input = {
         "domain": {"nx": 4, "ny": 4, "nz": 4},
+
         "fluid_properties": {
             "density": 10.0,
             "viscosity": 2.0,
         },
-        "time_integration": {"dt": 0.1},
+
+        # IMPORTANT: Step 1 parser still expects simulation_parameters.time_step
+        "simulation_parameters": {"time_step": 0.1},
+
         "external_forces": {"force_vector": [0.0, 0.0, 0.0]},
+
+        # 4×4×4 mask of fluid cells
         "mask": [
             [[1, 1, 1, 1]] * 4,
             [[1, 1, 1, 1]] * 4,
