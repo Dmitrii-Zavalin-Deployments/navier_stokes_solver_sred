@@ -5,7 +5,6 @@
 
 EXPECTED_STEP5_SCHEMA = [
     # Optional metadata included in final schema
-    "time",
     "step_index",
 
     # Core solver state
