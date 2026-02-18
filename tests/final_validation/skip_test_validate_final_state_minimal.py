@@ -1,4 +1,4 @@
-# tests/contract/test_validate_final_state_minimal.py
+# tests/final_validation/test_validate_final_state_minimal.py
 
 from src.main_solver import run_solver
 from src.common.final_schema_utils import validate_final_state
