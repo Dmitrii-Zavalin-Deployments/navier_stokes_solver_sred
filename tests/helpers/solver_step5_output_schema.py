@@ -17,9 +17,6 @@ step5_output_schema = {
         "ppe",
         "health",
 
-        # Step 5 structured outputs (replaces old 'history')
-        "step5_outputs",
-
         # Step 5 must set this to True
         "ready_for_time_loop",
     ],
@@ -45,7 +42,7 @@ step5_output_schema = {
         "ppe": {"type": "object"},
         "health": {"type": "object"},
 
-        # Step 5 structured outputs
+        # Step 5 structured outputs (optional)
         "step5_outputs": {"type": "object"},
 
         # Optional (not required by final schema)
