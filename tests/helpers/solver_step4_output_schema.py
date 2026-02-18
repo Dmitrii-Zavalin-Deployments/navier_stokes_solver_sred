@@ -12,11 +12,6 @@ step4_output_schema = {
         "constants",
         "boundary_conditions",
 
-        # Step 2 carry‑overs
-        "operators",
-        "ppe",
-        "health",
-
         # Step 4 additions: extended fields
         "P_ext",
         "U_ext",

@@ -1,5 +1,3 @@
-# tests/helpers/solver_step4_output_dummy.py
-
 import numpy as np
 from src.solver_state import SolverState
 
@@ -45,6 +43,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     # ---------------------------------------------------------
     # 4. mask semantics (modern)
     # ---------------------------------------------------------
+    state.mask = np.ones((nx, ny, nz), dtype=bool)
     state.is_fluid = np.ones((nx, ny, nz), dtype=bool)
     state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool)
 
@@ -61,7 +60,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # ---------------------------------------------------------
-    # 6. operators (minimal placeholders)
+    # 6. operators (optional in final schema)
     # ---------------------------------------------------------
     state.operators = {
         "adv_u": lambda U, V, W: np.zeros_like(U),
@@ -77,7 +76,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # ---------------------------------------------------------
-    # 7. PPE metadata
+    # 7. PPE metadata (optional in final schema)
     # ---------------------------------------------------------
     state.ppe = {
         "solver": None,
@@ -87,7 +86,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # ---------------------------------------------------------
-    # 8. Step 3 health
+    # 8. Step 3 health (optional in final schema)
     # ---------------------------------------------------------
     state.health = {
         "post_correction_divergence_norm": 0.0,
@@ -96,7 +95,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # ---------------------------------------------------------
-    # 9. Step 3 history
+    # 9. Step 3 history (NOT part of final schema — keep internal only)
     # ---------------------------------------------------------
     state.history = {
         "times": [],
@@ -127,8 +126,8 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # ---------------------------------------------------------
-    # 12. Ready flag
+    # 12. Ready flag (Step 4 sets False)
     # ---------------------------------------------------------
-    state.ready_for_time_loop = True
+    state.ready_for_time_loop = False
 
     return state
