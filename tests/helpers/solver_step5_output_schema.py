@@ -3,11 +3,8 @@
 step5_output_schema = {
     "type": "object",
 
-    # Step 5 internal state requirements
+    # Step 5 required fields must be a subset of final schema required fields
     "required": [
-        "time",
-        "step_index",
-
         "config",
         "constants",
 
@@ -23,14 +20,12 @@ step5_output_schema = {
         # Step 5 structured outputs (replaces old 'history')
         "step5_outputs",
 
-        # Final health summary after all corrections
-        "final_health",
-
         # Step 5 must set this to True
         "ready_for_time_loop",
     ],
 
     "properties": {
+        # Optional metadata (not required by final schema)
         "time": {"type": "number"},
         "step_index": {"type": "integer"},
 
@@ -53,7 +48,7 @@ step5_output_schema = {
         # Step 5 structured outputs
         "step5_outputs": {"type": "object"},
 
-        # Final health summary
+        # Optional (not required by final schema)
         "final_health": {"type": "object"},
 
         "ready_for_time_loop": {"type": "boolean"},
