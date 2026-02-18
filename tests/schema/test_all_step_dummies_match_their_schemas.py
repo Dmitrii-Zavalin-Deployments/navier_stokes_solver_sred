@@ -124,9 +124,9 @@ def test_step2_dummy_matches_schema():
     _validate_step_dummy("Step 2", dummy, EXPECTED_STEP2_SCHEMA)
 
 
-# def test_step3_dummy_matches_schema():
-#     dummy = make_step3_output_dummy()
-#     _validate_step_dummy("Step 3", dummy, EXPECTED_STEP3_SCHEMA)
+def test_step3_dummy_matches_schema():
+    dummy = make_step3_output_dummy()
+    _validate_step_dummy("Step 3", dummy, EXPECTED_STEP3_SCHEMA)
 
 
 # def test_step4_dummy_matches_schema():
