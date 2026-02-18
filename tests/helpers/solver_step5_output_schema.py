@@ -1,53 +1,35 @@
 # tests/helpers/solver_step5_output_schema.py
 
-EXPECTED_STEP5_SCHEMA = {
-    "type": "object",
+# Step 5 expected top-level fields in SolverState.
+# These must be a subset of the final solver_output_schema.json keys.
 
-    # Step 5 required fields must be a subset of final schema required fields
-    "required": [
-        "config",
-        "constants",
+EXPECTED_STEP5_SCHEMA = [
+    # Optional metadata included in final schema
+    "time",
+    "step_index",
 
-        "fields",          # P, U, V, W
-        "P_ext",
-        "U_ext",
-        "V_ext",
-        "W_ext",
+    # Core solver state
+    "config",
+    "constants",
+    "grid",
+    "mask",
+    "fields",
+    "boundary_conditions",
 
-        "ppe",
-        "health",
+    # Extended fields (from Step 4)
+    "P_ext",
+    "U_ext",
+    "V_ext",
+    "W_ext",
 
-        # Step 5 must set this to True
-        "ready_for_time_loop",
-    ],
+    # PPE and health
+    "ppe",
+    "health",
 
-    "properties": {
-        # Optional metadata (not required by final schema)
-        "time": {"type": "number"},
-        "step_index": {"type": "integer"},
+    # Step 5 structured outputs
+    "step5_outputs",
+    "final_health",
 
-        "config": {"type": "object"},
-        "constants": {"type": "object"},
-
-        "fields": {
-            "type": "object",
-            "required": ["P", "U", "V", "W"],
-        },
-
-        "P_ext": {"type": ["array", "null"]},
-        "U_ext": {"type": ["array", "null"]},
-        "V_ext": {"type": ["array", "null"]},
-        "W_ext": {"type": ["array", "null"]},
-
-        "ppe": {"type": "object"},
-        "health": {"type": "object"},
-
-        # Step 5 structured outputs (optional)
-        "step5_outputs": {"type": "object"},
-
-        # Optional (not required by final schema)
-        "final_health": {"type": "object"},
-
-        "ready_for_time_loop": {"type": "boolean"},
-    },
-}
+    # Step 5 sets this to True
+    "ready_for_time_loop",
+]

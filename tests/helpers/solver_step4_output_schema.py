@@ -1,24 +1,29 @@
 # tests/helpers/solver_step4_output_schema.py
 
-EXPECTED_STEP4_SCHEMA = {
-    "type": "object",
-    "required": [
-        "config",
-        "grid",
-        "fields",
+# Step 4 expected top-level fields in SolverState.
+# These must be a subset of the final solver_output_schema.json keys.
 
-        # Final schema requires mask, not is_fluid/is_boundary_cell
-        "mask",
-        "constants",
-        "boundary_conditions",
+EXPECTED_STEP4_SCHEMA = [
+    "config",
+    "grid",
+    "fields",
+    "mask",
+    "constants",
+    "boundary_conditions",
 
-        # Step 4 additions: extended fields
-        "P_ext",
-        "U_ext",
-        "V_ext",
-        "W_ext",
+    # Extended fields created in Step 4
+    "P_ext",
+    "U_ext",
+    "V_ext",
+    "W_ext",
 
-        # Step 4 must set this to False (Step 5 will set it to True)
-        "ready_for_time_loop",
-    ],
-}
+    # Diagnostics accumulated up to Step 4
+    "step3_diagnostics",
+    "step4_diagnostics",
+
+    # PPE persists through all steps
+    "ppe",
+
+    # Step 4 sets this to False (Step 5 sets it to True)
+    "ready_for_time_loop",
+]
