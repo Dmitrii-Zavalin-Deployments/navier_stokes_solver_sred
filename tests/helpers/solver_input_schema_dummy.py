@@ -6,17 +6,33 @@ solver_input_schema_dummy.py
 Canonical JSON‑safe dummy input that fully satisfies solver_input_schema.json.
 Used for Step 1 tests, schema validation tests, and as a base for override‑based
 unit tests (e.g., boundary conditions, mask validation, domain validation).
+
+Updated for the new contract:
+- mask is now a flat 1D array of length nx*ny*nz
+- mask values ∈ {-1, 0, 1}
+- canonical flattening rule is i + nx*(j + ny*k)
 """
 
 def solver_input_schema_dummy():
     # Small, simple domain
     nx, ny, nz = 2, 2, 2
+    total_cells = nx * ny * nz
 
-    # Helper to build nested lists of integers for mask
-    def ints(shape, value=1):
-        if len(shape) == 1:
-            return [value for _ in range(shape[0])]
-        return [ints(shape[1:], value) for _ in range(shape[0])]
+    # Intuitive, human-readable flat mask (length = 8)
+    # Demonstrates all allowed values: -1, 0, 1
+    mask_flat = [
+        0,   # cell 0
+        -1,  # cell 1
+        1,   # cell 2
+        -1,  # cell 3
+        0,   # cell 4
+        1,   # cell 5
+        0,   # cell 6
+        -1   # cell 7
+    ]
+
+    # Safety: ensure length matches nx*ny*nz
+    assert len(mask_flat) == total_cells
 
     return {
         "domain": {
@@ -50,8 +66,8 @@ def solver_input_schema_dummy():
         # Minimal valid BC list: empty list is allowed
         "boundary_conditions": [],
 
-        # 3D mask of allowed values {-1, 0, 1}
-        "mask": ints((nx, ny, nz), value=1),
+        # Flat mask (canonical)
+        "mask": mask_flat,
 
         "external_forces": {
             "force_vector": [0.0, 0.0, 0.0],
