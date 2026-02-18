@@ -16,13 +16,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
       - fields
       - boundary_conditions
       - health (empty)
-      - history (empty)
       - is_fluid (derived from mask)
       - is_boundary_cell (all False)
 
     Step 1 does NOT fill:
       - operators
       - ppe
+      - history  (removed — SolverState no longer accepts it)
     """
 
     # ------------------------------------------------------------------
@@ -42,7 +42,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     config = {
         "dt": 0.1,
-        "external_forces": {},  # Step 1 may define this
+        "external_forces": {},
     }
 
     # ------------------------------------------------------------------
@@ -85,7 +85,6 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     operators = {}
     ppe = {}
     health = {}
-    history = {}
 
     # ------------------------------------------------------------------
     # Construct SolverState
@@ -102,5 +101,4 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         operators=operators,
         ppe=ppe,
         health=health,
-        history=history,
     )
