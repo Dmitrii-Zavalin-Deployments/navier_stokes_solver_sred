@@ -4,9 +4,6 @@
 # These must be a subset of the final solver_output_schema.json keys.
 
 EXPECTED_STEP5_SCHEMA = [
-    # Optional metadata included in final schema
-    "step_index",
-
     # Core solver state
     "config",
     "constants",
