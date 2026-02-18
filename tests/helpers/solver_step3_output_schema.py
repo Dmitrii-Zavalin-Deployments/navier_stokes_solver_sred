@@ -18,22 +18,23 @@ EXPECTED_STEP3_SCHEMA = {
     "constants": dict,
     "boundary_conditions": (type(None), object),
 
-    # Step 2 additions
+    # Step 2 additions (still present in Step 3)
     "operators": dict,
     "ppe": dict,
 
-    # Step 3 additions
+    # Step 3 additions: updated health metrics
     "health": {
         "post_correction_divergence_norm": float,
         "max_velocity_magnitude": float,
         "cfl_advection_estimate": float,
     },
 
-    "history": {
-        "times": list,
-        "divergence_norms": list,
-        "max_velocity_history": list,
-        "ppe_iterations_history": list,
-        "energy_history": list,
-    },
+    # ❌ Removed: Step 3 does NOT output history
+    # "history": {
+    #     "times": list,
+    #     "divergence_norms": list,
+    #     "max_velocity_history": list,
+    #     "ppe_iterations_history": list,
+    #     "energy_history": list,
+    # },
 }
