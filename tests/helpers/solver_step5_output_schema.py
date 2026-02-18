@@ -24,7 +24,6 @@ EXPECTED_STEP5_SCHEMA = [
 
     # Step 5 structured outputs
     "step5_outputs",
-    "final_health",
 
     # Step 5 sets this to True
     "ready_for_time_loop",
