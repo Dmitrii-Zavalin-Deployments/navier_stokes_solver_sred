@@ -17,8 +17,9 @@ def build_advection_structure(state: SolverState) -> None:
     # Scale Guard: Accessing via dict keys
     dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
     
-    # Retrieve scheme from config (defaulting to central if not set)
-    scheme = getattr(state.config, "advection_scheme", "central_difference_2nd_order")
+    # Retrieve scheme from config dict (defaulting to central if not set)
+    # Using .get() because state.config is a dictionary
+    scheme = state.config.get("advection_scheme", "central_difference_2nd_order")
     
     # This dictionary will be used by the Predictor in Step 3
     state.operators["advection"] = {
