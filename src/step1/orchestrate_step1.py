@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 import numpy as np
+import json
+import os
+import jsonschema
 from types import SimpleNamespace
 
 from src.solver_state import SolverState
@@ -50,18 +53,16 @@ def orchestrate_step1(
     """
 
     # ---------------------------------------------------------
-    # 0. Input schema validation (tests expect RuntimeError)
+    # 0. Input schema validation (Fixes test_step1_input_schema_failure)
     # ---------------------------------------------------------
-    required = [
-        "domain",
-        "fluid_properties",
-        "initial_conditions",
-        "boundary_conditions",
-        "external_forces",
-    ]
-    for key in required:
-        if key not in json_input:
-            raise RuntimeError(f"Missing required key: {key}")
+    schema_path = os.path.join("schema", "solver_input_schema.json")
+    try:
+        with open(schema_path, "r") as f:
+            input_schema = json.load(f)
+        jsonschema.validate(instance=json_input, schema=input_schema)
+    except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+        # Re-raising as RuntimeError because the frozen test expects it
+        raise RuntimeError(f"Validation error: {exc}") from exc
 
     # ---------------------------------------------------------
     # 1. Parse config (dt + external_forces)
@@ -69,16 +70,14 @@ def orchestrate_step1(
     config = parse_config(json_input)
 
     # ---------------------------------------------------------
-    # 2. Validate physical constraints (density, viscosity, etc.)
+    # 2. Validate physical constraints (Fixes test_step1_physical_constraints_failure)
     # ---------------------------------------------------------
     validate_physical_constraints(json_input)
 
     # ---------------------------------------------------------
     # 3. Grid (nx, ny, nz, dx, dy, dz)
     # ---------------------------------------------------------
-    grid = initialize_grid(json_input)
-
-    nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
+    grid = initialize_grid(json_input["domain"]) # Pass domain specifically
 
     # ---------------------------------------------------------
     # 4. Allocate fields (P, U, V, W)
@@ -86,21 +85,24 @@ def orchestrate_step1(
     fields = allocate_fields(grid)
 
     # ---------------------------------------------------------
-    # 5. Geometry mask (3‑D int array)
+    # 5. Geometry mask (Fixes test_step1_geometry_mask_mapping & happy_path)
     # ---------------------------------------------------------
-    mask = map_geometry_mask(json_input, grid)
-    is_fluid = mask == 1
-    is_boundary_cell = np.zeros_like(mask, dtype=bool)
+    # Ensure map_geometry_mask returns the reshaped (nx, ny, nz) array
+    mask = map_geometry_mask(json_input["mask"], json_input["domain"])
+    
+    is_fluid = (mask == 1)
+    # Boundary cells are typically mask == -1
+    is_boundary_cell = (mask == -1)
 
     # ---------------------------------------------------------
-    # 6. Derived constants (SimpleNamespace)
+    # 6. Derived constants (Ensure this returns a SimpleNamespace)
     # ---------------------------------------------------------
-    constants = compute_derived_constants(json_input, grid, config)
+    constants = compute_derived_constants(json_input)
 
     # ---------------------------------------------------------
-    # 7. Boundary conditions (must be list, not None)
+    # 7. Boundary conditions (Fixes test_step1_boundary_conditions)
     # ---------------------------------------------------------
-    boundary_conditions = parse_boundary_conditions(json_input)
+    boundary_conditions = parse_boundary_conditions(json_input.get("boundary_conditions", []))
 
     # ---------------------------------------------------------
     # 8. Empty containers (matching frozen Step‑1 dummy)
@@ -140,6 +142,6 @@ def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
     """
     Modern Step‑1 orchestrator: returns a SolverState object.
     """
-
     state_dict = orchestrate_step1(json_input)
-    return assemble_simulation_state(state_dict)
+    # assemble_simulation_state should convert the dict into a dot-notation object
+    return assemble_simulation_state(**state_dict)
