@@ -16,9 +16,9 @@ def test_correct_grid_spacing_computation():
 
     grid = initialize_grid(domain)
 
-    assert grid.dx == pytest.approx((8.0 - 0.0) / 4)
-    assert grid.dy == pytest.approx((3.0 - (-1.0)) / 2)
-    assert grid.dz == pytest.approx((6.0 - 2.0) / 1)
+    assert grid["dx"] == pytest.approx((8.0 - 0.0) / 4)
+    assert grid["dy"] == pytest.approx((3.0 - (-1.0)) / 2)
+    assert grid["dz"] == pytest.approx((6.0 - 2.0) / 1)
 
 
 def test_missing_required_keys_raise_keyerror():
@@ -82,7 +82,6 @@ def test_extents_must_be_ordered_correctly():
 
 
 def test_dx_dy_dz_must_be_positive_and_finite():
-    # dx = (x_max - x_min) / nx
     domain = {
         "nx": 1, "ny": 1, "nz": 1,
         "x_min": 0.0, "x_max": 0.0,  # dx = 0 → invalid
