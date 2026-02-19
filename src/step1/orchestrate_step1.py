@@ -4,9 +4,19 @@ from __future__ import annotations
 
 from typing import Any, Dict
 import numpy as np
+from types import SimpleNamespace
 
 from src.solver_state import SolverState
+
 from .parse_config import parse_config
+from .initialize_grid import initialize_grid
+from .allocate_fields import allocate_fields
+from .map_geometry_mask import map_geometry_mask
+from .parse_boundary_conditions import parse_boundary_conditions
+from .compute_derived_constants import compute_derived_constants
+from .validate_physical_constraints import validate_physical_constraints
+from .assemble_simulation_state import assemble_simulation_state
+
 
 DEBUG_STEP1 = True
 
@@ -26,28 +36,32 @@ def debug_state_step1(state: Dict[str, Any]) -> None:
     print("====================================================================\n")
 
 
+# =====================================================================
+# PURE DICT‑BASED ORCHESTRATOR (frozen Step‑1 contract)
+# =====================================================================
+
 def orchestrate_step1(
     json_input: Dict[str, Any],
     _unused_schema_argument: Dict[str, Any] = None,
     **_ignored_kwargs,
 ) -> Dict[str, Any]:
     """
-    Step 1 — Minimal orchestrator aligned with the frozen Step 1 schema
-    and the frozen Step 1 dummy.
-
-    Produces:
-      • config
-      • grid
-      • fields
-      • mask
-      • is_fluid
-      • is_boundary_cell
-      • constants
-      • boundary_conditions
-      • operators
-      • ppe
-      • health
+    Step 1 — Minimal orchestrator aligned with the frozen Step‑1 schema.
     """
+
+    # ---------------------------------------------------------
+    # 0. Input schema validation (tests expect RuntimeError)
+    # ---------------------------------------------------------
+    required = [
+        "domain",
+        "fluid_properties",
+        "initial_conditions",
+        "boundary_conditions",
+        "external_forces",
+    ]
+    for key in required:
+        if key not in json_input:
+            raise RuntimeError(f"Missing required key: {key}")
 
     # ---------------------------------------------------------
     # 1. Parse config (dt + external_forces)
@@ -55,66 +69,48 @@ def orchestrate_step1(
     config = parse_config(json_input)
 
     # ---------------------------------------------------------
-    # 2. Grid (simple uniform grid, matching Step 1 dummy)
+    # 2. Validate physical constraints (density, viscosity, etc.)
     # ---------------------------------------------------------
-    nx = json_input["domain"]["nx"]
-    ny = json_input["domain"]["ny"]
-    nz = json_input["domain"]["nz"]
-
-    grid = {
-        "nx": nx,
-        "ny": ny,
-        "nz": nz,
-        "dx": 1.0,
-        "dy": 1.0,
-        "dz": 1.0,
-    }
+    validate_physical_constraints(json_input)
 
     # ---------------------------------------------------------
-    # 3. Constants (matching Step 1 dummy)
+    # 3. Grid (nx, ny, nz, dx, dy, dz)
     # ---------------------------------------------------------
-    constants = {
-        "rho": json_input["fluid_properties"]["density"],
-        "mu": json_input["fluid_properties"]["viscosity"],
-        "dt": config["dt"],
-        "dx": grid["dx"],
-        "dy": grid["dy"],
-        "dz": grid["dz"],
-    }
+    grid = initialize_grid(json_input)
+
+    nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
 
     # ---------------------------------------------------------
-    # 4. Mask (3D array of ints)
+    # 4. Allocate fields (P, U, V, W)
     # ---------------------------------------------------------
-    mask_list = json_input["mask"]
-    mask = np.array(mask_list, dtype=int)
+    fields = allocate_fields(grid)
 
+    # ---------------------------------------------------------
+    # 5. Geometry mask (3‑D int array)
+    # ---------------------------------------------------------
+    mask = map_geometry_mask(json_input, grid)
     is_fluid = mask == 1
     is_boundary_cell = np.zeros_like(mask, dtype=bool)
 
     # ---------------------------------------------------------
-    # 5. Fields (matching Step 1 dummy)
+    # 6. Derived constants (SimpleNamespace)
     # ---------------------------------------------------------
-    fields = {
-        "P": np.zeros((nx, ny, nz)),
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-    }
+    constants = compute_derived_constants(json_input, grid, config)
 
     # ---------------------------------------------------------
-    # 6. Boundary conditions (Step 1 dummy sets None)
+    # 7. Boundary conditions (must be list, not None)
     # ---------------------------------------------------------
-    boundary_conditions = None
+    boundary_conditions = parse_boundary_conditions(json_input)
 
     # ---------------------------------------------------------
-    # 7. Empty containers (matching Step 1 dummy)
+    # 8. Empty containers (matching frozen Step‑1 dummy)
     # ---------------------------------------------------------
     operators = {}
     ppe = {}
     health = {}
 
     # ---------------------------------------------------------
-    # 8. Assemble final Step 1 state dict
+    # 9. Assemble final Step‑1 state dict
     # ---------------------------------------------------------
     state_dict = {
         "config": config,
@@ -137,28 +133,13 @@ def orchestrate_step1(
 
 
 # =====================================================================
-# STATE‑BASED STEP 1 ORCHESTRATOR
+# STATE‑BASED ORCHESTRATOR (returns SolverState)
 # =====================================================================
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
     """
-    Modern Step 1 orchestrator: returns a SolverState object.
+    Modern Step‑1 orchestrator: returns a SolverState object.
     """
 
     state_dict = orchestrate_step1(json_input)
-
-    state = SolverState(
-        config=state_dict["config"],
-        grid=state_dict["grid"],
-        fields=state_dict["fields"],
-        mask=state_dict["mask"],
-        is_fluid=state_dict["is_fluid"],
-        is_boundary_cell=state_dict["is_boundary_cell"],
-        constants=state_dict["constants"],
-        boundary_conditions=state_dict["boundary_conditions"],
-        operators=state_dict["operators"],
-        ppe=state_dict["ppe"],
-        health=state_dict["health"],
-    )
-
-    return state
+    return assemble_simulation_state(state_dict)
