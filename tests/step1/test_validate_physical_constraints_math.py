@@ -27,7 +27,6 @@ def get_valid_state():
 def test_density_must_be_positive():
     state = get_valid_state()
     state.constants["rho"] = 0.0  
-    # Using case-insensitive match to be robust
     with pytest.raises(ValueError, match="(?i)density"):
         validate_physical_constraints(state)
 
@@ -47,8 +46,8 @@ def test_grid_extents_must_be_ordered():
     state = get_valid_state()
     # x_max must be > x_min.
     state.grid["x_max"] = state.grid["x_min"]
-    # Matches "extent" or "ordered"
-    with pytest.raises(ValueError, match="(?i)extent"):
+    # FIXED: Match the actual message: "x_max (0.0) must be > x_min (0.0)"
+    with pytest.raises(ValueError, match="must be >"):
         validate_physical_constraints(state)
 
 
@@ -76,7 +75,6 @@ def test_grid_counts_must_be_positive():
 
 def test_mask_shape_must_match_grid():
     state = get_valid_state()
-    # The dummy is 2x2x2; provide a mismatched 3x2x2
     state.mask = np.ones((3, 2, 2), dtype=int)
     with pytest.raises(ValueError, match="(?i)shape"):
         validate_physical_constraints(state)
@@ -84,8 +82,9 @@ def test_mask_shape_must_match_grid():
 
 def test_mask_entries_must_be_valid():
     state = get_valid_state()
-    state.mask[0, 0, 0] = 9  # Only -1, 0, 1 allowed
-    with pytest.raises(ValueError, match="(?i)mask values"):
+    state.mask[0, 0, 0] = 9 
+    # FIXED: Match actual message: "Mask contains invalid entries..."
+    with pytest.raises(ValueError, match="invalid entries"):
         validate_physical_constraints(state)
 
 
@@ -114,6 +113,5 @@ def test_initial_pressure_fields_must_be_finite():
 def test_time_step_must_be_positive():
     state = get_valid_state()
     state.constants["dt"] = 0.0
-    # Core code likely uses "time step" or "dt"
     with pytest.raises(ValueError, match="(?i)time step"):
         validate_physical_constraints(state)
