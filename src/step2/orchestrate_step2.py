@@ -3,6 +3,9 @@
 from __future__ import annotations
 from src.solver_state import SolverState
 
+# New internal dependency for numerical tuning
+from .load_numerical_config import load_numerical_config
+
 from .enforce_mask_semantics import enforce_mask_semantics
 from .create_fluid_mask import create_fluid_mask
 from .build_divergence_operator import build_divergence_operator
@@ -21,8 +24,12 @@ def orchestrate_step2_state(state: SolverState) -> SolverState:
     operators (Sparse Matrices) and prepares the Pressure Poisson Equation.
     
     All calculations are derived from state.grid, state.constants, 
-    and state.mask.
+    state.mask, and the numerical config.
     """
+    
+    # 0. Configuration Loading
+    # Independent parser: loads solver_type, tolerance, etc., from config.json
+    load_numerical_config(state)
     
     # 1. Geometry & Masking
     # Sets is_fluid, is_boundary_cell, and is_solid based on state.mask
@@ -30,12 +37,13 @@ def orchestrate_step2_state(state: SolverState) -> SolverState:
     create_fluid_mask(state)
     
     # 2. Sparse Operator Construction (Scale Guard Active)
-    # These must use state.grid and state.constants (dx, dy, dz)
+    # These use state.grid and state.constants (dx, dy, dz)
     build_divergence_operator(state)
     build_gradient_operators(state)
     build_laplacian_operators(state)
     
     # 3. Advection & PPE Setup
+    # prepare_ppe_structure now utilizes the data loaded in Step 0
     build_advection_structure(state)
     prepare_ppe_structure(state)
     
