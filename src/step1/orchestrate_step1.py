@@ -82,7 +82,6 @@ def orchestrate_step1(
     )
 
     # 5. Assemble the State Object
-    # We pass the collected parts to assemble_simulation_state to get our SolverState
     state = assemble_simulation_state(
         config=config,
         grid=grid,
@@ -93,18 +92,21 @@ def orchestrate_step1(
     )
 
     # 6. Mask Semantics (Schema: 1=fluid, 0=solid, -1=boundary-fluid)
-    # logic: fluid and boundary cells are 'active' for physics
     state.is_fluid = (mask == 1) | (mask == -1)
     state.is_boundary_cell = (mask == -1)
-    # Added explicit solid flag for completeness and visualization
     state.is_solid = (mask == 0)
 
     # 7. Physical Validation
-    # We validate the underlying data dictionary
     validate_physical_constraints(state.__dict__)
 
     if DEBUG_STEP1:
-        # We pass the __dict__ to the debugger to see all internal attributes
         debug_state_step1(state.__dict__)
 
     return state
+
+def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
+    """
+    Explicit entry point that returns the SolverState object.
+    Matches the import expected in src/step1/__init__.py.
+    """
+    return orchestrate_step1(json_input)
