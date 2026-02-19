@@ -5,7 +5,8 @@ from src.step1.map_geometry_mask import map_geometry_mask
 
 
 def test_map_geometry_mask_row_major():
-    flat = list(range(8))
+    # Valid mask values under the frozen contract: {-1, 0, 1}
+    flat = [0, 1, -1, 0, 1, 0, -1, 1]
     domain = {"nx": 2, "ny": 2, "nz": 2}
 
     mask = map_geometry_mask(flat, domain)
@@ -17,9 +18,8 @@ def test_map_geometry_mask_row_major():
 
 
 def test_map_geometry_mask_column_major():
-    # Under the frozen architecture, column-major is not supported.
-    # Both tests validate the canonical F-order reshape.
-    flat = list(range(8))
+    # Same canonical reshape; column-major is no longer supported
+    flat = [0, 1, -1, 0, 1, 0, -1, 1]
     domain = {"nx": 2, "ny": 2, "nz": 2}
 
     mask = map_geometry_mask(flat, domain)
