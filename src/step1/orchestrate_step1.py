@@ -52,8 +52,6 @@ def orchestrate_step1(
 
     # 1. Grid & Config Parsing
     grid = initialize_grid(json_input["domain"])
-    
-    # Ensure physical extents are preserved in the grid dict for validation
     grid.update({
         "x_min": json_input["domain"]["x_min"],
         "x_max": json_input["domain"]["x_max"],
@@ -81,7 +79,13 @@ def orchestrate_step1(
         json_input["simulation_parameters"]
     )
 
-    # 5. Assemble the State Object
+    # 5. Pre-calculate Mask Semantics (Required for assemble_simulation_state)
+    # Schema: 1=fluid, 0=solid, -1=boundary-fluid
+    is_fluid = (mask == 1) | (mask == -1)
+    is_boundary_cell = (mask == -1)
+
+    # 6. Assemble the State Object
+    # Passing the boolean arrays here to satisfy the function signature
     state = assemble_simulation_state(
         config=config,
         grid=grid,
@@ -89,11 +93,11 @@ def orchestrate_step1(
         mask=mask,
         constants=constants,
         boundary_conditions=bc_table if bc_table else {},
+        is_fluid=is_fluid,
+        is_boundary_cell=is_boundary_cell
     )
 
-    # 6. Mask Semantics (Schema: 1=fluid, 0=solid, -1=boundary-fluid)
-    state.is_fluid = (mask == 1) | (mask == -1)
-    state.is_boundary_cell = (mask == -1)
+    # Add the solid flag to the object after creation for Step 5/Visualization
     state.is_solid = (mask == 0)
 
     # 7. Physical Validation
@@ -105,8 +109,4 @@ def orchestrate_step1(
     return state
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
-    """
-    Explicit entry point that returns the SolverState object.
-    Matches the import expected in src/step1/__init__.py.
-    """
     return orchestrate_step1(json_input)
