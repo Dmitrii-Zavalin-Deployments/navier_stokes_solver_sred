@@ -45,21 +45,33 @@ def test_data_type_pollution(dummy_data):
 def test_flattening_order_round_trip(dummy_data):
     """
     Verifies that the 3D indexing [i, j, k] matches the canonical 
-    flattening rule: index = i + nx * (j + ny * k).
+    flattening rule (Fortran Order): index = i + nx * (j + ny * k).
+    
+    Uses valid mask values (-1, 0, 1) to satisfy core validation.
     """
     grid = dummy_data["grid"]
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
+    total_cells = nx * ny * nz
 
-    # Generate a flat mask where each value is its own index
-    flat = list(range(nx * ny * nz))
-    mask = map_geometry_mask(flat, grid)
+    # We iterate through a few key indices to ensure the mapping is correct
+    # without violating the [-1, 0, 1] rule of the core validator.
+    for target_index in [0, 1, nx, nx * ny - 1, total_cells - 1]:
+        # Create a valid mask of all 0s
+        flat = [0] * total_cells
+        # Place a '1' at the specific flat index we are testing
+        flat[target_index] = 1
+        
+        mask_3d = map_geometry_mask(flat, grid)
 
-    # Verify every coordinate maps back correctly to the flat index
-    for k in range(nz):
-        for j in range(ny):
-            for i in range(nx):
-                expected_index = i + nx * (j + ny * k)
-                assert mask[i, j, k] == expected_index
+        # Calculate expected 3D coordinates for Fortran order
+        # i changes fastest, then j, then k
+        k_exp = target_index // (nx * ny)
+        remainder = target_index % (nx * ny)
+        j_exp = remainder // nx
+        i_exp = remainder % nx
+
+        # Verify the '1' ended up in the right 3D spot
+        assert mask_3d[i_exp, j_exp, k_exp] == 1, f"Index {target_index} mapped to wrong 3D coordinate."
 
 def test_mask_in_solver_state(dummy_data):
     """
@@ -71,8 +83,15 @@ def test_mask_in_solver_state(dummy_data):
     
     mask_array = map_geometry_mask(flat_mask, grid)
     
-    # Instantiate SolverState (Object Style)
-    state = SolverState(mask=mask_array, grid=grid)
+    # Instantiate SolverState using Object Style
+    # Note: We provide empty dicts for other required fields if necessary
+    state = SolverState(
+        mask=mask_array, 
+        grid=grid, 
+        fields={}, 
+        constants={}, 
+        config={}
+    )
     
     # Assertions using attribute access
     assert isinstance(state.mask, np.ndarray)
