@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import Dict, Any
+import math
 
 
 def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
@@ -13,9 +14,16 @@ def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
         dy = (y_max - y_min) / ny
         dz = (z_max - z_min) / nz
 
-    Step 1 now validates extents and computes real spacing.
+    Step 1 validates:
+        • grid dimensions > 0
+        • extents finite
+        • extents ordered
+        • computed spacing finite and positive
     """
 
+    # ---------------------------------------------------------
+    # Extract values
+    # ---------------------------------------------------------
     nx = int(domain["nx"])
     ny = int(domain["ny"])
     nz = int(domain["nz"])
@@ -28,16 +36,27 @@ def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
     z_max = float(domain["z_max"])
 
     # ---------------------------------------------------------
-    # Validate extents (required by Step 1 tests)
+    # Validate grid dimensions
+    # ---------------------------------------------------------
+    if nx <= 0 or ny <= 0 or nz <= 0:
+        raise ValueError("Grid dimensions nx, ny, nz must be positive.")
+
+    # ---------------------------------------------------------
+    # Validate finiteness of extents
+    # ---------------------------------------------------------
+    for value in (x_min, x_max, y_min, y_max, z_min, z_max):
+        if not math.isfinite(value):
+            raise ValueError("Domain extents must be finite.")
+
+    # ---------------------------------------------------------
+    # Validate ordering of extents
     # ---------------------------------------------------------
     if x_max <= x_min:
-        raise ValueError(f"x_max must be greater than x_min, got {x_min} .. {x_max}")
-
+        raise ValueError("x_max must be greater than x_min.")
     if y_max <= y_min:
-        raise ValueError(f"y_max must be greater than y_min, got {y_min} .. {y_max}")
-
+        raise ValueError("y_max must be greater than y_min.")
     if z_max <= z_min:
-        raise ValueError(f"z_max must be greater than z_min, got {z_min} .. {z_max}")
+        raise ValueError("z_max must be greater than z_min.")
 
     # ---------------------------------------------------------
     # Compute physical spacing
@@ -45,6 +64,13 @@ def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
     dx = (x_max - x_min) / nx
     dy = (y_max - y_min) / ny
     dz = (z_max - z_min) / nz
+
+    # ---------------------------------------------------------
+    # Validate spacing
+    # ---------------------------------------------------------
+    for v in (dx, dy, dz):
+        if not math.isfinite(v) or v <= 0:
+            raise ValueError("Computed grid spacing must be positive and finite.")
 
     return {
         "nx": nx,
