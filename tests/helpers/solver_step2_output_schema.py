@@ -1,5 +1,13 @@
 # tests/helpers/solver_step2_output_schema.py
 
+"""
+EXPECTED_STEP2_SCHEMA defines the structural contract for the SolverState 
+after Step 2 (Operators & PPE Setup).
+
+Note: Because validation occurs on the result of SolverState.to_json_safe(),
+sparse matrices appear as metadata dictionaries containing 'type', 'shape', and 'nnz'.
+"""
+
 EXPECTED_STEP2_SCHEMA = {
     "config": dict,
     "grid": dict,
@@ -14,17 +22,37 @@ EXPECTED_STEP2_SCHEMA = {
     "mask": "ndarray",
     "is_fluid": "ndarray",
     "is_boundary_cell": "ndarray",
+    "is_solid": (type(None), "ndarray"), 
 
     "constants": dict,
 
-    # Step 2 does not modify BCs structurally, but they remain present
-    "boundary_conditions": (type(None), object),
+    # Step 2 maintains BCs but doesn't transform them into fields yet
+    "boundary_conditions": (type(None), dict, list),
 
     # Step 2 additions / updates
-    "operators": dict,   # gradient/divergence/laplacian operators
-    "ppe": dict,         # PPE structure (matrices, RHS placeholders)
-    "health": dict,      # updated health metrics after Step 2
+    # These contain metadata dicts for Laplacian, Divergence, and Gradient matrices
+    "operators": {
+        "laplacian": dict,
+        "divergence": dict,
+        "gradient": dict,
+    },
+    
+    # PPE contains solver settings and the system matrix A metadata
+    "ppe": {
+        "solver_type": str,
+        "A": dict,
+        "tolerance": float,
+        "max_iterations": int,
+        "ppe_is_singular": bool,
+        "rhs_norm": float,
+    },
+    
+    # Updated health metrics initialized in Step 2
+    "health": {
+        "divergence_norm": float,
+        "max_velocity": float,
+        "cfl": float,
+    },
 
-    # ❌ Removed: Step 2 does NOT output history
-    # "history": dict,
+    "ready_for_time_loop": bool,
 }

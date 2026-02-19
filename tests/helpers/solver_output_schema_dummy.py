@@ -6,12 +6,15 @@ solver_output_schema_dummy.py
 Canonical JSON‑safe dummy final output state that fully satisfies
 solver_output_schema.json. Used for schema validation tests and
 end‑to‑end contract tests.
+
+Updated to comply with Phase C, Rule 7 (Scale Guard):
+- Sparse matrices are represented as metadata dictionaries.
 """
 
 def solver_output_schema_dummy():
     nx, ny, nz = 2, 2, 2
 
-    # Helper to build nested lists
+    # Helper to build nested lists (JSON-safe equivalent of ndarrays)
     def zeros(shape, value=0.0):
         if len(shape) == 1:
             return [value for _ in range(shape[0])]
@@ -21,6 +24,10 @@ def solver_output_schema_dummy():
         if len(shape) == 1:
             return [value for _ in range(shape[0])]
         return [ints(shape[1:], value) for _ in range(shape[0])]
+
+    # Dimensions for metadata
+    dof_p = nx * ny * nz
+    total_vel_dof = ((nx+1)*ny*nz) + (nx*(ny+1)*nz) + (nx*ny*(nz+1))
 
     return {
         "config": {
@@ -44,19 +51,17 @@ def solver_output_schema_dummy():
             "dz": 1.0,
         },
 
-        # Cell-centered fields
         "fields": {
             "P": zeros((nx, ny, nz)),
-            "U": zeros((nx, ny, nz)),
-            "V": zeros((nx, ny, nz)),
-            "W": zeros((nx, ny, nz)),
+            "U": zeros((nx + 1, ny, nz)), # Staggered shape
+            "V": zeros((nx, ny + 1, nz)),
+            "W": zeros((nx, ny, nz + 1)),
         },
 
-        # Integer mask
         "mask": ints((nx, ny, nz), value=1),
-
         "is_fluid": ints((nx, ny, nz), value=1),
         "is_boundary_cell": ints((nx, ny, nz), value=0),
+        "is_solid": ints((nx, ny, nz), value=0),
 
         "constants": {
             "rho": 1.0,
@@ -70,15 +75,24 @@ def solver_output_schema_dummy():
         "boundary_conditions": {},
 
         "health": {
-            "post_correction_divergence_norm": 0.0,
-            "max_velocity_magnitude": 0.0,
-            "cfl_advection_estimate": 0.0,
+            "divergence_norm": 0.0,
+            "max_velocity": 0.0,
+            "cfl": 0.0,
         },
 
-        "operators": {},
+        # Scale Guard: Sparse matrices as metadata dicts
+        "operators": {
+            "laplacian": {"type": "csr", "shape": [dof_p, dof_p], "nnz": 0},
+            "divergence": {"type": "csr", "shape": [dof_p, total_vel_dof], "nnz": 0},
+            "gradient": {"type": "csr", "shape": [total_vel_dof, dof_p], "nnz": 0},
+        },
 
         "ppe": {
-            "singularity_detected": False,
+            "solver_type": "sparse_cg",
+            "A": {"type": "csr", "shape": [dof_p, dof_p], "nnz": 0},
+            "tolerance": 1e-6,
+            "max_iterations": 1000,
+            "ppe_is_singular": True,
             "rhs_norm": 0.0,
         },
 
@@ -87,7 +101,7 @@ def solver_output_schema_dummy():
             "max_velocity": 0.0,
         },
 
-        # Extended fields (shapes arbitrary but consistent)
+        # Extended fields (padded for BCs)
         "P_ext": zeros((nx+2, ny+2, nz+2)),
         "U_ext": zeros((nx+2, ny+2, nz+2)),
         "V_ext": zeros((nx+2, ny+2, nz+2)),

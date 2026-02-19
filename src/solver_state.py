@@ -75,28 +75,44 @@ class SolverState:
     def to_json_safe(self) -> Dict[str, Any]:
         """
         Convert the entire solver state into a JSON-safe dictionary.
-        NumPy arrays become lists; nested dicts are converted recursively.
-        Callables (e.g., operator functions) are replaced with None to 
-        maintain key presence for schema validation.
+        
+        Updated to satisfy the Phase C, Rule 7 (Scale Guard):
+        - SciPy sparse matrices are summarized as metadata to prevent OOM errors.
+        - NumPy arrays become lists.
+        - Callables are nullified to maintain schema key-presence.
         """
+        from scipy.sparse import issparse
+
         def convert(value):
+            # 1. Handle SciPy Sparse Matrices (Scale Guard)
+            # Prevents .tolist() on 10^6 x 10^6 matrices
+            if issparse(value):
+                return {
+                    "type": str(value.format),  # e.g., 'csr', 'csc'
+                    "shape": list(value.shape),
+                    "nnz": int(value.nnz)
+                }
+
+            # 2. Handle Dense NumPy arrays
             if isinstance(value, np.ndarray):
                 return value.tolist()
+
+            # 3. Handle Dictionaries recursively
             if isinstance(value, dict):
-                # Recursively convert dictionary values
                 return {k: convert(v) for k, v in value.items()}
+
+            # 4. Handle Callables (replaced with None for JSON)
             if callable(value):
-                # We keep the key but nullify the value for JSON
                 return None
-            # Handle numpy scalar types (like np.float64) which JSON encoder dislikes
-            if hasattr(value, "item"):
+
+            # 5. Handle NumPy scalars (np.float64, etc.)
+            if hasattr(value, "item") and not isinstance(value, (list, dict)):
                 return value.item()
+
             return value
 
         result = {}
         for key, value in self.__dict__.items():
-            # We process ALL keys, including 'operators', to ensure 
-            # the dictionary matches the required Step 1/Final schemas.
             result[key] = convert(value)
 
         return result
