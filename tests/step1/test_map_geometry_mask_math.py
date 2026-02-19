@@ -7,18 +7,21 @@ from src.step1.map_geometry_mask import map_geometry_mask
 
 
 # ---------------------------------------------------------
-# Shape validation
+# Shape validation (via domain dict)
 # ---------------------------------------------------------
 
 def test_invalid_shape_raises():
+    # Negative dimension
     with pytest.raises(ValueError):
-        map_geometry_mask([1, 2, 3], shape=(4, 4), order_formula="C")
+        map_geometry_mask([1, 2, 3], {"nx": 4, "ny": -1, "nz": 2})
 
+    # Non-integer dimension
     with pytest.raises(ValueError):
-        map_geometry_mask([1, 2, 3], shape=(4, -1, 2), order_formula="C")
+        map_geometry_mask([1, 2, 3], {"nx": "bad", "ny": 2, "nz": 2})
 
-    with pytest.raises(ValueError):
-        map_geometry_mask([1, 2, 3], shape="not-a-shape", order_formula="C")
+    # Missing keys
+    with pytest.raises(KeyError):
+        map_geometry_mask([1, 2, 3], {"nx": 4, "ny": 4})  # missing nz
 
 
 # ---------------------------------------------------------
@@ -27,7 +30,7 @@ def test_invalid_shape_raises():
 
 def test_mask_flat_must_be_iterable():
     with pytest.raises(TypeError):
-        map_geometry_mask(12345, shape=(1, 1, 1), order_formula="C")
+        map_geometry_mask(12345, {"nx": 1, "ny": 1, "nz": 1})
 
 
 # ---------------------------------------------------------
@@ -35,11 +38,15 @@ def test_mask_flat_must_be_iterable():
 # ---------------------------------------------------------
 
 def test_mask_flat_length_must_match_shape():
-    with pytest.raises(ValueError):
-        map_geometry_mask([1, 2], shape=(2, 2, 2), order_formula="C")
+    domain = {"nx": 2, "ny": 2, "nz": 2}
 
+    # Too short
     with pytest.raises(ValueError):
-        map_geometry_mask(list(range(10)), shape=(2, 2, 2), order_formula="C")
+        map_geometry_mask([1, 2], domain)
+
+    # Too long
+    with pytest.raises(ValueError):
+        map_geometry_mask(list(range(10)), domain)
 
 
 # ---------------------------------------------------------
@@ -51,71 +58,33 @@ def test_mask_entries_must_be_finite_integers():
 
     for bad in bad_values:
         with pytest.raises(ValueError):
-            map_geometry_mask([bad], shape=(1, 1, 1), order_formula="C")
+            map_geometry_mask([bad], {"nx": 1, "ny": 1, "nz": 1})
 
 
 # ---------------------------------------------------------
-# Semantic validation (Step 1 allows arbitrary integers)
+# Semantic validation (Step 1 allows only {-1, 0, 1})
 # ---------------------------------------------------------
 
-def test_semantic_validation_allows_flattening_test_values():
-    arr = map_geometry_mask(
-        [0, 1, 2, 3, 4, 5, 6, 7],
-        shape=(2, 2, 2),
-        order_formula="C",
-    )
+def test_semantic_validation_allows_valid_entries():
+    flat = [0, 1, -1, 0, 1, 0, -1, 1]
+    domain = {"nx": 2, "ny": 2, "nz": 2}
+
+    arr = map_geometry_mask(flat, domain)
+    expected = np.array(flat).reshape((2, 2, 2), order="F")
+
     assert arr.shape == (2, 2, 2)
-
-
-# ---------------------------------------------------------
-# Flattening order tests
-# ---------------------------------------------------------
-
-def test_c_order_mapping():
-    flat = list(range(8))
-    arr = map_geometry_mask(flat, shape=(2, 2, 2), order_formula="C")
-    expected = np.array(flat).reshape((2, 2, 2), order="C")
     assert np.array_equal(arr, expected)
 
 
-def test_f_order_mapping():
-    flat = list(range(8))
-    arr = map_geometry_mask(flat, shape=(2, 2, 2), order_formula="F")
+# ---------------------------------------------------------
+# Canonical flattening rule tests
+# ---------------------------------------------------------
+
+def test_canonical_f_order_mapping():
+    flat = [0, 1, -1, 0, 1, 0, -1, 1]
+    domain = {"nx": 2, "ny": 2, "nz": 2}
+
+    arr = map_geometry_mask(flat, domain)
     expected = np.array(flat).reshape((2, 2, 2), order="F")
-    assert np.array_equal(arr, expected)
-
-
-def test_fortran_formula_i_nx_j_ny_k():
-    flat = list(range(8))
-    arr = map_geometry_mask(flat, shape=(2, 2, 2), order_formula="i + nx*(j + ny*k)")
-    expected = np.array(flat).reshape((2, 2, 2), order="F")
-    assert np.array_equal(arr, expected)
-
-
-def test_fortran_formula_k_nz_j_ny_i():
-    flat = list(range(8))
-    arr = map_geometry_mask(flat, shape=(2, 2, 2), order_formula="k + nz*(j + ny*i)")
-
-    tmp = np.array(flat).reshape((2, 2, 2), order="F")
-    expected = tmp.transpose(2, 1, 0)
 
     assert np.array_equal(arr, expected)
-
-
-def test_fortran_formula_j_ny_i_nx_k():
-    flat = list(range(8))
-    arr = map_geometry_mask(flat, shape=(2, 2, 2), order_formula="j + ny*(i + nx*k)")
-
-    tmp = np.array(flat).reshape((2, 2, 2), order="F")
-    expected = tmp.transpose(1, 0, 2)
-
-    assert np.array_equal(arr, expected)
-
-
-# ---------------------------------------------------------
-# Unknown formula
-# ---------------------------------------------------------
-
-def test_unknown_formula_raises():
-    with pytest.raises(ValueError):
-        map_geometry_mask([0], shape=(1, 1, 1), order_formula="UNKNOWN_ORDER")
