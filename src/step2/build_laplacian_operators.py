@@ -9,16 +9,16 @@ def build_laplacian_operators(state: SolverState) -> None:
     """
     Construct a sparse 7-point Laplacian operator for the Pressure Poisson Equation.
     
-    This matrix L represents the second derivatives (diffusion) of pressure.
-    It is a square matrix of shape (N_cells, N_cells).
+    This matrix represents the second derivatives (diffusion) of pressure.
+    It is a square matrix of shape (nx*ny*nz, nx*ny*nz).
     """
     grid = state.grid
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     
-    # Accessing constants via dict keys to fix AttributeError
-    dx2 = state.constants['dx']**2
-    dy2 = state.constants['dy']**2
-    dz2 = state.constants['dz']**2
+    # Grid spacing pulled from the grid dictionary
+    dx2 = grid['dx']**2
+    dy2 = grid['dy']**2
+    dz2 = grid['dz']**2
     is_fluid = state.is_fluid
     
     num_cells = nx * ny * nz
@@ -32,8 +32,8 @@ def build_laplacian_operators(state: SolverState) -> None:
             for i in range(nx):
                 curr = get_idx(i, j, k)
                 
-                # If cell is solid, we place a 1 on the diagonal.
-                # This makes the matrix non-singular and easier for the solver.
+                # Solid cell handling: 
+                # Place 1.0 on the diagonal to keep the matrix invertible (non-singular).
                 if not is_fluid[i, j, k]:
                     rows.append(curr)
                     cols.append(curr)
@@ -66,10 +66,13 @@ def build_laplacian_operators(state: SolverState) -> None:
                         data.append(1.0 / dz2)
                         center_val -= 1.0 / dz2
 
-                # Diagonal element (the center of the 7-point stencil)
+                # Diagonal element (center of the 7-point stencil)
                 rows.append(curr)
                 cols.append(curr)
                 data.append(center_val)
 
-    # Store as a single sparse matrix under the key "laplacian"
-    state.operators["laplacian"] = sp.csr_matrix((data, (rows, cols)), shape=(num_cells, num_cells))
+    # Store as a sparse CSR matrix for efficient linear solving in Step 3
+    state.operators["laplacian"] = sp.csr_matrix(
+        (data, (rows, cols)), 
+        shape=(num_cells, num_cells)
+    )
