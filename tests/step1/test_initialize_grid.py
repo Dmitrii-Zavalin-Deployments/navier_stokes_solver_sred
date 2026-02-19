@@ -14,10 +14,13 @@ def test_initialize_grid_basic():
 
     grid = initialize_grid(domain)
 
-    assert grid.nx == 4
-    assert grid.dx == 1.0
-    assert grid.dy == 1.0
-    assert grid.dz == 1.0
+    assert grid["nx"] == 4
+    assert grid["ny"] == 6
+    assert grid["nz"] == 2
+
+    assert grid["dx"] == pytest.approx(1.0)
+    assert grid["dy"] == pytest.approx(1.0)
+    assert grid["dz"] == pytest.approx(1.0)
 
 
 def test_initialize_grid_invalid_extents():
