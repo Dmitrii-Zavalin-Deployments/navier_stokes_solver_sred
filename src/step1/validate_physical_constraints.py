@@ -1,48 +1,45 @@
 # src/step1/validate_physical_constraints.py
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, TYPE_CHECKING
 import math
 import numpy as np
 
+if TYPE_CHECKING:
+    from src.solver_state import SolverState
 
 def _ensure_positive(name: str, value: float) -> None:
     if not math.isfinite(value) or value <= 0.0:
         raise ValueError(f"{name} must be a finite number > 0, got {value}")
 
-
 def _ensure_non_negative(name: str, value: float) -> None:
     if not math.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be a finite number >= 0, got {value}")
-
 
 def _ensure_positive_int(name: str, value: int) -> None:
     if not isinstance(value, (int, np.integer)) or value <= 0:
         raise ValueError(f"{name} must be a positive integer, got {value}")
 
-
 def _ensure_finite(name: str, value: float) -> None:
     if not math.isfinite(value):
         raise ValueError(f"{name} must be finite, got {value}")
 
-
-def validate_physical_constraints(data: Dict[str, Any]) -> None:
+def validate_physical_constraints(state: SolverState) -> None:
     """
     Fatal physical checks for the Step 1 state.
-    Matches the state structure: grid, constants, fields, and mask.
+    Accesses state attributes: grid, constants, fields, and mask.
     """
 
-    # 1. Access sections as they appear in the DEBUG State Summary
-    # These will raise KeyError if the orchestrator fails to provide them.
-    grid = data["grid"]
-    constants = data["constants"]
-    fields = data["fields"]
-    mask = data["mask"]
+    # 1. Access sections via attribute access (SolverState object)
+    grid = state.grid
+    constants = state.constants
+    fields = state.fields
+    mask = state.mask
 
-    # 2. Fluid properties & Time step (extracted from constants dictionary)
+    # 2. Fluid properties & Time step
     _ensure_positive("density (rho)", float(constants["rho"]))
     _ensure_non_negative("viscosity (mu)", float(constants["mu"]))
-    _ensure_positive("time_step (dt)", float(constants["dt"]))
+    _ensure_positive("time step (dt)", float(constants["dt"]))
 
     # 3. Grid counts & Spacing
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
@@ -55,33 +52,30 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     _ensure_positive("dz", float(grid["dz"]))
 
     # 4. Domain extents validation
-    # Using .get() because processed grid state usually prioritizes dx/dy/dz
+    # Processed grid state prioritizes dx/dy/dz, but we check extents for logic consistency
     x_min, x_max = grid.get("x_min"), grid.get("x_max")
     y_min, y_max = grid.get("y_min"), grid.get("y_max")
     z_min, z_max = grid.get("z_min"), grid.get("z_max")
 
-    # Validate X-axis
     if x_min is not None and x_max is not None:
         _ensure_finite("x_min", x_min)
         _ensure_finite("x_max", x_max)
         if x_max <= x_min:
             raise ValueError(f"x_max ({x_max}) must be > x_min ({x_min})")
 
-    # Validate Y-axis
     if y_min is not None and y_max is not None:
         _ensure_finite("y_min", y_min)
         _ensure_finite("y_max", y_max)
         if y_max <= y_min:
             raise ValueError(f"y_max ({y_max}) must be > y_min ({y_min})")
 
-    # Validate Z-axis
     if z_min is not None and z_max is not None:
         _ensure_finite("z_min", z_min)
         _ensure_finite("z_max", z_max)
         if z_max <= z_min:
             raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
 
-    # 5. Mask consistency (Shape check against numpy array)
+    # 5. Mask consistency
     expected_shape = (nx, ny, nz)
     if mask.shape != expected_shape:
         raise ValueError(
@@ -92,8 +86,7 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     if not np.all(np.isin(mask, [-1, 0, 1])):
         raise ValueError("Mask contains invalid entries (only -1, 0, 1 allowed)")
 
-    # 6. Field Finiteness (Checking the actual allocated numpy arrays)
-    # This prevents the solver from starting with NaN/Inf values that crash the PPE
+    # 6. Field Finiteness
     for field_name in ["U", "V", "W", "P"]:
         if field_name in fields:
             arr = fields[field_name]
