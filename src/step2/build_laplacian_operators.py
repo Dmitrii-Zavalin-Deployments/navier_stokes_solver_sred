@@ -1,4 +1,5 @@
 # src/step2/build_laplacian_operators.py
+
 from __future__ import annotations
 import numpy as np
 import scipy.sparse as sp
