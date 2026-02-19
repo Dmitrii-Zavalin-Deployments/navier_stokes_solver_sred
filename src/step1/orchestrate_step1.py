@@ -19,18 +19,18 @@ from .assemble_simulation_state import assemble_simulation_state
 
 DEBUG_STEP1 = True
 
-def debug_state_step1(state: Dict[str, Any]) -> None:
+def debug_state_step1(state_obj: SolverState) -> None:
+    """Prints a summary using the SolverState object attributes."""
     print("\n==================== DEBUG: STEP‑1 STATE SUMMARY ====================")
-    for key, value in state.items():
-        print(f"\n• {key}: {type(value)}")
+    # We iterate over the main attributes expected in SolverState
+    attrs = ["grid", "fields", "constants", "mask", "boundary_conditions"]
+    for attr in attrs:
+        value = getattr(state_obj, attr, None)
+        print(f"\n• {attr}: {type(value)}")
         if isinstance(value, np.ndarray):
             print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
         elif isinstance(value, dict):
             print(f"    dict keys={list(value.keys())}")
-        elif hasattr(value, "__dict__"):
-            print(f"    object attributes={list(vars(value).keys())}")
-        else:
-            print(f"    value={value}")
     print("====================================================================\n")
 
 def orchestrate_step1(
@@ -50,15 +50,18 @@ def orchestrate_step1(
     except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
         raise RuntimeError(f"Input schema validation FAILED: {exc}") from exc
 
-    # 1. Grid & Config Parsing
-    grid = initialize_grid(json_input["grid"])
+    # 1. Grid & Config Parsing (Renamed from domain to grid)
+    grid_params = json_input["grid"]
+    grid = initialize_grid(grid_params)
+    
+    # Ensure all coordinate extents are present in the grid dict
     grid.update({
-        "x_min": json_input["grid"]["x_min"],
-        "x_max": json_input["grid"]["x_max"],
-        "y_min": json_input["grid"]["y_min"],
-        "y_max": json_input["grid"]["y_max"],
-        "z_min": json_input["grid"]["z_min"],
-        "z_max": json_input["grid"]["z_max"],
+        "x_min": grid_params["x_min"],
+        "x_max": grid_params["x_max"],
+        "y_min": grid_params["y_min"],
+        "y_max": grid_params["y_max"],
+        "z_min": grid_params["z_min"],
+        "z_max": grid_params["z_max"],
     })
 
     config = parse_config(json_input)
@@ -69,7 +72,8 @@ def orchestrate_step1(
     fields = allocate_fields(grid)
     
     # 3. Mask & Boundary Processing
-    mask = map_geometry_mask(json_input["mask"], json_input["grid"])
+    # Pass the grid sub-dict to the mask mapper
+    mask = map_geometry_mask(json_input["mask"], grid_params)
     bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
 
     # 4. Numerical Constants
@@ -79,13 +83,12 @@ def orchestrate_step1(
         json_input["simulation_parameters"]
     )
 
-    # 5. Pre-calculate Mask Semantics (Required for assemble_simulation_state)
+    # 5. Pre-calculate Mask Semantics
     # Schema: 1=fluid, 0=solid, -1=boundary-fluid
     is_fluid = (mask == 1) | (mask == -1)
     is_boundary_cell = (mask == -1)
 
     # 6. Assemble the State Object
-    # Passing the boolean arrays here to satisfy the function signature
     state = assemble_simulation_state(
         config=config,
         grid=grid,
@@ -97,16 +100,18 @@ def orchestrate_step1(
         is_boundary_cell=is_boundary_cell
     )
 
-    # Add the solid flag to the object after creation for Step 5/Visualization
+    # Add the solid flag for visualization/Step 5
     state.is_solid = (mask == 0)
 
     # 7. Physical Validation
-    validate_physical_constraints(state.__dict__)
+    # FIXED: Pass the 'state' object itself, NOT state.__dict__
+    validate_physical_constraints(state)
 
     if DEBUG_STEP1:
-        debug_state_step1(state.__dict__)
+        debug_state_step1(state)
 
     return state
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
+    """Helper to ensure we return the SolverState object."""
     return orchestrate_step1(json_input)
