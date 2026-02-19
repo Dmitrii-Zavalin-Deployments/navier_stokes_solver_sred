@@ -13,8 +13,9 @@ def build_divergence_operator(state: SolverState) -> None:
     """
     grid = state.grid
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
-    dx, dy, dz = state.constants['dx'], state.constants['dy'], state.constants['dz']
-    is_fluid = state.is_fluid # Used to zero out divergence in solid cells
+    # Scale Guard: Pull from grid dict
+    dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
+    is_fluid = state.is_fluid 
     
     num_cells = nx * ny * nz
     
@@ -23,7 +24,6 @@ def build_divergence_operator(state: SolverState) -> None:
     num_v = nx * (ny + 1) * nz
     num_w = nx * ny * (nz + 1)
 
-    # Helper to get flat cell index (pressure centers)
     def get_c_idx(i, j, k): return i + j * nx + k * nx * ny
 
     # --- Dx (U contribution) ---
@@ -34,7 +34,7 @@ def build_divergence_operator(state: SolverState) -> None:
                 cell = get_c_idx(i, j, k)
                 if not is_fluid[i, j, k]: continue
                 
-                # U indices: u[i, j, k] is west face, u[i+1, j, k] is east face
+                # U staggered indices
                 idx_w = i + j * (nx + 1) + k * (nx + 1) * ny
                 idx_e = (i + 1) + j * (nx + 1) + k * (nx + 1) * ny
                 
@@ -52,7 +52,7 @@ def build_divergence_operator(state: SolverState) -> None:
                 cell = get_c_idx(i, j, k)
                 if not is_fluid[i, j, k]: continue
                 
-                # V indices: v[i, j, k] is south face, v[i, j+1, k] is north face
+                # V staggered indices
                 idx_s = i + j * nx + k * nx * (ny + 1)
                 idx_n = i + (j + 1) * nx + k * nx * (ny + 1)
                 
@@ -70,7 +70,7 @@ def build_divergence_operator(state: SolverState) -> None:
                 cell = get_c_idx(i, j, k)
                 if not is_fluid[i, j, k]: continue
                 
-                # W indices: w[i, j, k] is back face, w[i, j, k+1] is front face
+                # W staggered indices
                 idx_b = i + j * nx + k * nx * ny
                 idx_f = i + j * nx + (k + 1) * nx * ny
                 
