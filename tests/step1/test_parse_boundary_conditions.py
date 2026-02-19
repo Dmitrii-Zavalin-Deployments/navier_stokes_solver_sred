@@ -3,16 +3,12 @@
 import pytest
 
 from src.step1.parse_boundary_conditions import parse_boundary_conditions
-from src.step1.types import GridConfig
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
-
-GRID = GridConfig(
-    nx=4, ny=4, nz=4,
-    dx=1.0, dy=1.0, dz=1.0,
-    x_min=0.0, x_max=1.0,
-    y_min=0.0, y_max=1.0,
-    z_min=0.0, z_max=1.0,
-)
+# Use the dummy helper to get the domain dictionary
+# This satisfies the requirement to use the dummy as a base
+DUMMY_DATA = solver_input_schema_dummy()
+GRID = DUMMY_DATA["domain"]
 
 
 def test_invalid_location_rejected():
