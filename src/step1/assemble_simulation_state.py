@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Any, Dict
 import numpy as np
 
-# REMOVED: from .types import (...)  <-- Fixing the ModuleNotFoundError
+# Import the actual class we want to create
+from src.solver_state import SolverState
 
 def assemble_simulation_state(
     config: Dict[str, Any],
@@ -19,39 +20,31 @@ def assemble_simulation_state(
     ppe: Dict[str, Any] = None,
     health: Dict[str, Any] = None,
     **kwargs
-) -> Dict[str, Any]:
+) -> SolverState:
     """
-    Assemble a solver-ready Step 1 state dictionary.
-
-    This version removes dependencies on the missing '.types' module and 
-    strictly follows the frozen 'solver_step1_output_dummy' structure.
+    Assemble the central SolverState object for the pipeline.
+    
+    This replaces the dictionary-only approach with a proper object
+    that travels through Steps 1-5.
     """
 
-    # 1. Initialize empty containers for keys Step 1 doesn't fill yet
-    # but are required by the output schema.
-    if operators is None: operators = {}
-    if ppe is None: ppe = {}
-    if health is None: health = {}
+    # 1. Initialize Step 1 specific state into the SolverState object
+    state = SolverState(
+        config=config,
+        grid=grid,
+        fields=fields,
+        mask=mask,
+        constants=constants,
+        boundary_conditions=boundary_conditions if boundary_conditions is not None else {},
+        is_fluid=is_fluid,
+        is_boundary_cell=is_boundary_cell,
+        operators=operators if operators is not None else {},
+        ppe=ppe if ppe is not None else {},
+        health=health if health is not None else {}
+    )
 
-    # 2. Assemble final Step 1 state dictionary
-    # Keys match EXACTLY with EXPECTED_STEP1_SCHEMA and solver_output_schema.json
-    state = {
-        "config": config,
-        "grid": grid,
-        "fields": fields,
-        "mask": mask,
-        "is_fluid": is_fluid,
-        "is_boundary_cell": is_boundary_cell,
-        "constants": constants,
-        "boundary_conditions": boundary_conditions,
-        "operators": operators,
-        "ppe": ppe,
-        "health": health,
-        "ready_for_time_loop": False,
-        "P_ext": None,
-        "U_ext": None,
-        "V_ext": None,
-        "W_ext": None,
-    }
-
+    # 2. Set any additional flags or extended fields if provided via kwargs
+    # This keeps the assembly flexible for future steps
+    state.ready_for_time_loop = kwargs.get("ready_for_time_loop", False)
+    
     return state
