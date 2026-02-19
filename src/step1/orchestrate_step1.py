@@ -55,13 +55,14 @@ def orchestrate_step1(
     # ---------------------------------------------------------
     # 0. Input schema validation (Fixes test_step1_input_schema_failure)
     # ---------------------------------------------------------
+    # Enforces the immutable contract defined in solver_input_schema.json
     schema_path = os.path.join("schema", "solver_input_schema.json")
     try:
         with open(schema_path, "r") as f:
             input_schema = json.load(f)
         jsonschema.validate(instance=json_input, schema=input_schema)
     except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
-        # Re-raising as RuntimeError because the frozen test expects it
+        # Re-raising as RuntimeError to satisfy the unit test expectation
         raise RuntimeError(f"Validation error: {exc}") from exc
 
     # ---------------------------------------------------------
@@ -72,12 +73,14 @@ def orchestrate_step1(
     # ---------------------------------------------------------
     # 2. Validate physical constraints (Fixes test_step1_physical_constraints_failure)
     # ---------------------------------------------------------
+    # Semantic check for density > 0, viscosity > 0, etc.
     validate_physical_constraints(json_input)
 
     # ---------------------------------------------------------
     # 3. Grid (nx, ny, nz, dx, dy, dz)
     # ---------------------------------------------------------
-    grid = initialize_grid(json_input["domain"]) # Pass domain specifically
+    # Aligned to frozen Step 1 dummy (2x2x2)
+    grid = initialize_grid(json_input["domain"])
 
     # ---------------------------------------------------------
     # 4. Allocate fields (P, U, V, W)
@@ -87,21 +90,22 @@ def orchestrate_step1(
     # ---------------------------------------------------------
     # 5. Geometry mask (Fixes test_step1_geometry_mask_mapping & happy_path)
     # ---------------------------------------------------------
-    # Ensure map_geometry_mask returns the reshaped (nx, ny, nz) array
+    # Reshapes flat mask list to (nx, ny, nz) NumPy array
     mask = map_geometry_mask(json_input["mask"], json_input["domain"])
     
     is_fluid = (mask == 1)
-    # Boundary cells are typically mask == -1
+    # Logic for boundary detection (usually mask values <= 0 or specific flags)
     is_boundary_cell = (mask == -1)
 
     # ---------------------------------------------------------
-    # 6. Derived constants (Ensure this returns a SimpleNamespace)
+    # 6. Derived constants (rho, mu, dt, dx, etc.)
     # ---------------------------------------------------------
     constants = compute_derived_constants(json_input)
 
     # ---------------------------------------------------------
     # 7. Boundary conditions (Fixes test_step1_boundary_conditions)
     # ---------------------------------------------------------
+    # Ensures a valid list is returned, satisfying len() checks in tests
     boundary_conditions = parse_boundary_conditions(json_input.get("boundary_conditions", []))
 
     # ---------------------------------------------------------
@@ -141,7 +145,8 @@ def orchestrate_step1(
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
     """
     Modern Step‑1 orchestrator: returns a SolverState object.
+    Provides dot-notation access required by tests (e.g., state.constants.rho)
     """
     state_dict = orchestrate_step1(json_input)
-    # assemble_simulation_state should convert the dict into a dot-notation object
+    # unpacks the dictionary into the SolverState constructor/assembler
     return assemble_simulation_state(**state_dict)
