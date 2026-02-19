@@ -38,47 +38,46 @@ def orchestrate_step1(
     **_ignored_kwargs,
 ) -> Dict[str, Any]:
     """
-    Step 1 — Orchestrator strictly aligned with frozen dummy and test suite requirements.
+    Step 1 — Orchestrator strictly aligned with the production schema and 
+    staggered grid physical contract.
     """
     # 0. Structural Validation against frozen external schema
+    # Enforces the contract: domain, fluid_properties, initial_conditions, 
+    # simulation_parameters, boundary_conditions, mask, and external_forces.
     schema_path = os.path.join("schema", "solver_input_schema.json")
     try:
         with open(schema_path, "r") as f:
             input_schema = json.load(f)
         jsonschema.validate(instance=json_input, schema=input_schema)
     except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
-        # UPDATED: Added specific string to satisfy test_step1_input_schema_failure
         raise RuntimeError(f"Input schema validation FAILED. Validation error: {exc}") from exc
 
-    # 1. Logic Components
+    # 1. Physics & Configuration Parsing
     validate_physical_constraints(json_input)
     grid = initialize_grid(json_input["domain"])
-    
-    # 2. Config Assembly
-    # parse_config handles dt and external_forces. 
-    # We manually inject the rest to satisfy tests looking for 'geometry'.
     config = parse_config(json_input)
-    config["geometry"] = json_input.get("geometry", {})
-    config["initial_conditions"] = json_input.get("initial_conditions", {})
-    config["boundary_conditions"] = json_input.get("boundary_conditions", [])
     
-    # 3. Field Allocation (Staggered shapes)
+    # Ensure config dict carries over the full metadata from input
+    config["geometry"] = json_input.get("geometry", {})
+    config["initial_conditions"] = json_input["initial_conditions"]
+    config["boundary_conditions"] = json_input["boundary_conditions"]
+
+    # 2. Field Allocation (Staggered Grid)
+    # U: (nx+1, ny, nz), V: (nx, ny+1, nz), W: (nx, ny, nz+1)
     fields = allocate_fields(grid)
     
-    # 4. Geometry (Using frozen map_geometry_mask.py)
+    # 3. Geometry & Boundary Processing
     mask = map_geometry_mask(json_input["mask"], json_input["domain"])
-    
-    # 5. Derived Constants
+    parse_boundary_conditions(json_input["boundary_conditions"], grid)
+
+    # 4. Numerical Constants Calculation
     constants = compute_derived_constants(
         grid, 
         json_input["fluid_properties"], 
         json_input["simulation_parameters"]
     )
 
-    # 6. Boundary Conditions (Validation only for Step 1)
-    parse_boundary_conditions(json_input.get("boundary_conditions", []), grid)
-
-    # 7. Assemble final Step 1 state
+    # 5. Assemble Production State Dictionary
     state_dict = {
         "config": config,
         "grid": grid,
@@ -100,8 +99,7 @@ def orchestrate_step1(
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
     """
-    Returns a SolverState object as required by the state-based tests.
+    Converts the validated dictionary into a SolverState object.
     """
     state_dict = orchestrate_step1(json_input)
-    # Ensure your assemble_simulation_state accepts these keys
     return assemble_simulation_state(**state_dict)
