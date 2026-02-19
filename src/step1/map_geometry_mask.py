@@ -23,20 +23,29 @@ def map_geometry_mask(mask_flat: List[int], domain: Dict[str, Any]) -> np.ndarra
 
     expected_len = nx * ny * nz
 
-    # Validate length
+    # 1. Validate length
     if len(mask_flat) != expected_len:
         raise ValueError(
             f"Mask length {len(mask_flat)} does not match nx*ny*nz={expected_len}"
         )
 
-    # Convert to array
+    # 2. Strict type/value validation to catch non-integers, NaNs, and Infs
+    # We use a loop or generator check here because np.asarray(dtype=int) 
+    # would silently truncate 1.5 to 1, causing the test to fail to see a ValueError.
+    for val in mask_flat:
+        if not isinstance(val, (int, np.integer)):
+            # This catches floats (1.5, NaN, Inf) and strings ("x")
+            raise ValueError(f"Mask entries must be finite integers, got {val}")
+
+    # 3. Convert to array now that we know they are integers
     arr = np.asarray(mask_flat, dtype=int)
 
-    # Validate values
+    # 4. Validate allowed values (-1, 0, 1)
     if not np.isin(arr, [-1, 0, 1]).all():
         raise ValueError("Mask entries must be -1, 0, or 1")
 
-    # Canonical reshape: i + nx*(j + ny*k)
+    # 5. Canonical reshape: i + nx*(j + ny*k)
+    # Fortran order 'F' corresponds to the i + nx*(j + ny*k) mapping
     mask_3d = arr.reshape((nx, ny, nz), order="F")
 
     return mask_3d
