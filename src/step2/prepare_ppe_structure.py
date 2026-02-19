@@ -1,29 +1,33 @@
 # src/step2/prepare_ppe_structure.py
 
 from __future__ import annotations
-import numpy as np
 from src.solver_state import SolverState
 
 def prepare_ppe_structure(state: SolverState) -> None:
     """
-    Prepare PPE metadata and source term coefficients.
-    
-    This structure provides the necessary parameters for the Pressure 
-    Poisson Equation (Lp = b), where the source term b is derived 
-    from the velocity divergence.
+    Finalizes the PPE dictionary by linking math operators, 
+    physical constants, and user-defined solver settings.
     """
-
-    # Fix AttributeError: Access constants and config via dictionary keys
+    # 1. Physics (from Input Schema)
     rho = state.constants['rho']
     dt = state.config['dt']
     
-    # We store the physical scaling factor: (rho / dt)
-    # This transforms the kinematic divergence into a dynamic pressure source.
-    # We also include solver-specific parameters for the iterative PCG method.
+    # 2. Tuning (from config.json)
+    settings = state.config.get("solver_settings", {})
+
+    # 3. Assembly
     state.ppe = {
+        # Math: The actual sparse matrix object
+        "A": state.operators.get("laplacian"),
+        
+        # Physics: The scaling coefficient
         "rhs_coeff": rho / dt,
-        "solver_type": "PCG",
-        "tolerance": 1e-6,
-        "max_iterations": 1000,
-        "ppe_is_singular": False,  # Updated by the solver if null-spaces are detected
+        
+        # Tuning: User preferences with safe fallbacks
+        "solver_type": settings.get("solver_type", "PCG"),
+        "tolerance": settings.get("ppe_tolerance", 1e-6),
+        "max_iterations": settings.get("ppe_max_iter", 1000),
+        
+        # Diagnostics: Start healthy, let the solver update this if needed
+        "ppe_is_singular": False
     }
