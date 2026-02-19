@@ -46,7 +46,7 @@ def initialize_grid(grid: Dict[str, Any]) -> Dict[str, Any]:
     # ---------------------------------------------------------
     for value in (x_min, x_max, y_min, y_max, z_min, z_max):
         if not math.isfinite(value):
-            raise ValueError("Domain extents must be finite.")
+            raise ValueError("Grid extents must be finite.")
 
     # ---------------------------------------------------------
     # Validate ordering of extents

@@ -42,7 +42,7 @@ def test_viscosity_must_be_non_negative():
 # 2. DOMAIN EXTENTS
 # ============================================================
 
-def test_domain_extents_must_be_ordered():
+def test_grid_extents_must_be_ordered():
     state = get_valid_state()
     # x_max must be > x_min. state.grid is a dict stored in the object.
     state.grid["x_max"] = state.grid["x_min"]
@@ -50,7 +50,7 @@ def test_domain_extents_must_be_ordered():
         validate_physical_constraints(state)
 
 
-def test_domain_extents_must_be_finite():
+def test_grid_extents_must_be_finite():
     state = get_valid_state()
     state.grid["x_min"] = float("inf")
     with pytest.raises(ValueError, match="finite"):

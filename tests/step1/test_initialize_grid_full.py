@@ -37,10 +37,10 @@ def test_grid_initialization_in_state(base_input):
     Integration test: Verifies that initialize_grid output is correctly 
     stored in the SolverState.grid attribute.
     """
-    domain_params = base_input["grid"]
+    grid_params = base_input["grid"]
     
     # Act
-    grid_dict = initialize_grid(domain_params)
+    grid_dict = initialize_grid(grid_params)
     state = SolverState(grid=grid_dict)
 
     # 1. Check Object-style access
@@ -50,4 +50,4 @@ def test_grid_initialization_in_state(base_input):
     # 2. Check calculated values in the grid dict
     # dx = (x_max - x_min) / nx = (1.0 - 0.0) / 2 = 0.5
     assert state.grid["dx"] == 0.5
-    assert state.grid["nx"] == domain_params["nx"]
+    assert state.grid["nx"] == grid_params["nx"]

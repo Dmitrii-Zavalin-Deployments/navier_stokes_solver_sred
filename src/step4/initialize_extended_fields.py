@@ -13,7 +13,7 @@ def initialize_extended_fields(state):
       • Zero velocities and pressure in solid cells (state.is_fluid == False)
       • Do NOT use mask semantics (0/1/-1) — Step‑4 uses state.is_fluid only
       • Do NOT apply boundary conditions here (handled in apply_boundary_conditions)
-      • Do NOT modify legacy Domain blocks or BCApplied flags
+      • Do NOT modify legacy Grid blocks or BCApplied flags
     """
 
     # ---------------------------------------------------------

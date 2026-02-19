@@ -37,7 +37,7 @@ def test_initialize_grid_basic(dummy_input):
 
 def test_initialize_grid_invalid_extents(dummy_input):
     """
-    Verifies that zero-width or negative-width domains are rejected.
+    Verifies that zero-width or negative-width grids are rejected.
     """
     grid = dummy_input["grid"]
     

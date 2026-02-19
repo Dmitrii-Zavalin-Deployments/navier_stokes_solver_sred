@@ -35,13 +35,13 @@ def test_correct_grid_spacing_computation(base_input):
 
 def test_missing_required_keys_raise_keyerror(base_input):
     """Ensures a KeyError is raised if any grid parameter is missing."""
-    base_domain = base_input["grid"]
+    base_grid = base_input["grid"]
 
-    for key in list(base_domain.keys()):
-        bad_domain = dict(base_domain)
-        del bad_domain[key]
+    for key in list(base_grid.keys()):
+        bad_grid = dict(base_grid)
+        del bad_grid[key]
         with pytest.raises(KeyError):
-            initialize_grid(bad_domain)
+            initialize_grid(bad_grid)
 
 def test_grid_dimensions_must_be_positive(base_input):
     """Checks that non-positive nx, ny, nz raise ValueErrors."""

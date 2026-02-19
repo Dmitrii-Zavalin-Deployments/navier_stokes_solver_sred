@@ -51,7 +51,7 @@ def validate_physical_constraints(state: SolverState) -> None:
     _ensure_positive("dy", float(grid["dy"]))
     _ensure_positive("dz", float(grid["dz"]))
 
-    # 4. Domain extents validation
+    # 4. Grid extents validation
     # Processed grid state prioritizes dx/dy/dz, but we check extents for logic consistency
     x_min, x_max = grid.get("x_min"), grid.get("x_max")
     y_min, y_max = grid.get("y_min"), grid.get("y_max")
