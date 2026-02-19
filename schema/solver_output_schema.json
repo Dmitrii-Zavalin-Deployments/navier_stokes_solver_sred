@@ -6,7 +6,6 @@
 
   "properties": {
     "config": { "type": "object" },
-
     "grid": { "type": "object" },
 
     "fields": {
@@ -21,24 +20,21 @@
     },
 
     "mask": { "type": ["array", "null"] },
-
     "constants": { "type": "object" },
-
     "boundary_conditions": { "type": "object" },
-
     "health": { "type": "object" },
 
     "operators": {
       "type": "object",
-      "description": "Runtime-only operators (callables). Skipped or empty in JSON-safe output.",
+      "description": "Runtime-only operators (callables). Represented as metadata dicts in JSON-safe output.",
       "additionalProperties": true
     },
 
     "ppe": { "type": "object" },
 
     "is_fluid": { "type": ["array", "null"] },
-
     "is_boundary_cell": { "type": ["array", "null"] },
+    "is_solid": { "type": ["array", "null"] },
 
     "step3_diagnostics": { "type": "object" },
 
@@ -48,7 +44,6 @@
     "W_ext": { "type": ["array", "null"] },
 
     "step4_diagnostics": { "type": "object" },
-
     "step5_outputs": { "type": "object" },
 
     "ready_for_time_loop": { "type": "boolean" }

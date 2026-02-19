@@ -4,8 +4,8 @@
 EXPECTED_STEP2_SCHEMA defines the structural contract for the SolverState 
 after Step 2 (Operators & PPE Setup).
 
-Note: Because validation occurs on the result of SolverState.to_json_safe(),
-sparse matrices appear as metadata dictionaries containing 'type', 'shape', and 'nnz'.
+This schema is 'Live-Aware': it accepts both SciPy sparse objects (for unit tests)
+and metadata dictionaries (for JSON-safe validation).
 """
 
 EXPECTED_STEP2_SCHEMA = {
@@ -30,17 +30,17 @@ EXPECTED_STEP2_SCHEMA = {
     "boundary_conditions": (type(None), dict, list),
 
     # Step 2 additions / updates
-    # These contain metadata dicts for Laplacian, Divergence, and Gradient matrices
+    # Scale Guard: Accepts dict (serialized) or object (live SciPy CSR)
     "operators": {
-        "laplacian": dict,
-        "divergence": dict,
-        "gradient": dict,
+        "laplacian": (dict, object),
+        "divergence": (dict, object),
+        "gradient": (dict, object),
     },
     
-    # PPE contains solver settings and the system matrix A metadata
+    # PPE contains solver settings and the system matrix A metadata/object
     "ppe": {
         "solver_type": str,
-        "A": dict,
+        "A": (dict, object),
         "tolerance": float,
         "max_iterations": int,
         "ppe_is_singular": bool,

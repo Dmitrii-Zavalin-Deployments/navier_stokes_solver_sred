@@ -81,7 +81,11 @@ class SolverState:
         - NumPy arrays become lists.
         - Callables are nullified to maintain schema key-presence.
         """
-        from scipy.sparse import issparse
+        # Local import to avoid requiring scipy if only using Step 1 (Dense)
+        try:
+            from scipy.sparse import issparse
+        except ImportError:
+            def issparse(obj): return False
 
         def convert(value):
             # 1. Handle SciPy Sparse Matrices (Scale Guard)

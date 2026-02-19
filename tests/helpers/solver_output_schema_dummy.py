@@ -9,6 +9,7 @@ end‑to‑end contract tests.
 
 Updated to comply with Phase C, Rule 7 (Scale Guard):
 - Sparse matrices are represented as metadata dictionaries.
+- Includes 'is_solid' to match the updated JSON properties.
 """
 
 def solver_output_schema_dummy():
@@ -27,7 +28,11 @@ def solver_output_schema_dummy():
 
     # Dimensions for metadata
     dof_p = nx * ny * nz
-    total_vel_dof = ((nx+1)*ny*nz) + (nx*(ny+1)*nz) + (nx*ny*(nz+1))
+    # Staggered grid DOF calculation
+    dof_u = (nx + 1) * ny * nz
+    dof_v = nx * (ny + 1) * nz
+    dof_w = nx * ny * (nz + 1)
+    total_vel_dof = dof_u + dof_v + dof_w
 
     return {
         "config": {
