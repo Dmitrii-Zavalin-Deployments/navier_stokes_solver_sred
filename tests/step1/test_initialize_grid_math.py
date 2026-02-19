@@ -4,7 +4,7 @@ import math
 import pytest
 
 from src.step1.initialize_grid import initialize_grid
-from src.step1.types import GridConfig
+from src.solver_state import GridConfig
 
 
 def test_correct_grid_spacing_computation():
