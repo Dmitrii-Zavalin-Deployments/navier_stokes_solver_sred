@@ -17,7 +17,7 @@ def _ensure_non_negative(name: str, value: float) -> None:
 
 
 def _ensure_positive_int(name: str, value: int) -> None:
-    if not isinstance(value, int) or value <= 0:
+    if not isinstance(value, (int, np.integer)) or value <= 0:
         raise ValueError(f"{name} must be a positive integer, got {value}")
 
 
@@ -28,72 +28,74 @@ def _ensure_finite(name: str, value: float) -> None:
 
 def validate_physical_constraints(data: Dict[str, Any]) -> None:
     """
-    Fatal physical checks before any allocation.
-    Strictly validates required properties without injecting default values.
+    Fatal physical checks for the Step 1 state.
+    Matches the state structure: grid, constants, fields, and mask.
     """
 
-    # 1. Required Sections (Will raise KeyError if missing, as expected)
-    domain = data["domain"]
-    fluid = data["fluid_properties"]
-    init = data["initial_conditions"]
-    sim = data["simulation_parameters"]
-    mask = data["mask"]  # Top-level 'mask' from schema
-    forces = data["external_forces"]
+    # 1. Access sections as they appear in the DEBUG State Summary
+    # These will raise KeyError if the orchestrator fails to provide them.
+    grid = data["grid"]
+    constants = data["constants"]
+    fields = data["fields"]
+    mask = data["mask"]
 
-    # 2. Fluid properties
-    _ensure_positive("density", float(fluid["density"]))
-    _ensure_non_negative("viscosity", float(fluid["viscosity"]))
+    # 2. Fluid properties & Time step (extracted from constants dictionary)
+    _ensure_positive("density (rho)", float(constants["rho"]))
+    _ensure_non_negative("viscosity (mu)", float(constants["mu"]))
+    _ensure_positive("time_step (dt)", float(constants["dt"]))
 
-    # 3. Grid counts
-    nx = int(domain["nx"])
-    ny = int(domain["ny"])
-    nz = int(domain["nz"])
+    # 3. Grid counts & Spacing
+    nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
     _ensure_positive_int("nx", nx)
     _ensure_positive_int("ny", ny)
     _ensure_positive_int("nz", nz)
+    
+    _ensure_positive("dx", float(grid["dx"]))
+    _ensure_positive("dy", float(grid["dy"]))
+    _ensure_positive("dz", float(grid["dz"]))
 
-    # 4. Domain extents (Strict access, no defaults)
-    x_min, x_max = float(domain["x_min"]), float(domain["x_max"])
-    y_min, y_max = float(domain["y_min"]), float(domain["y_max"])
-    z_min, z_max = float(domain["z_min"]), float(domain["z_max"])
+    # 4. Domain extents validation
+    # Using .get() because processed grid state usually prioritizes dx/dy/dz
+    x_min, x_max = grid.get("x_min"), grid.get("x_max")
+    y_min, y_max = grid.get("y_min"), grid.get("y_max")
+    z_min, z_max = grid.get("z_min"), grid.get("z_max")
 
-    for name, val in [
-        ("x_min", x_min), ("x_max", x_max),
-        ("y_min", y_min), ("y_max", y_max),
-        ("z_min", z_min), ("z_max", z_max)
-    ]:
-        _ensure_finite(name, val)
+    # Validate X-axis
+    if x_min is not None and x_max is not None:
+        _ensure_finite("x_min", x_min)
+        _ensure_finite("x_max", x_max)
+        if x_max <= x_min:
+            raise ValueError(f"x_max ({x_max}) must be > x_min ({x_min})")
 
-    if x_max <= x_min: raise ValueError(f"x_max ({x_max}) must be > x_min ({x_min})")
-    if y_max <= y_min: raise ValueError(f"y_max ({y_max}) must be > y_min ({y_min})")
-    if z_max <= z_min: raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
+    # Validate Y-axis
+    if y_min is not None and y_max is not None:
+        _ensure_finite("y_min", y_min)
+        _ensure_finite("y_max", y_max)
+        if y_max <= y_min:
+            raise ValueError(f"y_max ({y_max}) must be > y_min ({y_min})")
 
-    # 5. Mask consistency
-    # Ensure mask size matches nx*ny*nz. 
-    # Works for both flat lists and nested 3D lists.
-    mask_size = np.array(mask).size
-    if mask_size != nx * ny * nz:
+    # Validate Z-axis
+    if z_min is not None and z_max is not None:
+        _ensure_finite("z_min", z_min)
+        _ensure_finite("z_max", z_max)
+        if z_max <= z_min:
+            raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
+
+    # 5. Mask consistency (Shape check against numpy array)
+    expected_shape = (nx, ny, nz)
+    if mask.shape != expected_shape:
         raise ValueError(
-            f"Mask size {mask_size} does not match domain nx*ny*nz={nx*ny*nz}"
+            f"Mask shape {mask.shape} does not match grid counts {expected_shape}"
         )
-
-    # 6. Initial Conditions
-    vel = init["velocity"]
-    if not isinstance(vel, (list, tuple)) or len(vel) != 3:
-        raise ValueError("initial_conditions.velocity must be a list/tuple of length 3")
     
-    for i, v in enumerate(vel):
-        _ensure_finite(f"initial_conditions.velocity[{i}]", float(v))
-    
-    _ensure_finite("initial_conditions.pressure", float(init["pressure"]))
+    # Ensure mask contains valid entries (-1: obstacle, 0: fluid, 1: boundary)
+    if not np.all(np.isin(mask, [-1, 0, 1])):
+        raise ValueError("Mask contains invalid entries (only -1, 0, 1 allowed)")
 
-    # 7. Time step
-    _ensure_positive("time_step", float(sim["time_step"]))
-
-    # 8. External forces
-    fv = forces["force_vector"]
-    if not isinstance(fv, (list, tuple)) or len(fv) != 3:
-        raise ValueError("external_forces.force_vector must be a list/tuple of length 3")
-    
-    for i, comp in enumerate(fv):
-        _ensure_finite(f"external_forces.force_vector[{i}]", float(comp))
+    # 6. Field Finiteness (Checking the actual allocated numpy arrays)
+    # This prevents the solver from starting with NaN/Inf values that crash the PPE
+    for field_name in ["U", "V", "W", "P"]:
+        if field_name in fields:
+            arr = fields[field_name]
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"Initial field '{field_name}' contains non-finite values (Inf/NaN)")

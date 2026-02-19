@@ -36,70 +36,75 @@ def debug_state_step1(state: Dict[str, Any]) -> None:
 def orchestrate_step1(
     json_input: Dict[str, Any],
     **_ignored_kwargs,
-) -> Dict[str, Any]:
+) -> SolverState:
     """
-    Step 1 — Orchestrator strictly aligned with the production schema and 
-    staggered grid physical contract.
+    Step 1 — Orchestrator: Strictly aligned with the production schema.
+    Populates the SolverState progressively.
     """
-    # 0. Structural Validation against frozen external schema
-    # Enforces the contract: domain, fluid_properties, initial_conditions, 
-    # simulation_parameters, boundary_conditions, mask, and external_forces.
+    # 0. Structural Validation
     schema_path = os.path.join("schema", "solver_input_schema.json")
     try:
         with open(schema_path, "r") as f:
             input_schema = json.load(f)
         jsonschema.validate(instance=json_input, schema=input_schema)
     except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
-        raise RuntimeError(f"Input schema validation FAILED. Validation error: {exc}") from exc
+        raise RuntimeError(f"Input schema validation FAILED: {exc}") from exc
 
-    # 1. Physics & Configuration Parsing
-    validate_physical_constraints(json_input)
+    # 1. Grid & Config Parsing
     grid = initialize_grid(json_input["domain"])
-    config = parse_config(json_input)
     
-    # Ensure config dict carries over the full metadata from input
+    # Ensure physical extents are preserved in the grid dict for validation
+    grid.update({
+        "x_min": json_input["domain"]["x_min"],
+        "x_max": json_input["domain"]["x_max"],
+        "y_min": json_input["domain"]["y_min"],
+        "y_max": json_input["domain"]["y_max"],
+        "z_min": json_input["domain"]["z_min"],
+        "z_max": json_input["domain"]["z_max"],
+    })
+
+    config = parse_config(json_input)
     config["geometry"] = json_input.get("geometry", {})
     config["initial_conditions"] = json_input["initial_conditions"]
-    config["boundary_conditions"] = json_input["boundary_conditions"]
 
-    # 2. Field Allocation (Staggered Grid)
-    # U: (nx+1, ny, nz), V: (nx, ny+1, nz), W: (nx, ny, nz+1)
+    # 2. Field Allocation
     fields = allocate_fields(grid)
     
-    # 3. Geometry & Boundary Processing
+    # 3. Mask & Boundary Processing
     mask = map_geometry_mask(json_input["mask"], json_input["domain"])
-    parse_boundary_conditions(json_input["boundary_conditions"], grid)
+    bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
 
-    # 4. Numerical Constants Calculation
+    # 4. Numerical Constants
     constants = compute_derived_constants(
         grid, 
         json_input["fluid_properties"], 
         json_input["simulation_parameters"]
     )
 
-    # 5. Assemble Production State Dictionary
-    state_dict = {
-        "config": config,
-        "grid": grid,
-        "fields": fields,
-        "mask": mask,
-        "is_fluid": (mask == 1),
-        "is_boundary_cell": np.zeros_like(mask, dtype=bool),
-        "constants": constants,
-        "boundary_conditions": None, 
-        "operators": {},
-        "ppe": {},
-        "health": {},
-    }
+    # 5. Assemble the State Object
+    # We pass the collected parts to assemble_simulation_state to get our SolverState
+    state = assemble_simulation_state(
+        config=config,
+        grid=grid,
+        fields=fields,
+        mask=mask,
+        constants=constants,
+        boundary_conditions=bc_table if bc_table else {},
+    )
+
+    # 6. Mask Semantics (Schema: 1=fluid, 0=solid, -1=boundary-fluid)
+    # logic: fluid and boundary cells are 'active' for physics
+    state.is_fluid = (mask == 1) | (mask == -1)
+    state.is_boundary_cell = (mask == -1)
+    # Added explicit solid flag for completeness and visualization
+    state.is_solid = (mask == 0)
+
+    # 7. Physical Validation
+    # We validate the underlying data dictionary
+    validate_physical_constraints(state.__dict__)
 
     if DEBUG_STEP1:
-        debug_state_step1(state_dict)
+        # We pass the __dict__ to the debugger to see all internal attributes
+        debug_state_step1(state.__dict__)
 
-    return state_dict
-
-def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
-    """
-    Converts the validated dictionary into a SolverState object.
-    """
-    state_dict = orchestrate_step1(json_input)
-    return assemble_simulation_state(**state_dict)
+    return state
