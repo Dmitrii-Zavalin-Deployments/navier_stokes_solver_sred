@@ -11,12 +11,10 @@ def build_gradient_operators(state: SolverState) -> None:
     
     The operator G maps cell-centered Pressure (size N_cells) to 
     staggered faces (size N_u + N_v + N_w).
-    
-    Scale Guard: Returns a single scipy.sparse.csr_matrix in state.operators["gradient"].
     """
     grid = state.grid
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
-    dx, dy, dz = state.constants['dx'], state.constants['dy'], state.constants['dz']
+    dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
     is_fluid = state.is_fluid
     
     num_cells = nx * ny * nz
@@ -31,9 +29,9 @@ def build_gradient_operators(state: SolverState) -> None:
     rows_u, cols_u, data_u = [], [], []
     for k in range(nz):
         for j in range(ny):
-            for i in range(1, nx): # Internal faces
+            for i in range(1, nx): 
                 u_idx = i + j * (nx + 1) + k * (nx + 1) * ny
-                # Only compute gradient between two fluid cells
+                # Pressure gradient exists between two adjacent fluid cells
                 if is_fluid[i-1, j, k] and is_fluid[i, j, k]:
                     c_left = get_c_idx(i-1, j, k)
                     c_right = get_c_idx(i, j, k)
