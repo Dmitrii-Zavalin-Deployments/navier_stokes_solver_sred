@@ -1,29 +1,74 @@
 # src/step2/build_laplacian_operators.py
 from __future__ import annotations
 import numpy as np
+import scipy.sparse as sp
 from src.solver_state import SolverState
-
 
 def build_laplacian_operators(state: SolverState) -> None:
     """
-    Build Laplacian operators for U, V, W.
+    Construct a sparse 7-point Laplacian operator for the Pressure Poisson Equation.
+    
+    This matrix L represents the second derivatives (diffusion) of pressure.
+    It is a square matrix of shape (N_cells, N_cells).
     """
-
-    nx, ny, nz = state.grid.nx, state.grid.ny, state.grid.nz
-    dx2 = state.constants.inv_dx2
-    dy2 = state.constants.inv_dy2
-    dz2 = state.constants.inv_dz2
+    grid = state.grid
+    nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
+    
+    # Accessing constants via dict keys to fix AttributeError
+    dx2 = state.constants['dx']**2
+    dy2 = state.constants['dy']**2
+    dz2 = state.constants['dz']**2
     is_fluid = state.is_fluid
+    
+    num_cells = nx * ny * nz
+    rows, cols, data = [], [], []
 
-    def lap(F):
-        F = np.asarray(F)
-        out = np.zeros_like(F)
-        out[1:-1] += (F[2:] - 2 * F[1:-1] + F[:-2]) * dx2
-        out[:, 1:-1] += (F[:, 2:] - 2 * F[:, 1:-1] + F[:, :-2]) * dy2
-        out[:, :, 1:-1] += (F[:, :, 2:] - 2 * F[:, :, 1:-1] + F[:, :, :-2]) * dz2
-        out[~is_fluid] = 0.0
-        return out
+    def get_idx(i, j, k): 
+        return i + j * nx + k * nx * ny
 
-    state.operators["laplacian_u"] = lap
-    state.operators["laplacian_v"] = lap
-    state.operators["laplacian_w"] = lap
+    for k in range(nz):
+        for j in range(ny):
+            for i in range(nx):
+                curr = get_idx(i, j, k)
+                
+                # If cell is solid, we place a 1 on the diagonal.
+                # This makes the matrix non-singular and easier for the solver.
+                if not is_fluid[i, j, k]:
+                    rows.append(curr)
+                    cols.append(curr)
+                    data.append(1.0)
+                    continue
+
+                center_val = 0.0
+
+                # X-Neighbors: (i-1, j, k) and (i+1, j, k)
+                for ni in [i - 1, i + 1]:
+                    if 0 <= ni < nx and is_fluid[ni, j, k]:
+                        rows.append(curr)
+                        cols.append(get_idx(ni, j, k))
+                        data.append(1.0 / dx2)
+                        center_val -= 1.0 / dx2
+                
+                # Y-Neighbors: (i, j-1, k) and (i, j+1, k)
+                for nj in [j - 1, j + 1]:
+                    if 0 <= nj < ny and is_fluid[i, nj, k]:
+                        rows.append(curr)
+                        cols.append(get_idx(i, nj, k))
+                        data.append(1.0 / dy2)
+                        center_val -= 1.0 / dy2
+
+                # Z-Neighbors: (i, j, k-1) and (i, j, k+1)
+                for nk in [k - 1, k + 1]:
+                    if 0 <= nk < nz and is_fluid[i, j, nk]:
+                        rows.append(curr)
+                        cols.append(get_idx(i, j, nk))
+                        data.append(1.0 / dz2)
+                        center_val -= 1.0 / dz2
+
+                # Diagonal element (the center of the 7-point stencil)
+                rows.append(curr)
+                cols.append(curr)
+                data.append(center_val)
+
+    # Store as a single sparse matrix under the key "laplacian"
+    state.operators["laplacian"] = sp.csr_matrix((data, (rows, cols)), shape=(num_cells, num_cells))
