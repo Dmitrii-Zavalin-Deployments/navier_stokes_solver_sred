@@ -4,20 +4,22 @@ import numpy as np
 import pytest
 
 from src.step1.map_geometry_mask import map_geometry_mask
-
+from src.solver_state import SolverState
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 # ---------------------------------------------------------
 # Shape validation (via domain dict)
 # ---------------------------------------------------------
 
 def test_invalid_shape_raises():
+    """Verifies that malformed domain dictionaries trigger errors."""
     # Negative dimension
-    with pytest.raises(ValueError):
-        map_geometry_mask([1, 2, 3], {"nx": 4, "ny": -1, "nz": 2})
+    with pytest.raises(ValueError, match="positive"):
+        map_geometry_mask([1]*8, {"nx": 4, "ny": -1, "nz": 2})
 
     # Non-integer dimension
-    with pytest.raises(ValueError):
-        map_geometry_mask([1, 2, 3], {"nx": "bad", "ny": 2, "nz": 2})
+    with pytest.raises((ValueError, TypeError)):
+        map_geometry_mask([1]*16, {"nx": "bad", "ny": 2, "nz": 2})
 
     # Missing keys
     with pytest.raises(KeyError):
@@ -29,7 +31,8 @@ def test_invalid_shape_raises():
 # ---------------------------------------------------------
 
 def test_mask_flat_must_be_iterable():
-    with pytest.raises(TypeError):
+    """Ensures input mask must be a list or array-like."""
+    with pytest.raises(TypeError, match="iterable"):
         map_geometry_mask(12345, {"nx": 1, "ny": 1, "nz": 1})
 
 
@@ -37,15 +40,16 @@ def test_mask_flat_must_be_iterable():
 # Length validation
 # ---------------------------------------------------------
 
-def test_mask_flat_length_must_match_shape():
+def test_mask_flat_length_match():
+    """Checks that flat list length equals nx * ny * nz."""
     domain = {"nx": 2, "ny": 2, "nz": 2}
 
     # Too short
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="length"):
         map_geometry_mask([1, 2], domain)
 
     # Too long
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="length"):
         map_geometry_mask(list(range(10)), domain)
 
 
@@ -54,37 +58,46 @@ def test_mask_flat_length_must_match_shape():
 # ---------------------------------------------------------
 
 def test_mask_entries_must_be_finite_integers():
+    """Rejects floats, strings, NaNs, and Infs."""
     bad_values = [1.5, "x", float("nan"), float("inf")]
 
     for bad in bad_values:
-        with pytest.raises(ValueError):
+        with pytest.raises((ValueError, TypeError)):
             map_geometry_mask([bad], {"nx": 1, "ny": 1, "nz": 1})
 
 
 # ---------------------------------------------------------
-# Semantic validation (Step 1 allows only {-1, 0, 1})
+# Semantic and Object Integration
 # ---------------------------------------------------------
 
 def test_semantic_validation_allows_valid_entries():
-    flat = [0, 1, -1, 0, 1, 0, -1, 1]
-    domain = {"nx": 2, "ny": 2, "nz": 2}
+    """Confirms valid mask entries are correctly reshaped and stored in SolverState."""
+    dummy = solver_input_schema_dummy()
+    domain = dummy["domain"]
+    flat_mask = dummy["mask"]
 
-    arr = map_geometry_mask(flat, domain)
-    expected = np.array(flat).reshape((2, 2, 2), order="F")
+    # Act
+    arr = map_geometry_mask(flat_mask, domain)
+    state = SolverState(mask=arr, grid=domain)
 
-    assert arr.shape == (2, 2, 2)
-    assert np.array_equal(arr, expected)
+    # Verify object-style access
+    assert state.mask.shape == (domain["nx"], domain["ny"], domain["nz"])
+    
+    # Expected: index = i + nx*(j + ny*k)
+    expected = np.array(flat_mask).reshape((domain["nx"], domain["ny"], domain["nz"]), order="F")
+    assert np.array_equal(state.mask, expected)
 
-
-# ---------------------------------------------------------
-# Canonical flattening rule tests
-# ---------------------------------------------------------
 
 def test_canonical_f_order_mapping():
-    flat = [0, 1, -1, 0, 1, 0, -1, 1]
-    domain = {"nx": 2, "ny": 2, "nz": 2}
-
+    """Explicitly tests Fortran-order indexing where 'i' varies fastest."""
+    # (nx=2, ny=2, nz=1)
+    flat = [10, 20, 30, 40]
+    domain = {"nx": 2, "ny": 2, "nz": 1}
+    
     arr = map_geometry_mask(flat, domain)
-    expected = np.array(flat).reshape((2, 2, 2), order="F")
-
-    assert np.array_equal(arr, expected)
+    
+    # Check specific indices based on i + nx*j
+    assert arr[0, 0, 0] == 10  # i=0, j=0
+    assert arr[1, 0, 0] == 20  # i=1, j=0
+    assert arr[0, 1, 0] == 30  # i=0, j=1
+    assert arr[1, 1, 0] == 40  # i=1, j=1

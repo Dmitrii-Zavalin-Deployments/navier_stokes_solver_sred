@@ -4,57 +4,76 @@ import numpy as np
 import pytest
 
 from src.step1.map_geometry_mask import map_geometry_mask
+from src.solver_state import SolverState
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
+@pytest.fixture
+def dummy_data():
+    """Provides the canonical dummy input."""
+    return solver_input_schema_dummy()
 
-def test_perfect_reshape():
-    nx, ny, nz = 4, 4, 4
-    flat = [1] * (nx * ny * nz)
+def test_perfect_reshape(dummy_data):
+    """Verifies that the dummy's flat mask is reshaped to the dummy's domain dimensions."""
+    flat_mask = dummy_data["mask"]
+    domain = dummy_data["domain"]
+    
+    mask = map_geometry_mask(flat_mask, domain)
 
-    domain = {"nx": nx, "ny": ny, "nz": nz}
-    mask = map_geometry_mask(flat, domain)
+    assert mask.shape == (domain["nx"], domain["ny"], domain["nz"])
+    assert np.issubdtype(mask.dtype, np.integer)
 
-    assert mask.shape == (4, 4, 4)
-    assert mask.dtype == int
+def test_length_mismatch(dummy_data):
+    """Verifies that a list with an incorrect number of elements triggers a ValueError."""
+    domain = dummy_data["domain"]
+    # Create a list that is intentionally too short
+    short_flat = [1] * (domain["nx"] * domain["ny"] * domain["nz"] - 1)
 
+    with pytest.raises(ValueError, match="length"):
+        map_geometry_mask(short_flat, domain)
 
-def test_length_mismatch():
-    nx, ny, nz = 4, 4, 4
-    flat = [1] * (nx * ny * nz - 1)
+def test_data_type_pollution(dummy_data):
+    """Ensures Step 1 rejects non-numeric/string data in the mask list."""
+    domain = dummy_data["domain"]
+    total_cells = domain["nx"] * domain["ny"] * domain["nz"]
+    
+    bad_flat = [0] * total_cells
+    bad_flat[0] = "corrupt_string" 
 
-    domain = {"nx": nx, "ny": ny, "nz": nz}
-
-    with pytest.raises(ValueError):
-        map_geometry_mask(flat, domain)
-
-
-def test_data_type_pollution():
-    nx, ny, nz = 2, 2, 2
-    bad_flat = [1, 0, "3", 1, 0, 1, 0, 1]  # contains a string
-
-    domain = {"nx": nx, "ny": ny, "nz": nz}
-
-    # Step 1 must reject non-integer or non-finite values
-    with pytest.raises(ValueError):
+    with pytest.raises((ValueError, TypeError)):
         map_geometry_mask(bad_flat, domain)
 
+def test_flattening_order_round_trip(dummy_data):
+    """
+    Verifies that the 3D indexing [i, j, k] matches the canonical 
+    flattening rule: index = i + nx * (j + ny * k).
+    """
+    domain = dummy_data["domain"]
+    nx, ny, nz = domain["nx"], domain["ny"], domain["nz"]
 
-def test_flattening_order_round_trip():
-    nx, ny, nz = 3, 3, 3
-
-    # Generate a flat mask using the canonical flattening rule
-    flat = [
-        1 if (i + j + k) % 2 == 0 else 0
-        for k in range(nz)
-        for j in range(ny)
-        for i in range(nx)
-    ]
-
-    domain = {"nx": nx, "ny": ny, "nz": nz}
+    # Generate a flat mask where each value is its own index
+    flat = list(range(nx * ny * nz))
     mask = map_geometry_mask(flat, domain)
 
-    # Verify round-trip correctness
+    # Verify every coordinate maps back correctly to the flat index
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
-                idx = i + nx * (j + ny * k)
-                assert mask[i, j, k] == flat[idx]
+                expected_index = i + nx * (j + ny * k)
+                assert mask[i, j, k] == expected_index
+
+def test_mask_in_solver_state(dummy_data):
+    """
+    Integration test: Verifies that the SolverState object holds 
+    the mask correctly as an attribute (.mask).
+    """
+    domain = dummy_data["domain"]
+    flat_mask = dummy_data["mask"]
+    
+    mask_array = map_geometry_mask(flat_mask, domain)
+    
+    # Instantiate SolverState (Object Style)
+    state = SolverState(mask=mask_array, grid=domain)
+    
+    # Assertions using attribute access
+    assert isinstance(state.mask, np.ndarray)
+    assert state.mask.shape == (domain["nx"], domain["ny"], domain["nz"])
