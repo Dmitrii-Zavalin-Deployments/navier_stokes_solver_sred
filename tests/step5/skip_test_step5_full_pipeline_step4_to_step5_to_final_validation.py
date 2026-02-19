@@ -34,7 +34,7 @@ def make_state():
     }
 
     state.config = {
-        "domain": {"nx": 1, "ny": 1, "nz": 1},
+        "grid": {"nx": 1, "ny": 1, "nz": 1},
         "total_time": 0.2,
         "max_steps": 10,
         "output_interval": None,

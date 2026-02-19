@@ -13,24 +13,24 @@ def dummy_input():
 def test_initialize_grid_basic(dummy_input):
     """
     Verifies that the grid is initialized with correct dimensions and spacing
-    when provided with valid domain parameters from the dummy.
+    when provided with valid grid parameters from the dummy.
     """
-    domain = dummy_input["domain"]
+    grid = dummy_input["grid"]
     
     # Act: initialize the grid dictionary
-    grid = initialize_grid(domain)
+    grid = initialize_grid(grid)
     
     # Wrap in SolverState to verify object-style integration
     state = SolverState(grid=grid)
 
     # 1. Assertions on Dimensions
-    assert state.grid["nx"] == domain["nx"]
-    assert state.grid["ny"] == domain["ny"]
-    assert state.grid["nz"] == domain["nz"]
+    assert state.grid["nx"] == grid["nx"]
+    assert state.grid["ny"] == grid["ny"]
+    assert state.grid["nz"] == grid["nz"]
 
     # 2. Assertions on Spacing (dx, dy, dz)
     # For dummy: (1.0 - 0.0) / 2 = 0.5
-    expected_dx = (domain["x_max"] - domain["x_min"]) / domain["nx"]
+    expected_dx = (grid["x_max"] - grid["x_min"]) / grid["nx"]
     assert state.grid["dx"] == pytest.approx(expected_dx)
     assert state.grid["dy"] == pytest.approx(expected_dx)
     assert state.grid["dz"] == pytest.approx(expected_dx)
@@ -39,17 +39,17 @@ def test_initialize_grid_invalid_extents(dummy_input):
     """
     Verifies that zero-width or negative-width domains are rejected.
     """
-    domain = dummy_input["domain"]
+    grid = dummy_input["grid"]
     
     # Override x_max to be equal to x_min (zero extent)
-    domain["x_max"] = domain["x_min"]
+    grid["x_max"] = grid["x_min"]
 
     with pytest.raises(ValueError, match="x_max"):
-        initialize_grid(domain)
+        initialize_grid(grid)
 
 def test_initialize_grid_types(dummy_input):
     """Ensures calculated spacing values are floats and grid counts are ints."""
-    grid = initialize_grid(dummy_input["domain"])
+    grid = initialize_grid(dummy_input["grid"])
     
     assert isinstance(grid["nx"], int)
     assert isinstance(grid["dx"], float)

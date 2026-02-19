@@ -18,7 +18,7 @@ def make_step5_output_dummy():
         # Required by final schema
         # ---------------------------------------------------------
         "config": {
-            "domain": {"nx": nx, "ny": ny, "nz": nz},
+            "grid": {"nx": nx, "ny": ny, "nz": nz},
             "total_time": 0.12,
             "max_steps": 100,
             "output_interval": 2,

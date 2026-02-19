@@ -15,7 +15,7 @@ def test_compute_derived_constants_matches_dummy():
 
     # 2. Override values to test specific math logic
     # We set (max - min) / n = 1.0 to verify unit spacing calculation
-    json_input["domain"].update({
+    json_input["grid"].update({
         "nx": 2, "x_min": 0.0, "x_max": 2.0,
         "ny": 2, "y_min": 0.0, "y_max": 2.0,
         "nz": 2, "z_min": 0.0, "z_max": 2.0

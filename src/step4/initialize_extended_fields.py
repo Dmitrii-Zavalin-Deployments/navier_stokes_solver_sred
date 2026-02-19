@@ -19,9 +19,9 @@ def initialize_extended_fields(state):
     # ---------------------------------------------------------
     # Grid size
     # ---------------------------------------------------------
-    nx = state.config["domain"]["nx"]
-    ny = state.config["domain"]["ny"]
-    nz = state.config["domain"]["nz"]
+    nx = state.config["grid"]["nx"]
+    ny = state.config["grid"]["ny"]
+    nz = state.config["grid"]["nz"]
 
     # ---------------------------------------------------------
     # Allocate extended fields (documentation‑accurate shapes)

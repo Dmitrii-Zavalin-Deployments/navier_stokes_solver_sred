@@ -6,7 +6,7 @@ from src.common.final_schema_utils import validate_final_state
 
 def test_validate_final_state_minimal():
     config = {
-        "domain": {"nx": 2, "ny": 2, "nz": 2},
+        "grid": {"nx": 2, "ny": 2, "nz": 2},
         "initial_conditions": {
             "initial_pressure": 0.0,
             "initial_velocity": [0.0, 0.0, 0.0]

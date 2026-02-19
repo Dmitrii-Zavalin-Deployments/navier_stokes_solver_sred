@@ -15,7 +15,7 @@ def test_step1_constants_match_dummy():
 
     # 2. Override specific values for this test case
     # Setting (max - min) / n = 1.0 to check spacing logic
-    json_input["domain"].update({
+    json_input["grid"].update({
         "nx": 2, "ny": 2, "nz": 2,
         "x_min": 0.0, "x_max": 2.0,
         "y_min": 0.0, "y_max": 2.0,

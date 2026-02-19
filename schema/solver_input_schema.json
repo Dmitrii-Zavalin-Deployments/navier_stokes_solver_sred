@@ -3,7 +3,7 @@
   "title": "Solver Input Schema",
   "type": "object",
   "required": [
-    "domain",
+    "grid",
     "fluid_properties",
     "initial_conditions",
     "simulation_parameters",
@@ -12,7 +12,7 @@
     "external_forces"
   ],
   "properties": {
-    "domain": {
+    "grid": {
       "type": "object",
       "required": [
         "x_min",

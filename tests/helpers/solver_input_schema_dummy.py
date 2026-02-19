@@ -5,7 +5,7 @@ solver_input_schema_dummy.py
 
 Canonical JSON‑safe dummy input that fully satisfies solver_input_schema.json.
 Used for Step 1 tests, schema validation tests, and as a base for override‑based
-unit tests (e.g., boundary conditions, mask validation, domain validation).
+unit tests (e.g., boundary conditions, mask validation, grid validation).
 
 Updated for the new contract:
 - mask is now a flat 1D array of length nx*ny*nz
@@ -14,7 +14,7 @@ Updated for the new contract:
 """
 
 def solver_input_schema_dummy():
-    # Small, simple domain
+    # Small, simple grid
     nx, ny, nz = 2, 2, 2
     total_cells = nx * ny * nz
 
@@ -35,7 +35,7 @@ def solver_input_schema_dummy():
     assert len(mask_flat) == total_cells
 
     return {
-        "domain": {
+        "grid": {
             "x_min": 0.0,
             "x_max": 1.0,
             "y_min": 0.0,

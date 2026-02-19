@@ -14,7 +14,7 @@ def make_step4_output_dummy(nx=4, ny=4, nz=4):
     # 1. config
     # ---------------------------------------------------------
     state.config = {
-        "domain": {"nx": nx, "ny": ny, "nz": nz},
+        "grid": {"nx": nx, "ny": ny, "nz": nz},
         "boundary_conditions": [],
     }
 

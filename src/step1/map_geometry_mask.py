@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 import numpy as np
 
 
-def map_geometry_mask(mask_flat: List[int], domain: Dict[str, Any]) -> np.ndarray:
+def map_geometry_mask(mask_flat: List[int], grid: Dict[str, Any]) -> np.ndarray:
     """
     Step 1: Convert a flat mask into a 3D array using the solver's
     canonical flattening rule:
@@ -17,9 +17,9 @@ def map_geometry_mask(mask_flat: List[int], domain: Dict[str, Any]) -> np.ndarra
     of {-1, 0, 1} happens in Step 2.
     """
 
-    nx = int(domain["nx"])
-    ny = int(domain["ny"])
-    nz = int(domain["nz"])
+    nx = int(grid["nx"])
+    ny = int(grid["ny"])
+    nz = int(grid["nz"])
 
     expected_len = nx * ny * nz
 

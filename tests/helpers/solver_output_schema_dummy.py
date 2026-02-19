@@ -24,7 +24,7 @@ def solver_output_schema_dummy():
 
     return {
         "config": {
-            "domain": {"nx": nx, "ny": ny, "nz": nz},
+            "grid": {"nx": nx, "ny": ny, "nz": nz},
             "simulation_parameters": {
                 "time_step": 0.1,
                 "total_time": 0.2,

@@ -17,7 +17,7 @@ def test_step1_input_schema_failure():
     bad = copy.deepcopy(bad)
 
     # Remove a required top-level key defined in solver_input_schema.json
-    bad.pop("domain")
+    bad.pop("grid")
 
     with pytest.raises(RuntimeError) as excinfo:
         orchestrate_step1_state(bad)
@@ -123,7 +123,7 @@ def test_step1_happy_path():
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
     # Basic structural checks
-    assert state.grid["nx"] == inp["domain"]["nx"]
+    assert state.grid["nx"] == inp["grid"]["nx"]
     
     # Check field shapes (P=nx,ny,nz while U,V,W are staggered)
     nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]

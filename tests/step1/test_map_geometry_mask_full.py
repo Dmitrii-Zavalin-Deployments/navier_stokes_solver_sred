@@ -16,15 +16,15 @@ def test_map_geometry_mask_order_integrity(dummy_input):
     matching the solver's coordinate convention (i, j, k).
     """
     # Use dummy dimensions
-    domain = dummy_input["domain"]
-    nx, ny, nz = domain["nx"], domain["ny"], domain["nz"]
+    grid = dummy_input["grid"]
+    nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
     
     # Create a unique-value flat list to verify exact placement
     flat = list(range(nx * ny * nz))
 
     # Act
-    mask = map_geometry_mask(flat, domain)
-    state = SolverState(mask=mask, grid=domain)
+    mask = map_geometry_mask(flat, grid)
+    state = SolverState(mask=mask, grid=grid)
 
     # Expected: order="F" (Fortran-style) means i varies fastest, then j, then k.
     # This matches the rule: index = i + nx * (j + ny * k)
@@ -41,8 +41,8 @@ def test_map_geometry_mask_order_integrity(dummy_input):
 
 def test_mask_value_types(dummy_input):
     """Ensures the mask is stored as an integer type in the SolverState."""
-    domain = dummy_input["domain"]
-    mask = map_geometry_mask(dummy_input["mask"], domain)
+    grid = dummy_input["grid"]
+    mask = map_geometry_mask(dummy_input["mask"], grid)
     state = SolverState(mask=mask)
 
     # Mask must be integer to handle categorical values -1, 0, 1

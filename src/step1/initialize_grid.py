@@ -5,7 +5,7 @@ from typing import Dict, Any
 import math
 
 
-def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
+def initialize_grid(grid: Dict[str, Any]) -> Dict[str, Any]:
     """
     Grid initializer with physically meaningful spacing.
 
@@ -24,16 +24,16 @@ def initialize_grid(domain: Dict[str, Any]) -> Dict[str, Any]:
     # ---------------------------------------------------------
     # Extract values
     # ---------------------------------------------------------
-    nx = int(domain["nx"])
-    ny = int(domain["ny"])
-    nz = int(domain["nz"])
+    nx = int(grid["nx"])
+    ny = int(grid["ny"])
+    nz = int(grid["nz"])
 
-    x_min = float(domain["x_min"])
-    x_max = float(domain["x_max"])
-    y_min = float(domain["y_min"])
-    y_max = float(domain["y_max"])
-    z_min = float(domain["z_min"])
-    z_max = float(domain["z_max"])
+    x_min = float(grid["x_min"])
+    x_max = float(grid["x_max"])
+    y_min = float(grid["y_min"])
+    y_max = float(grid["y_max"])
+    z_min = float(grid["z_min"])
+    z_max = float(grid["z_max"])
 
     # ---------------------------------------------------------
     # Validate grid dimensions

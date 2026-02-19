@@ -51,14 +51,14 @@ def orchestrate_step1(
         raise RuntimeError(f"Input schema validation FAILED: {exc}") from exc
 
     # 1. Grid & Config Parsing
-    grid = initialize_grid(json_input["domain"])
+    grid = initialize_grid(json_input["grid"])
     grid.update({
-        "x_min": json_input["domain"]["x_min"],
-        "x_max": json_input["domain"]["x_max"],
-        "y_min": json_input["domain"]["y_min"],
-        "y_max": json_input["domain"]["y_max"],
-        "z_min": json_input["domain"]["z_min"],
-        "z_max": json_input["domain"]["z_max"],
+        "x_min": json_input["grid"]["x_min"],
+        "x_max": json_input["grid"]["x_max"],
+        "y_min": json_input["grid"]["y_min"],
+        "y_max": json_input["grid"]["y_max"],
+        "z_min": json_input["grid"]["z_min"],
+        "z_max": json_input["grid"]["z_max"],
     })
 
     config = parse_config(json_input)
@@ -69,7 +69,7 @@ def orchestrate_step1(
     fields = allocate_fields(grid)
     
     # 3. Mask & Boundary Processing
-    mask = map_geometry_mask(json_input["mask"], json_input["domain"])
+    mask = map_geometry_mask(json_input["mask"], json_input["grid"])
     bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
 
     # 4. Numerical Constants

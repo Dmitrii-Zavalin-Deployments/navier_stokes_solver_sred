@@ -8,7 +8,7 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 @pytest.fixture
 def dummy_grid():
     """Provides the canonical grid metadata from the dummy."""
-    return solver_input_schema_dummy()["domain"]
+    return solver_input_schema_dummy()["grid"]
 
 # ---------------------------------------------------------
 # Error Handling Tests

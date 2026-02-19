@@ -6,7 +6,7 @@ from src.solver_state import SolverState
 
 
 def test_step4_orchestrator_minimal_grid():
-    # Minimal domain 1×1×1
+    # Minimal grid 1×1×1
     state = make_step3_output_dummy(nx=1, ny=1, nz=1)
     state.config["boundary_conditions"] = []
 

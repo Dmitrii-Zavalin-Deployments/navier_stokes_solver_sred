@@ -19,11 +19,11 @@ def test_cell_centered_and_staggered_field_shapes(dummy_input):
     """
     Verifies field allocation shapes based on the canonical dummy input.
     """
-    domain = dummy_input["domain"]
+    grid = dummy_input["grid"]
     grid = {
-        "nx": domain["nx"],
-        "ny": domain["ny"],
-        "nz": domain["nz"]
+        "nx": grid["nx"],
+        "ny": grid["ny"],
+        "nz": grid["nz"]
     }
 
     # 1. Test the allocation function directly (returns dict)
@@ -49,8 +49,8 @@ def test_cell_centered_and_staggered_field_shapes(dummy_input):
 
 def test_field_initialization_to_zero(dummy_input):
     """Ensures all allocated fields start at zero to avoid garbage values."""
-    domain = dummy_input["domain"]
-    grid = {"nx": domain["nx"], "ny": domain["ny"], "nz": domain["nz"]}
+    grid = dummy_input["grid"]
+    grid = {"nx": grid["nx"], "ny": grid["ny"], "nz": grid["nz"]}
     fields = allocate_fields(grid)
     state = SolverState(fields=fields)
 

@@ -16,8 +16,8 @@ def test_correct_grid_spacing_computation(base_input):
     Verifies the mathematical correctness of dx, dy, dz calculations
     and their storage in the SolverState object.
     """
-    domain = base_input["domain"]
-    domain.update({
+    grid = base_input["grid"]
+    grid.update({
         "nx": 4, "ny": 2, "nz": 1,
         "x_min": 0.0, "x_max": 8.0,   # dx = 2.0
         "y_min": -1.0, "y_max": 3.0,  # dy = 2.0
@@ -25,7 +25,7 @@ def test_correct_grid_spacing_computation(base_input):
     })
 
     # Act
-    grid_data = initialize_grid(domain)
+    grid_data = initialize_grid(grid)
     state = SolverState(grid=grid_data)
 
     # Assertions using Object Attribute Access (.grid)
@@ -34,8 +34,8 @@ def test_correct_grid_spacing_computation(base_input):
     assert state.grid["dz"] == pytest.approx(4.0)
 
 def test_missing_required_keys_raise_keyerror(base_input):
-    """Ensures a KeyError is raised if any domain parameter is missing."""
-    base_domain = base_input["domain"]
+    """Ensures a KeyError is raised if any grid parameter is missing."""
+    base_domain = base_input["grid"]
 
     for key in list(base_domain.keys()):
         bad_domain = dict(base_domain)
@@ -45,44 +45,44 @@ def test_missing_required_keys_raise_keyerror(base_input):
 
 def test_grid_dimensions_must_be_positive(base_input):
     """Checks that non-positive nx, ny, nz raise ValueErrors."""
-    domain = base_input["domain"]
+    grid = base_input["grid"]
     
-    domain["nx"] = 0
+    grid["nx"] = 0
     with pytest.raises(ValueError, match="nx"):
-        initialize_grid(domain)
+        initialize_grid(grid)
 
-    domain["nx"] = -5
+    grid["nx"] = -5
     with pytest.raises(ValueError, match="nx"):
-        initialize_grid(domain)
+        initialize_grid(grid)
 
 def test_extents_must_be_finite(base_input):
-    """Ensures domain boundaries are not Inf or NaN."""
-    domain = base_input["domain"]
+    """Ensures grid boundaries are not Inf or NaN."""
+    grid = base_input["grid"]
     bad_values = [float("inf"), float("nan")]
 
     for bad in bad_values:
-        domain["x_min"] = bad
+        grid["x_min"] = bad
         with pytest.raises(ValueError, match="finite"):
-            initialize_grid(domain)
+            initialize_grid(grid)
 
 def test_extents_must_be_ordered_correctly(base_input):
     """Verifies that max must be strictly greater than min."""
-    domain = base_input["domain"]
+    grid = base_input["grid"]
     
-    domain["x_min"] = 10.0
-    domain["x_max"] = 10.0  # zero width
+    grid["x_min"] = 10.0
+    grid["x_max"] = 10.0  # zero width
     with pytest.raises(ValueError):
-        initialize_grid(domain)
+        initialize_grid(grid)
 
-    domain["x_max"] = 5.0   # negative width
+    grid["x_max"] = 5.0   # negative width
     with pytest.raises(ValueError):
-        initialize_grid(domain)
+        initialize_grid(grid)
 
 def test_dx_dy_dz_calculated_correctly_in_state(base_input):
     """Integration check ensuring SolverState.grid holds expected math results."""
-    domain = base_input["domain"]
+    grid = base_input["grid"]
     # dummy has nx=2, x_min=0, x_max=1 => dx=0.5
-    grid_data = initialize_grid(domain)
+    grid_data = initialize_grid(grid)
     state = SolverState(grid=grid_data)
     
     assert state.grid["dx"] > 0

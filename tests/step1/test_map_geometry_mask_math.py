@@ -8,11 +8,11 @@ from src.solver_state import SolverState
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 # ---------------------------------------------------------
-# Shape validation (via domain dict)
+# Shape validation (via grid dict)
 # ---------------------------------------------------------
 
 def test_invalid_shape_raises():
-    """Verifies that malformed domain dictionaries trigger errors."""
+    """Verifies that malformed grid dictionaries trigger errors."""
     # Negative dimension: Corrected match to reflect actual core message
     with pytest.raises(ValueError, match="nx\*ny\*nz"):
         map_geometry_mask([1]*8, {"nx": 4, "ny": -1, "nz": 2})
@@ -43,15 +43,15 @@ def test_mask_flat_must_be_iterable():
 
 def test_mask_flat_length_match():
     """Checks that flat list length equals nx * ny * nz."""
-    domain = {"nx": 2, "ny": 2, "nz": 2}
+    grid = {"nx": 2, "ny": 2, "nz": 2}
 
     # Too short
     with pytest.raises(ValueError, match="match nx\*ny\*nz"):
-        map_geometry_mask([1, 2], domain)
+        map_geometry_mask([1, 2], grid)
 
     # Too long
     with pytest.raises(ValueError, match="match nx\*ny\*nz"):
-        map_geometry_mask(list(range(10)), domain)
+        map_geometry_mask(list(range(10)), grid)
 
 
 # ---------------------------------------------------------
@@ -75,18 +75,18 @@ def test_mask_entries_must_be_finite_integers():
 def test_semantic_validation_allows_valid_entries():
     """Confirms valid mask entries are correctly reshaped and stored in SolverState."""
     dummy = solver_input_schema_dummy()
-    domain = dummy["domain"]
+    grid = dummy["grid"]
     flat_mask = dummy["mask"]
 
     # Act
-    arr = map_geometry_mask(flat_mask, domain)
-    state = SolverState(mask=arr, grid=domain)
+    arr = map_geometry_mask(flat_mask, grid)
+    state = SolverState(mask=arr, grid=grid)
 
     # Verify object-style access
-    assert state.mask.shape == (domain["nx"], domain["ny"], domain["nz"])
+    assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     
     # Expected: index = i + nx*(j + ny*k)
-    expected = np.array(flat_mask).reshape((domain["nx"], domain["ny"], domain["nz"]), order="F")
+    expected = np.array(flat_mask).reshape((grid["nx"], grid["ny"], grid["nz"]), order="F")
     assert np.array_equal(state.mask, expected)
 
 
@@ -102,9 +102,9 @@ def test_canonical_f_order_mapping():
     # index 2 (0,1): -1
     # index 3 (1,1): 1
     flat = [1, 0, -1, 1]
-    domain = {"nx": 2, "ny": 2, "nz": 1}
+    grid = {"nx": 2, "ny": 2, "nz": 1}
     
-    arr = map_geometry_mask(flat, domain)
+    arr = map_geometry_mask(flat, grid)
     
     # Check specific indices based on i + nx*j
     assert arr[0, 0, 0] == 1   # i=0, j=0 (First element)
