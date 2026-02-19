@@ -2,30 +2,57 @@
 
 from __future__ import annotations
 from typing import Any, Dict, List
-import math
 
-# REMOVED: from .types import GridConfig  <-- Fixing the ModuleNotFoundError
-
-_VALID_FACES = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}
-_VALID_APPLY_TO = {"velocity", "pressure", "pressure_gradient"}
+_VALID_LOCATIONS = {"x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}
+_VALID_TYPES = {"no-slip", "free-slip", "inflow", "outflow", "pressure"}
 
 def parse_boundary_conditions(
     bc_list: List[Dict[str, Any]],
-    grid_config: Dict[str, Any], # Changed from GridConfig to Dict
-) -> Any:
+    grid_config: Dict[str, Any],
+) -> Dict[str, Dict[str, Any]]:
     """
-    Step 1: Parse and validate BCs. 
-    Per frozen dummy 'make_step1_output_dummy', this should return None 
-    at the end of Step 1.
+    Step 1: Parse and validate BCs.
+    Returns a dictionary mapping locations to their normalized physical properties.
     """
-    # 1. Structural Validation (Keep your existing logic for Point 7 Coverage)
-    for bc in bc_list:
-        faces = bc.get("faces")
-        if not isinstance(faces, list) or not faces:
-            raise ValueError("BC must specify at least one face")
-        for face in faces:
-            if face not in _VALID_FACES:
-                raise ValueError(f"Face must be one of {sorted(_VALID_FACES)}, got {face!r}")
+    parsed_table = {}
 
-    # 2. Return None to satisfy the frozen Step 1 Dummy 'boundary_conditions' key
-    return None
+    for bc in bc_list:
+        # Use 'location' as the primary key for the returned table
+        loc = bc.get("location")
+        if not loc or loc not in _VALID_LOCATIONS:
+            raise ValueError(f"Invalid or missing boundary location: {loc}")
+        
+        if loc in parsed_table:
+            raise ValueError(f"Duplicate boundary condition for location: {loc}")
+
+        bc_type = bc.get("type")
+        if bc_type not in _VALID_TYPES:
+            raise ValueError(f"Invalid boundary type: {bc_type}")
+
+        values = bc.get("values", {})
+        
+        # Physical Logic Validations
+        if bc_type == "inflow":
+            for comp in ["u", "v", "w"]:
+                if comp not in values:
+                    raise ValueError(f"Inflow at {loc} requires velocity component '{comp}'")
+        
+        if bc_type == "pressure":
+            if "p" not in values:
+                raise ValueError(f"Pressure boundary at {loc} requires value 'p'")
+
+        if bc_type == "no-slip":
+            if "p" in values:
+                raise ValueError(f"No-slip boundary at {loc} cannot define pressure 'p'")
+
+        # Normalization: Ensure every entry has u, v, w, and p for downstream safety
+        parsed_table[loc] = {
+            "type": bc_type,
+            "u": float(values.get("u", 0.0)),
+            "v": float(values.get("v", 0.0)),
+            "w": float(values.get("w", 0.0)),
+            "p": float(values.get("p", 0.0)),
+            "comment": bc.get("comment", "")
+        }
+
+    return parsed_table
