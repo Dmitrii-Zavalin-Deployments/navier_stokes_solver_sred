@@ -14,7 +14,8 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 def test_invalid_shape_raises():
     """Verifies that malformed grid dictionaries trigger errors."""
     # Negative dimension: Corrected match to reflect actual core message
-    with pytest.raises(ValueError, match="nx\*ny\*nz"):
+    # Added 'r' prefix to fix SyntaxWarning in Python 3.12+
+    with pytest.raises(ValueError, match=r"nx\*ny\*nz"):
         map_geometry_mask([1]*8, {"nx": 4, "ny": -1, "nz": 2})
 
     # Non-integer dimension
@@ -45,12 +46,12 @@ def test_mask_flat_length_match():
     """Checks that flat list length equals nx * ny * nz."""
     grid = {"nx": 2, "ny": 2, "nz": 2}
 
-    # Too short
-    with pytest.raises(ValueError, match="match nx\*ny\*nz"):
+    # Too short: Added 'r' prefix to fix SyntaxWarning
+    with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
         map_geometry_mask([1, 2], grid)
 
-    # Too long
-    with pytest.raises(ValueError, match="match nx\*ny\*nz"):
+    # Too long: Added 'r' prefix to fix SyntaxWarning
+    with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
         map_geometry_mask(list(range(10)), grid)
 
 
@@ -85,7 +86,7 @@ def test_semantic_validation_allows_valid_entries():
     # Verify object-style access
     assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     
-    # Expected: index = i + nx*(j + ny*k)
+    # Expected: index = i + nx*(j + ny*k) (Fortran Order)
     expected = np.array(flat_mask).reshape((grid["nx"], grid["ny"], grid["nz"]), order="F")
     assert np.array_equal(state.mask, expected)
 

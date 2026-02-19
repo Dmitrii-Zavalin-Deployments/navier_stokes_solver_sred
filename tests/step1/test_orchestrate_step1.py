@@ -1,4 +1,4 @@
-# tests/step1/test_orchestrate_step1_state.py
+# tests/step1/test_orchestrate_step1.py
 
 import pytest
 import copy
@@ -26,17 +26,22 @@ def test_step1_input_schema_failure():
 
 
 # ------------------------------------------------------------
-# Test 2 — Physical constraints failure
+# Test 2 — Physical constraints failure (Schema Level)
 # ------------------------------------------------------------
 def test_step1_physical_constraints_failure():
-    """Verifies that physically impossible values trigger a ValueError."""
+    """
+    Verifies that physically impossible values (like negative density) 
+    are caught. Since our JSON Schema has 'exclusiveMinimum: 0', 
+    this now triggers a RuntimeError from the validator.
+    """
     bad = solver_input_schema_dummy()
     bad = copy.deepcopy(bad)
 
     # Invalid density (must be > 0)
     bad["fluid_properties"]["density"] = -1.0
 
-    with pytest.raises(ValueError):
+    # This is caught by jsonschema.validate() in orchestrate_step1
+    with pytest.raises(RuntimeError, match="Input schema validation FAILED"):
         orchestrate_step1_state(bad)
 
 
@@ -53,7 +58,6 @@ def test_step1_geometry_mask_mapping():
     assert isinstance(state.mask, np.ndarray)
 
     # In your dummy, you have a specific pattern of -1, 0, 1
-    # We check that at least one fluid cell (0) and boundary cell (-1/1) exists
     assert 0 in state.mask
     assert 1 in state.mask or -1 in state.mask
 
@@ -79,7 +83,7 @@ def test_step1_derived_constants():
     inp = solver_input_schema_dummy()
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
-    # Constants is usually a dictionary in the SolverState object
+    # Constants is a dictionary in the SolverState object
     c = state.constants
 
     assert c["rho"] == inp["fluid_properties"]["density"]
@@ -92,26 +96,29 @@ def test_step1_derived_constants():
 
 
 # ------------------------------------------------------------
-# Test 6 — Output schema validation failure
+# Test 6 — Internal Structural failure
 # ------------------------------------------------------------
 def test_step1_output_schema_failure(monkeypatch):
-    """Mocks the state assembler to produce a bad object, triggering validation failure."""
+    """
+    Mocks the state assembler to produce an object missing grid keys,
+    triggering a ValueError in the physical validation logic.
+    """
     import src.step1.orchestrate_step1 as mod
 
     real = mod.assemble_simulation_state
 
     def broken(*args, **kwargs):
         state = real(*args, **kwargs)
-        # Corrupt the state object by removing required grid metadata
+        # Corrupt the state object by emptying grid metadata
         state.grid = {} 
         return state
 
     monkeypatch.setattr(mod, "assemble_simulation_state", broken)
 
-    with pytest.raises(RuntimeError) as excinfo:
+    # This is caught by validate_physical_constraints() which raises ValueError
+    # because 'nx' is missing from the grid dict.
+    with pytest.raises(ValueError, match="Physical validation failed"):
         orchestrate_step1_state(solver_input_schema_dummy())
-
-    assert "Output schema validation FAILED" in str(excinfo.value)
 
 
 # ------------------------------------------------------------

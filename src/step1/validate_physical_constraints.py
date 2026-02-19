@@ -36,12 +36,22 @@ def validate_physical_constraints(state: SolverState) -> None:
     fields = state.fields
     mask = state.mask
 
-    # 2. Fluid properties & Time step
+    # 2. Structural Guard: Ensure grid metadata is present before unpacking
+    # This prevents KeyError: 'nx' when running tests with corrupted/empty states
+    required_grid_keys = ["nx", "ny", "nz", "dx", "dy", "dz"]
+    missing_keys = [k for k in required_grid_keys if k not in grid]
+    if missing_keys:
+        raise ValueError(
+            f"Physical validation failed: Grid is missing required keys: {missing_keys}. "
+            "Ensure initialize_grid was successful."
+        )
+
+    # 3. Fluid properties & Time step
     _ensure_positive("density (rho)", float(constants["rho"]))
     _ensure_non_negative("viscosity (mu)", float(constants["mu"]))
     _ensure_positive("time step (dt)", float(constants["dt"]))
 
-    # 3. Grid counts & Spacing
+    # 4. Grid counts & Spacing
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
     _ensure_positive_int("nx", nx)
     _ensure_positive_int("ny", ny)
@@ -51,8 +61,7 @@ def validate_physical_constraints(state: SolverState) -> None:
     _ensure_positive("dy", float(grid["dy"]))
     _ensure_positive("dz", float(grid["dz"]))
 
-    # 4. Grid extents validation
-    # Processed grid state prioritizes dx/dy/dz, but we check extents for logic consistency
+    # 5. Grid extents validation
     x_min, x_max = grid.get("x_min"), grid.get("x_max")
     y_min, y_max = grid.get("y_min"), grid.get("y_max")
     z_min, z_max = grid.get("z_min"), grid.get("z_max")
@@ -75,18 +84,18 @@ def validate_physical_constraints(state: SolverState) -> None:
         if z_max <= z_min:
             raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
 
-    # 5. Mask consistency
-    expected_shape = (nx, ny, nz)
-    if mask.shape != expected_shape:
-        raise ValueError(
-            f"Mask shape {mask.shape} does not match grid counts {expected_shape}"
-        )
-    
-    # Ensure mask contains valid entries (-1: obstacle, 0: fluid, 1: boundary)
-    if not np.all(np.isin(mask, [-1, 0, 1])):
-        raise ValueError("Mask contains invalid entries (only -1, 0, 1 allowed)")
+    # 6. Mask consistency
+    if mask is not None:
+        expected_shape = (nx, ny, nz)
+        if mask.shape != expected_shape:
+            raise ValueError(
+                f"Mask shape {mask.shape} does not match grid counts {expected_shape}"
+            )
+        
+        if not np.all(np.isin(mask, [-1, 0, 1])):
+            raise ValueError("Mask contains invalid entries (only -1, 0, 1 allowed)")
 
-    # 6. Field Finiteness
+    # 7. Field Finiteness
     for field_name in ["U", "V", "W", "P"]:
         if field_name in fields:
             arr = fields[field_name]
