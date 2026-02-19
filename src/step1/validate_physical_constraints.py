@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 import math
+import numpy as np
 
 
 def _ensure_positive(name: str, value: float) -> None:
@@ -28,37 +29,22 @@ def _ensure_finite(name: str, value: float) -> None:
 def validate_physical_constraints(data: Dict[str, Any]) -> None:
     """
     Fatal physical checks before any allocation.
-
-    Step 1 responsibilities:
-      • structural validation only
-      • no geometry semantics
-      • no BC logic
-      • no ghost-layer logic
-      • no solver-level constraints (e.g., CFL)
-
-    Ensures the input is physically meaningful and internally consistent
-    before Step 1 allocates fields or constructs SolverState.
+    Strictly validates required properties without injecting default values.
     """
 
-    # ---------------------------------------------------------
-    # Extract sections (new schema)
-    # ---------------------------------------------------------
+    # 1. Required Sections (Will raise KeyError if missing, as expected)
     domain = data["domain"]
     fluid = data["fluid_properties"]
     init = data["initial_conditions"]
-    geom = data["geometry"]
-    forces = data.get("external_forces", {})
     sim = data["simulation_parameters"]
+    mask = data["mask"]  # Top-level 'mask' from schema
+    forces = data["external_forces"]
 
-    # ---------------------------------------------------------
-    # Fluid properties
-    # ---------------------------------------------------------
+    # 2. Fluid properties
     _ensure_positive("density", float(fluid["density"]))
     _ensure_non_negative("viscosity", float(fluid["viscosity"]))
 
-    # ---------------------------------------------------------
-    # Grid counts
-    # ---------------------------------------------------------
+    # 3. Grid counts
     nx = int(domain["nx"])
     ny = int(domain["ny"])
     nz = int(domain["nz"])
@@ -66,103 +52,48 @@ def validate_physical_constraints(data: Dict[str, Any]) -> None:
     _ensure_positive_int("ny", ny)
     _ensure_positive_int("nz", nz)
 
-    # ---------------------------------------------------------
-    # Domain extents (finite + ordered)
-    # ---------------------------------------------------------
-    x_min = float(domain["x_min"])
-    x_max = float(domain["x_max"])
-    y_min = float(domain["y_min"])
-    y_max = float(domain["y_max"])
-    z_min = float(domain["z_min"])
-    z_max = float(domain["z_max"])
+    # 4. Domain extents (Strict access, no defaults)
+    x_min, x_max = float(domain["x_min"]), float(domain["x_max"])
+    y_min, y_max = float(domain["y_min"]), float(domain["y_max"])
+    z_min, z_max = float(domain["z_min"]), float(domain["z_max"])
 
     for name, val in [
         ("x_min", x_min), ("x_max", x_max),
         ("y_min", y_min), ("y_max", y_max),
-        ("z_min", z_min), ("z_max", z_max),
+        ("z_min", z_min), ("z_max", z_max)
     ]:
         _ensure_finite(name, val)
 
-    if not x_max > x_min:
-        raise ValueError("x_max must be > x_min")
-    if not y_max > y_min:
-        raise ValueError("y_max must be > y_min")
-    if not z_max > z_min:
-        raise ValueError("z_max must be > z_min")
+    if x_max <= x_min: raise ValueError(f"x_max ({x_max}) must be > x_min ({x_min})")
+    if y_max <= y_min: raise ValueError(f"y_max ({y_max}) must be > y_min ({y_min})")
+    if z_max <= z_min: raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
 
-    # ---------------------------------------------------------
-    # Geometry mask consistency (STRUCTURAL ONLY)
-    # ---------------------------------------------------------
-    mask_flat = geom["mask_flat"]
-    mask_shape = geom["mask_shape"]
-
-    if len(mask_shape) != 3:
-        raise ValueError("mask_shape must have 3 dimensions")
-
-    expected_len = mask_shape[0] * mask_shape[1] * mask_shape[2]
-    if expected_len != nx * ny * nz:
+    # 5. Mask consistency
+    # Ensure mask size matches nx*ny*nz. 
+    # Works for both flat lists and nested 3D lists.
+    mask_size = np.array(mask).size
+    if mask_size != nx * ny * nz:
         raise ValueError(
-            f"mask_shape {mask_shape} does not match nx*ny*nz={nx*ny*nz}"
+            f"Mask size {mask_size} does not match domain nx*ny*nz={nx*ny*nz}"
         )
 
-    if len(mask_flat) != expected_len:
-        raise ValueError(
-            f"mask_flat length {len(mask_flat)} does not match "
-            f"mask_shape product {expected_len}"
-        )
-
-    # Structural validation only — NO semantic enforcement
-    for i, v in enumerate(mask_flat):
-        if not isinstance(v, int) or not math.isfinite(v):
-            raise ValueError(f"Mask entry at index {i} must be a finite integer, got {v}")
-
-    # ---------------------------------------------------------
-    # Validate flattening_order (string only)
-    # ---------------------------------------------------------
-    order = geom.get("flattening_order")
-    if not isinstance(order, str):
-        raise ValueError("flattening_order must be a string")
-
-    # ---------------------------------------------------------
-    # Initial velocity
-    # ---------------------------------------------------------
+    # 6. Initial Conditions
     vel = init["velocity"]
     if not isinstance(vel, (list, tuple)) or len(vel) != 3:
-        raise ValueError("initial_conditions.velocity must have exactly 3 components")
-
+        raise ValueError("initial_conditions.velocity must be a list/tuple of length 3")
+    
     for i, v in enumerate(vel):
-        _ensure_finite(f"velocity[{i}]", float(v))
+        _ensure_finite(f"initial_conditions.velocity[{i}]", float(v))
+    
+    _ensure_finite("initial_conditions.pressure", float(init["pressure"]))
 
-    # ---------------------------------------------------------
-    # Initial pressure
-    # ---------------------------------------------------------
-    _ensure_finite("pressure", float(init["pressure"]))
+    # 7. Time step
+    _ensure_positive("time_step", float(sim["time_step"]))
 
-    # ---------------------------------------------------------
-    # Time step
-    # ---------------------------------------------------------
-    dt = float(sim["time_step"])
-    _ensure_positive("time_step", dt)
-
-    # ---------------------------------------------------------
-    # External forces
-    # ---------------------------------------------------------
-    if not isinstance(forces, dict):
-        raise ValueError("external_forces must be a dictionary")
-
-    fv = forces.get("force_vector")
-    if fv is None:
-        raise ValueError("external_forces must contain 'force_vector'")
-
+    # 8. External forces
+    fv = forces["force_vector"]
     if not isinstance(fv, (list, tuple)) or len(fv) != 3:
-        raise ValueError("external_forces.force_vector must be a length‑3 vector")
-
+        raise ValueError("external_forces.force_vector must be a list/tuple of length 3")
+    
     for i, comp in enumerate(fv):
-        if not isinstance(comp, (int, float)) or not math.isfinite(comp):
-            raise ValueError(
-                f"external_forces.force_vector[{i}] must be a finite number, got {comp}"
-            )
-
-    # ---------------------------------------------------------
-    # NOTE: CFL pre-check removed (belongs to Step 3/4)
-    # ---------------------------------------------------------
+        _ensure_finite(f"external_forces.force_vector[{i}]", float(comp))
