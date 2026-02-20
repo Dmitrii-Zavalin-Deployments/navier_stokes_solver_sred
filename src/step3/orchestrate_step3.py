@@ -16,60 +16,50 @@ def orchestrate_step3(
     step_index: int,
 ) -> SolverState:
     """
-    Step 3 Conductor — Pressure projection and velocity correction.
-    Coordinates the star-step, PPE solve, and divergence-free correction.
+    Step 3 Conductor — Coordinates star-step, PPE solve, and correction.
     """
 
-    # 1. Apply pre‑prediction boundaries (Sets Inflow/Wall velocities)
+    # 1. Apply pre‑prediction boundaries
     fields_pre = apply_boundary_conditions_pre(state, state.fields)
 
-    # 2. Predict intermediate velocity U* U_star, V_star, W_star = predict_velocity(state, fields_pre)
+    # 2. Predict intermediate velocity U* (FIXED: Restored function call)
+    U_star, V_star, W_star = predict_velocity(state)
 
     # 3. Build PPE RHS (Divergence of U*)
     rhs = build_ppe_rhs(state, U_star, V_star, W_star)
 
-    # 4. Solve for pressure (Handles Dirichlet/Neumann switching and tolerances)
+    # 4. Solve for pressure
     P_new, ppe_meta = solve_pressure(state, rhs)
 
     # 5. Correct velocity (Subtract Pressure Gradient)
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
 
-    # 6. Apply post‑correction boundaries (Lock physical boundaries/no-slip)
+    # 6. Apply post‑correction boundaries
     fields_post = apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new)
 
-    # 7. Write back fields (Synchronize State)
+    # 7. Write back fields
     state.fields["U"] = fields_post["U"]
     state.fields["V"] = fields_post["V"]
     state.fields["W"] = fields_post["W"]
     state.fields["P"] = P_new
 
-    # 8. Update health diagnostics (CFL and Divergence checks)
+    # 8. Update health diagnostics
     state.health = update_health(state, state.fields, P_new)
 
     # 9. Log diagnostics and update history
     diag = log_step_diagnostics(state, state.fields, current_time, step_index)
     
-    # Update state history safely
     if not hasattr(state, "history") or state.history is None:
         state.history = {}
         
     history = state.history
-    keys = [
-        "times", "divergence_norms", "max_velocity_history", 
-        "ppe_status_history", "energy_history", "ppe_atol_history"
-    ]
-    for key in keys:
-        if key not in history: 
-            history[key] = []
+    for key in ["times", "divergence_norms", "max_velocity_history", "ppe_status_history", "energy_history"]:
+        if key not in history: history[key] = []
         
-    # Append step data
     history["times"].append(float(current_time))
     history["divergence_norms"].append(state.health.get("post_correction_divergence_norm", 0.0))
     history["max_velocity_history"].append(state.health.get("max_velocity_magnitude", 0.0))
-    
-    # Capture PPE solver metadata
     history["ppe_status_history"].append(ppe_meta.get("solver_status", "Unknown"))
-    history["ppe_atol_history"].append(ppe_meta.get("absolute_tolerance_used", 0.0))
     history["energy_history"].append(diag.get("energy", 0.0))
 
     return state
