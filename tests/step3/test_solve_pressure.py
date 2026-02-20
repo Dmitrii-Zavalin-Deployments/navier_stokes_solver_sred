@@ -12,7 +12,6 @@ def test_config_key_mapping_and_logic():
     p_size = state.fields["P"].size
     
     # Setup Identity Matrix as mock Laplacian (Non-singular case)
-    # diag(A) = 1.0, so Jacobi Preconditioner will be Identity.
     state.ppe["A"] = eye(p_size, format="csr")
     state.ppe["ppe_is_singular"] = False
     
@@ -65,7 +64,7 @@ def test_fallback_tolerance_values():
     rhs = np.zeros((2, 2, 2))
     P_new, meta = solve_pressure(state, rhs)
     
-    # Matches hardcoded defaults: 1e-6 and 1e-12
+    # These should match the hardcoded defaults in solve_pressure.py
     assert meta["tolerance_used"] == 1e-6
     assert meta["absolute_tolerance_used"] == 1e-12
     assert meta["converged"] is True
