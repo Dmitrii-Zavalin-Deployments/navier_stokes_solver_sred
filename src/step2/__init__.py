@@ -6,9 +6,9 @@ This module transforms the geometric data from Step 1 into
 computational sparse operators and prepares the linear systems.
 """
 
-from .orchestrate_step2 import orchestrate_step2_state
+from .orchestrate_step2 import orchestrate_step2
 
 # Only expose the main orchestrator to external modules
 __all__ = [
-    "orchestrate_step2_state",
+    "orchestrate_step2",
 ]

@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from src.solver_state import SolverState
 from src.step1.orchestrate_step1 import orchestrate_step1_state
-from src.step2.orchestrate_step2 import orchestrate_step2_state
+from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3_state
 from src.step4.orchestrate_step4 import orchestrate_step4_state
 
@@ -28,7 +28,7 @@ def run_solver(config: Dict[str, Any]) -> SolverState:
     # ---------------------------------------------------------
     # Step 2 — numerical preprocessing
     # ---------------------------------------------------------
-    state = orchestrate_step2_state(state)
+    state = orchestrate_step2(state)
 
     # ---------------------------------------------------------
     # Step 3 — pressure projection + velocity correction

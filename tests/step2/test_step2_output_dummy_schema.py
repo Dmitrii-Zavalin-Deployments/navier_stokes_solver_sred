@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import issparse
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_schema import EXPECTED_STEP2_SCHEMA
-from src.step2.orchestrate_step2 import orchestrate_step2_state
+from src.step2.orchestrate_step2 import orchestrate_step2
 
 def test_step2_output_matches_schema():
     """
@@ -17,7 +17,7 @@ def test_step2_output_matches_schema():
 
     # 2. Run real Step 2 Orchestrator
     # This is the call that was missing!
-    state = orchestrate_step2_state(step1_state)
+    state = orchestrate_step2(step1_state)
 
     # 3. Check object attribute existence
     for key in EXPECTED_STEP2_SCHEMA:
