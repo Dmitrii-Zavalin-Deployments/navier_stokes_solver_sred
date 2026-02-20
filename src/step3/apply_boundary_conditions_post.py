@@ -7,11 +7,6 @@ def apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new):
     """
     Step‑3 boundary‑condition reapplication.
     Takes corrected fields and returns new fields with BCs enforced.
-    
-    Logic Flow:
-    1. Zero out internal solid faces (Internal Mask).
-    2. Apply domain-specific Enums (JSON Contract).
-    3. Call custom BC handler if exists.
     """
     is_solid = ~state.is_fluid
     U = np.array(U_new, copy=True)
@@ -19,10 +14,10 @@ def apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new):
     W = np.array(W_new, copy=True)
 
     # 1. Internal Mask: Zero faces adjacent to solid cells
-    # This ensures no-leakage for obstacles
     U[1:-1, :, :][is_solid[:-1, :, :] | is_solid[1:, :, :]] = 0.0
     V[:, 1:-1, :][is_solid[:, :-1, :] | is_solid[:, 1:, :]] = 0.0
-    W[:, :, 1:-1][is_solid[:, :, :-1] | is_solid[:, :, 1:] = 0.0
+    # FIX: Added the missing closing bracket ] before the assignment
+    W[:, :, 1:-1][is_solid[:, :, :-1] | is_solid[:, :, 1:]] = 0.0
 
     fields = {"U": U, "V": V, "W": W, "P": P_new}
 
