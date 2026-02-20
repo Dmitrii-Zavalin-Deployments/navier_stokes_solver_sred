@@ -2,11 +2,14 @@
 
 import numpy as np
 
-def predict_velocity(state) -> None:
+def predict_velocity(state, fields=None):
     """
     Step-3 velocity prediction (The "Star" step).
-    Calculates intermediate velocities U*, V*, W* using sparse operators
-    for Diffusion and Advection from Step 2.
+    Calculates intermediate velocities U*, V*, W* using sparse operators.
+    
+    Args:
+        state: The SolverState object.
+        fields: Optional dictionary containing U, V, W (pre-enforced BCs).
     """
     # 1. Physics and Time Constants
     rho = state.constants["rho"]
@@ -14,26 +17,24 @@ def predict_velocity(state) -> None:
     dt  = state.constants["dt"]
     nu  = mu / rho
 
-    # 2. Get Current Velocity Fields
-    U = state.fields["U"]
-    V = state.fields["V"]
-    W = state.fields["W"]
+    # 2. Get Velocity Fields (favoring input fields from BC pre-step)
+    f = fields if fields is not None else state.fields
+    U = f["U"]
+    V = f["V"]
+    W = f["W"]
 
     # 3. Apply Sparse Operators (Diffusion & Advection)
-    # Note: Operators act on flattened (raveled) vectors.
     def apply_op(field, op_key):
         op = state.operators.get(op_key)
         if op is None:
             return np.zeros_like(field)
-        # Matrix-vector multiplication: A @ x
+        # Matrix-vector multiplication for flattened fields
         return (op @ field.ravel()).reshape(field.shape)
 
-    # Calculate Diffusion: nu * nabla^2(u)
     diff_u = apply_op(U, "lap_u")
     diff_v = apply_op(V, "lap_v")
     diff_w = apply_op(W, "lap_w")
 
-    # Calculate Advection: (u . grad)u
     adv_u = apply_op(U, "advection_u")
     adv_v = apply_op(V, "advection_v")
     adv_w = apply_op(W, "advection_w")
@@ -50,20 +51,7 @@ def predict_velocity(state) -> None:
     V_star = V + dt * (nu * diff_v - adv_v + fy)
     W_star = W + dt * (nu * diff_w - adv_w + fz)
 
-    # 6. Enforce No-Slip at Solid Boundaries (Staggered Grid logic)
-    if state.is_solid is not None:
-        mask = state.is_solid
-        # Zero out velocity components on faces shared with solid cells
-        U_star[1:-1, :, :][mask[:-1, :, :] | mask[1:, :, :]] = 0.0
-        V_star[:, 1:-1, :][mask[:, :-1, :] | mask[:, 1:, :]] = 0.0
-        W_star[:, :, 1:-1][mask[:, :, :-1] | mask[:, :, 1:]] = 0.0
-        
-        # Domain boundary condition enforcement (Static Walls)
-        U_star[0, :, :] = 0.0; U_star[-1, :, :] = 0.0
-        V_star[:, 0, :] = 0.0; V_star[:, -1, :] = 0.0
-        W_star[:, :, 0] = 0.0; W_star[:, :, -1] = 0.0
-
-    # 7. Update State
-    state.intermediate_fields["U_star"] = U_star
-    state.intermediate_fields["V_star"] = V_star
-    state.intermediate_fields["W_star"] = W_star
+    # Note: Boundary enforcement and solid masking are now handled 
+    # by the orchestrator via apply_boundary_conditions_post.
+    
+    return U_star, V_star, W_star
