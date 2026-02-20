@@ -10,7 +10,6 @@ def test_orchestrate_step3_minimal():
     """Verify renamed orchestrator successfully updates state fields and history."""
     state = make_step2_output_dummy(nx=3, ny=3, nz=3)
 
-    # Provide a simple BC config to ensure orchestrator handles it
     state.config["boundary_conditions"] = [
         {"location": "x_min", "type": "no-slip"}
     ]
@@ -42,12 +41,14 @@ def test_orchestrate_step3_resilience():
     """Ensure orchestrator handles cases where optional state attributes are missing."""
     state = make_step2_output_dummy(nx=2, ny=2, nz=2)
     
-    # Clear optional attributes to test initialization logic
+    # Specifically testing the initialization of history if it's missing
     if hasattr(state, "history"): 
         delattr(state, "history")
     state.boundary_conditions = None
 
     result = orchestrate_step3(state, 0.0, 0)
     
+    assert hasattr(result, "history")
     assert "times" in result.history
+    # Staggered grid U shape check: nx+1, ny, nz
     assert result.fields["U"].shape == (3, 2, 2)

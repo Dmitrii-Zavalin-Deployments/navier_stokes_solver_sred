@@ -17,13 +17,13 @@ def orchestrate_step3(
 ) -> SolverState:
     """
     Step 3 Conductor — Pressure projection and velocity correction.
-    Renamed to orchestrate_step3 for consistency with Step 1 and Step 2.
+    Renamed for consistency. Coordinates the star-step and correction.
     """
 
     # 1. Apply pre‑prediction boundaries (Sets Inflow/Wall velocities)
     fields_pre = apply_boundary_conditions_pre(state, state.fields)
 
-    # 2. Predict intermediate velocity U* (Advection/Diffusion)
+    # 2. Predict intermediate velocity U* (Accepts fields_pre to satisfy updated signature)
     U_star, V_star, W_star = predict_velocity(state, fields_pre)
 
     # 3. Build PPE RHS (Divergence of U*)
@@ -50,8 +50,11 @@ def orchestrate_step3(
     # 9. Log diagnostics and update history
     diag = log_step_diagnostics(state, state.fields, current_time, step_index)
     
-    # Update state history (Preserving previous history if exists)
-    history = getattr(state, "history", {})
+    # Update state history safely
+    if not hasattr(state, "history") or state.history is None:
+        state.history = {}
+        
+    history = state.history
     keys = ["times", "divergence_norms", "max_velocity_history", "ppe_iterations_history", "energy_history"]
     for key in keys:
         if key not in history: 
@@ -61,10 +64,8 @@ def orchestrate_step3(
     history["divergence_norms"].append(diag["divergence_norm"])
     history["max_velocity_history"].append(diag["max_velocity"])
     
-    # Map solver status/info to history
-    history["ppe_iterations_history"].append(ppe_meta.get("solver_status", 0))
+    # Capture iteration count or status from metadata
+    history["ppe_iterations_history"].append(ppe_meta.get("iterations", 0))
     history["energy_history"].append(diag["energy"])
-
-    state.history = history
 
     return state
