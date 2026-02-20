@@ -2,42 +2,44 @@
 
 from __future__ import annotations
 from src.solver_state import SolverState
+import numpy as np
 
 def prepare_ppe_structure(state: SolverState) -> None:
     """
     Finalizes the PPE dictionary by linking math operators, 
     physical constants, and user-defined solver settings.
-    
-    This structure provides the Pressure Poisson Equation solver with everything
-    needed to calculate the pressure field from the intermediate velocity divergence.
     """
-    # 1. Physics (from Input Schema)
+    # 1. Physics
     rho = state.constants['rho']
     dt = state.config['dt']
     
-    # Scale Guard: Explicitly reject non-physical time steps to prevent ZeroDivisionError
     if dt <= 0:
-        raise ValueError(
-            f"Invalid time step (dt={dt}). The Pressure Poisson Equation requires "
-            "a positive, non-zero time step to scale the divergence term."
-        )
+        raise ValueError(f"Invalid time step (dt={dt}). Must be positive.")
     
-    # 2. Tuning (from config.json)
-    settings = state.config.get("solver_settings", {})
+    # 2. Singularity Check: 
+    # The PPE is singular if there are no pressure (Dirichlet) outlets.
+    # We check if "pressure_outlet" exists in the boundary_conditions dict.
+    bc = state.boundary_conditions or {}
+    has_outlet = "pressure_outlet" in bc and len(bc["pressure_outlet"]) > 0
+    is_singular = not has_outlet
 
-    # 3. Assembly
+    # 3. RHS Builder Function
+    # The RHS of the PPE is: - (rho / dt) * divergence
+    # We also mask it to ensure no pressure updates happen inside solid cells.
+    def rhs_builder(divergence: np.ndarray) -> np.ndarray:
+        rhs = -(rho / dt) * divergence
+        if state.is_fluid is not None:
+            rhs = rhs * state.is_fluid  # Zero out non-fluid (solid) cells
+        return rhs
+
+    # 4. Assembly
+    settings = state.config.get("solver_settings", {})
     state.ppe = {
-        # Math: The actual sparse matrix object representing the Laplacian operator
         "A": state.operators.get("laplacian"),
-        
-        # Physics: The scaling coefficient (rho / dt) used in the RHS of the PPE
         "rhs_coeff": rho / dt,
-        
-        # Tuning: Numerical solver preferences with safe fallbacks
+        "rhs_builder": rhs_builder,
         "solver_type": settings.get("solver_type", "PCG"),
         "tolerance": settings.get("ppe_tolerance", 1e-6),
         "max_iterations": settings.get("ppe_max_iter", 1000),
-        
-        # Diagnostics: Status flags for numerical health
-        "ppe_is_singular": False
+        "ppe_is_singular": is_singular
     }
