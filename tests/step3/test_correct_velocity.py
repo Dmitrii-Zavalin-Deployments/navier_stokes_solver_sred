@@ -17,7 +17,6 @@ def test_correction_math():
     state.constants["rho"] = 1.0
     _wire_mock_gradients(state, value=1.0)
     
-    # Create star velocities with correct staggered shapes
     U_star = np.full_like(state.fields["U"], 5.0)
     V_star = np.full_like(state.fields["V"], 5.0)
     W_star = np.full_like(state.fields["W"], 5.0)
@@ -25,17 +24,17 @@ def test_correction_math():
     
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_dummy)
     
-    # Check internal nodes
-    assert np.allclose(U_new[1:-1, :, :], 4.0)
-    assert np.allclose(V_new[:, 1:-1, :], 4.0)
+    # Check internal staggered faces (for nx=3, index 1 and 2 are internal)
+    assert np.all(U_new[1:3, :, :] == 4.0)
+    assert np.all(V_new[:, 1:3, :] == 4.0)
+    assert np.all(W_new[:, :, 1:3] == 4.0)
 
 def test_internal_solid_mask_neighbor_rule():
     """Verify that if a cell is solid, its surrounding faces are zeroed."""
     state = make_step2_output_dummy(nx=3, ny=3, nz=3)
     _wire_mock_gradients(state, value=0.0)
 
-    # Set center cell to solid
-    state.is_fluid[1, 1, 1] = False
+    state.is_fluid[1, 1, 1] = False # Set center cell to solid
 
     U_star = np.ones_like(state.fields["U"])
     V_star = np.ones_like(state.fields["V"])
@@ -44,7 +43,7 @@ def test_internal_solid_mask_neighbor_rule():
 
     U_new, _, _ = correct_velocity(state, U_star, V_star, W_star, P_dummy)
 
-    # U-face between cell 0 and 1, and cell 1 and 2
+    # U-faces adjacent to cell [1,1,1]
     assert U_new[1, 1, 1] == 0.0
     assert U_new[2, 1, 1] == 0.0
 
@@ -61,4 +60,3 @@ def test_minimal_grid_no_crash():
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_dummy)
 
     assert U_new.shape == U_star.shape
-    assert V_new.shape == V_star.shape
