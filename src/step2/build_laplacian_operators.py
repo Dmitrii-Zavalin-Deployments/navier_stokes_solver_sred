@@ -9,17 +9,17 @@ def build_laplacian_operators(state: SolverState) -> None:
     """
     Construct a sparse 7-point Laplacian operator for the Pressure Poisson Equation.
     
-    This matrix represents the second derivatives (diffusion) of pressure.
-    It is a square matrix of shape (nx*ny*nz, nx*ny*nz).
+    Step 2: Operator Construction (The Matrix Debt)
+    Implements Neumann (Wall-type) and Dirichlet (Pressure-type) BCs into the matrix A.
     """
     grid = state.grid
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     
-    # Grid spacing pulled from the grid dictionary
     dx2 = grid['dx']**2
     dy2 = grid['dy']**2
     dz2 = grid['dz']**2
     is_fluid = state.is_fluid
+    bc_table = state.boundary_conditions
     
     num_cells = nx * ny * nz
     rows, cols, data = [], [], []
@@ -27,22 +27,50 @@ def build_laplacian_operators(state: SolverState) -> None:
     def get_idx(i, j, k): 
         return i + j * nx + k * nx * ny
 
+    # Helper to identify if a cell index is on a specific boundary face
+    def is_on_face(i, j, k, face):
+        if face == "x_min": return i == 0
+        if face == "x_max": return i == nx - 1
+        if face == "y_min": return j == 0
+        if face == "y_max": return j == ny - 1
+        if face == "z_min": return k == 0
+        if face == "z_max": return k == nz - 1
+        return False
+
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
                 curr = get_idx(i, j, k)
                 
-                # Solid cell handling: 
-                # Place 1.0 on the diagonal to keep the matrix invertible (non-singular).
+                # 1. Solid cell handling: Keep matrix non-singular
                 if not is_fluid[i, j, k]:
                     rows.append(curr)
                     cols.append(curr)
                     data.append(1.0)
                     continue
 
+                # 2. Dirichlet (Pressure) Boundary Check
+                # Theory: In matrix A, the row corresponding to a boundary cell is replaced 
+                # with an identity-like row.
+                is_dirichlet = False
+                for loc, config in bc_table.items():
+                    if config["type"] == "pressure" and is_on_face(i, j, k, loc):
+                        is_dirichlet = True
+                        break
+                
+                if is_dirichlet:
+                    rows.append(curr)
+                    cols.append(curr)
+                    data.append(1.0) # Identity-like row: A[i,i] = 1
+                    continue
+
+                # 3. Standard Stencil / Neumann (Wall-type) Logic
+                # Theory: For Wall-type BCs (no-slip, inflow, outflow), we apply Neumann 
+                # conditions (dp/dn = 0). This is achieved by ignoring neighbors 
+                # outside the domain.
                 center_val = 0.0
 
-                # X-Neighbors: (i-1, j, k) and (i+1, j, k)
+                # X-Neighbors
                 for ni in [i - 1, i + 1]:
                     if 0 <= ni < nx and is_fluid[ni, j, k]:
                         rows.append(curr)
@@ -50,7 +78,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                         data.append(1.0 / dx2)
                         center_val -= 1.0 / dx2
                 
-                # Y-Neighbors: (i, j-1, k) and (i, j+1, k)
+                # Y-Neighbors
                 for nj in [j - 1, j + 1]:
                     if 0 <= nj < ny and is_fluid[i, nj, k]:
                         rows.append(curr)
@@ -58,7 +86,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                         data.append(1.0 / dy2)
                         center_val -= 1.0 / dy2
 
-                # Z-Neighbors: (i, j, k-1) and (i, j, k+1)
+                # Z-Neighbors
                 for nk in [k - 1, k + 1]:
                     if 0 <= nk < nz and is_fluid[i, j, nk]:
                         rows.append(curr)
@@ -66,7 +94,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                         data.append(1.0 / dz2)
                         center_val -= 1.0 / dz2
 
-                # Diagonal element (center of the 7-point stencil)
+                # Diagonal element
                 rows.append(curr)
                 cols.append(curr)
                 data.append(center_val)
