@@ -7,7 +7,7 @@ from src.step3.solve_pressure import solve_pressure
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 def test_config_key_mapping_and_logic():
-    """Verify solver correctly utilizes tolerance and atol from config (No solver_type)."""
+    """Verify solver correctly utilizes tolerance and atol from config."""
     state = make_step2_output_dummy(nx=2, ny=2, nz=2)
     p_size = state.fields["P"].size
     
@@ -15,14 +15,14 @@ def test_config_key_mapping_and_logic():
     state.ppe["A"] = eye(p_size, format="csr")
     state.ppe["ppe_is_singular"] = False
     
-    # Inject JSON-style config without "solver_type"
+    # Inject settings into config
     state.config["solver_settings"] = {
         "ppe_tolerance": 1e-9,
         "ppe_atol": 1e-11,
         "ppe_max_iter": 500
     }
     
-    # Input RHS = 5.0 everywhere. For A=I, P should be 5.0.
+    # Input RHS = 5.0 everywhere. For A*P = I*P = 5.0, P should be 5.0.
     rhs = np.full((2, 2, 2), 5.0)
     P_new, meta = solve_pressure(state, rhs)
 
@@ -48,7 +48,7 @@ def test_singular_mean_subtraction_physics():
     rhs = np.full((3, 3, 3), 10.0)
     P_new, meta = solve_pressure(state, rhs)
 
-    # Check that the fluid mean is zero
+    # Check that the fluid mean is zero (Mean-Subtraction Logic)
     assert abs(np.mean(P_new[state.is_fluid])) < 1e-12
     assert meta["is_singular"] is True
 
@@ -64,7 +64,7 @@ def test_fallback_tolerance_values():
     rhs = np.zeros((2, 2, 2))
     P_new, meta = solve_pressure(state, rhs)
     
-    # These should match the hardcoded defaults in solve_pressure.py
+    # These should match the hardcoded defaults in solve_pressure.py (1e-6 and 1e-12)
     assert meta["tolerance_used"] == 1e-6
     assert meta["absolute_tolerance_used"] == 1e-12
     assert meta["converged"] is True
