@@ -19,7 +19,9 @@ def build_laplacian_operators(state: SolverState) -> None:
     dy2 = grid['dy']**2
     dz2 = grid['dz']**2
     is_fluid = state.is_fluid
-    bc_table = state.boundary_conditions
+    
+    # FIX: Default to empty dict if boundary_conditions is None to prevent AttributeError
+    bc_table = state.boundary_conditions if state.boundary_conditions is not None else {}
     
     num_cells = nx * ny * nz
     rows, cols, data = [], [], []
@@ -50,24 +52,20 @@ def build_laplacian_operators(state: SolverState) -> None:
                     continue
 
                 # 2. Dirichlet (Pressure) Boundary Check
-                # Theory: In matrix A, the row corresponding to a boundary cell is replaced 
-                # with an identity-like row.
                 is_dirichlet = False
                 for loc, config in bc_table.items():
-                    if config["type"] == "pressure" and is_on_face(i, j, k, loc):
+                    # Only apply Dirichlet if the BC type is explicitly 'pressure'
+                    if config.get("type") == "pressure" and is_on_face(i, j, k, loc):
                         is_dirichlet = True
                         break
                 
                 if is_dirichlet:
                     rows.append(curr)
                     cols.append(curr)
-                    data.append(1.0) # Identity-like row: A[i,i] = 1
+                    data.append(1.0)
                     continue
 
                 # 3. Standard Stencil / Neumann (Wall-type) Logic
-                # Theory: For Wall-type BCs (no-slip, inflow, outflow), we apply Neumann 
-                # conditions (dp/dn = 0). This is achieved by ignoring neighbors 
-                # outside the domain.
                 center_val = 0.0
 
                 # X-Neighbors
