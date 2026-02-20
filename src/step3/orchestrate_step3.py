@@ -23,7 +23,7 @@ def orchestrate_step3(
     # 1. Apply pre‑prediction boundaries (Ghost cell filling)
     fields_pre = apply_boundary_conditions_pre(state, state.fields)
 
-    # 2. Predict intermediate velocity U* # This accounts for advection and diffusion but ignores pressure.
+    # 2. Predict intermediate velocity U* # Accounts for advection and diffusion; ignores pressure.
     U_star, V_star, W_star = predict_velocity(state)
 
     # 3. Build PPE RHS (Scaling the Divergence of U*)
@@ -58,6 +58,7 @@ def orchestrate_step3(
         state.history = {}
         
     history = state.history
+    # Standardized key: max_velocity_history
     required_keys = ["times", "divergence_norms", "max_velocity_history", "ppe_status_history", "energy_history"]
     for key in required_keys:
         if key not in history: 
@@ -66,7 +67,7 @@ def orchestrate_step3(
     # Append current step metrics
     history["times"].append(float(current_time))
     history["divergence_norms"].append(state.health.get("post_correction_divergence_norm", 0.0))
-    history["max_velocity_magnitude"].append(state.health.get("max_velocity_magnitude", 0.0))
+    history["max_velocity_history"].append(state.health.get("max_velocity_magnitude", 0.0))
     history["ppe_status_history"].append(ppe_meta.get("solver_status", "Unknown"))
     history["energy_history"].append(diag.get("energy", 0.0))
 
