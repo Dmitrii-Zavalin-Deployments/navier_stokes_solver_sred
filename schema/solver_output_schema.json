@@ -46,7 +46,16 @@
     "step4_diagnostics": { "type": "object" },
     "step5_outputs": { "type": "object" },
 
-    "ready_for_time_loop": { "type": "boolean" }
+    "ready_for_time_loop": { "type": "boolean" },
+    
+    "iteration": { 
+      "type": "integer",
+      "description": "Current time-step count."
+    },
+    "time": { 
+      "type": "number",
+      "description": "Elapsed physical time in the simulation."
+    }
   },
 
   "required": [
@@ -62,7 +71,9 @@
     "U_ext",
     "V_ext",
     "W_ext",
-    "ready_for_time_loop"
+    "ready_for_time_loop",
+    "iteration",
+    "time"
   ],
 
   "additionalProperties": false

@@ -7,9 +7,9 @@ Canonical JSON‑safe dummy final output state that fully satisfies
 solver_output_schema.json. Used for schema validation tests and
 end‑to‑end contract tests.
 
-Updated to comply with Phase C, Rule 7 (Scale Guard):
-- Sparse matrices are represented as metadata dictionaries.
-- Includes 'is_solid' to match the updated JSON properties.
+Updated to comply with:
+- Phase C, Rule 7 (Scale Guard): Sparse matrices as metadata dicts.
+- Latest Schema: Includes 'iteration' and 'time' as required fields.
 """
 
 def solver_output_schema_dummy():
@@ -125,4 +125,8 @@ def solver_output_schema_dummy():
         },
 
         "ready_for_time_loop": True,
+        
+        # --- Analysis & Tracking Metadata ---
+        "iteration": 2,
+        "time": 0.2
     }

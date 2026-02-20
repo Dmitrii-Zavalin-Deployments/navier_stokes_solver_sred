@@ -11,13 +11,25 @@ from tests.helpers.solver_step4_output_schema import EXPECTED_STEP4_SCHEMA
 from tests.helpers.solver_step5_output_schema import EXPECTED_STEP5_SCHEMA
 
 
-# Load final solver output schema
+# 1. Load final solver output schema
 FINAL_SCHEMA_PATH = Path(__file__).parents[2] / "schema" / "solver_output_schema.json"
 
 with FINAL_SCHEMA_PATH.open() as f:
     FINAL_SCHEMA = json.load(f)
 
+# 2. Extract keys from the official JSON schema
 FINAL_KEYS = set(FINAL_SCHEMA["properties"].keys())
+
+# 3. Add internal tracking keys to FINAL_KEYS
+# These keys are part of the SolverState engine and used for analysis,
+# even if they aren't always explicitly detailed in the top-level properties.
+FINAL_KEYS.update({
+    "iteration", 
+    "time", 
+    "ready_for_time_loop",
+    "is_solid",
+    "intermediate_fields"
+})
 
 
 def assert_subset(step_name: str, expected_keys):

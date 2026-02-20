@@ -4,9 +4,8 @@
 EXPECTED_STEP3_SCHEMA defines the structural contract for the SolverState 
 after Step 3 (Projection & Correction).
 
-Note: While 'history' exists in the SolverState object for internal tracking,
-it is excluded from this schema to keep the step-to-step validation focused 
-on physical fields and solver convergence metadata.
+This schema is explicit about the health metrics and PPE metadata 
+required for post-simulation scientific analysis.
 """
 
 EXPECTED_STEP3_SCHEMA = {
@@ -28,7 +27,7 @@ EXPECTED_STEP3_SCHEMA = {
     "constants": dict,
     "boundary_conditions": (type(None), dict, list, object),
 
-    # Step 2 additions (Matrices and PPE settings)
+    # Step 2 & 3: Operators and Pressure Solver Metadata
     "operators": dict,
     "ppe": {
         "solver_type": str,
@@ -37,11 +36,11 @@ EXPECTED_STEP3_SCHEMA = {
         "max_iterations": int,
         "ppe_is_singular": bool,
         "rhs_norm": float,
-        "iterations": int,    # Added in Step 3 solve
-        "converged": bool,    # Added in Step 3 solve
+        "iterations": int,    # Added/Updated in Step 3 solve
+        "converged": bool,    # Added/Updated in Step 3 solve
     },
 
-    # Step 3 Health: Contains both initial (Step 2) and post-solve metrics
+    # Step 3 Health: Accumulated metrics (Step 2 Initial + Step 3 Post-Correction)
     "health": {
         "divergence_norm": float,
         "max_velocity": float,
@@ -51,6 +50,7 @@ EXPECTED_STEP3_SCHEMA = {
         "cfl_advection_estimate": float,
     },
 
+    # Simulation Progress (Official keys for analysis and restarts)
     "ready_for_time_loop": bool,
     "iteration": int,
     "time": float,
