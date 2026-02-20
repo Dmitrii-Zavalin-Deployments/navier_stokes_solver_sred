@@ -5,8 +5,8 @@ import numpy as np
 def correct_velocity(state, U_star, V_star, W_star, P_new):
     """
     Correct velocity using the pressure gradient: u^{n+1} = u* - dt/rho * grad(p)
+    Also enforces zero-velocity on faces adjacent to solid cells.
     """
-
     rho = state.constants["rho"]
     dt = state.constants["dt"]
 
@@ -26,6 +26,7 @@ def correct_velocity(state, U_star, V_star, W_star, P_new):
     W_new = np.array(W_star, copy=True) - (dt / rho) * Gz
 
     # 4. Zero faces adjacent to internal solid cells (The "Neighbor Rule")
+    # This prevents flow through solid boundaries.
     is_solid = ~state.is_fluid
 
     # Internal Mask for U
