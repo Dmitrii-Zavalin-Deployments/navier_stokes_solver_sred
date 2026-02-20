@@ -1,73 +1,69 @@
-# file: src/step3/predict_velocity.py
+# src/step3/predict_velocity.py
 
 import numpy as np
 
-
-def predict_velocity(state, fields):
+def predict_velocity(state) -> None:
     """
-    Step‑3 velocity prediction.
-    Computes intermediate velocity U* using:
-        • diffusion (via Step‑2 Laplacian operators)
-        • external forces (optional)
-    Pure function: does not mutate state.
+    Step-3 velocity prediction (The "Star" step).
+    Calculates intermediate velocities U*, V*, W* using sparse operators
+    for Diffusion and Advection from Step 2.
     """
-
+    # 1. Physics and Time Constants
     rho = state.constants["rho"]
-    mu = state.constants["mu"]
-    dt = state.constants["dt"]
+    mu  = state.constants.get("mu", 0.001)
+    dt  = state.constants["dt"]
+    nu  = mu / rho
 
-    U = np.asarray(fields["U"])
-    V = np.asarray(fields["V"])
-    W = np.asarray(fields["W"])
+    # 2. Get Current Velocity Fields
+    U = state.fields["U"]
+    V = state.fields["V"]
+    W = state.fields["W"]
 
-    # ------------------------------------------------------------
-    # 1. Diffusion operators from Step‑2
-    # ------------------------------------------------------------
-    lap_u = state.operators["lap_u"]
-    lap_v = state.operators["lap_v"]
-    lap_w = state.operators["lap_w"]
+    # 3. Apply Sparse Operators (Diffusion & Advection)
+    # Note: Operators act on flattened (raveled) vectors.
+    def apply_op(field, op_key):
+        op = state.operators.get(op_key)
+        if op is None:
+            return np.zeros_like(field)
+        # Matrix-vector multiplication: A @ x
+        return (op @ field.ravel()).reshape(field.shape)
 
-    Du = lap_u(U)
-    Dv = lap_v(V)
-    Dw = lap_w(W)
+    # Calculate Diffusion: nu * nabla^2(u)
+    diff_u = apply_op(U, "lap_u")
+    diff_v = apply_op(V, "lap_v")
+    diff_w = apply_op(W, "lap_w")
 
-    # ------------------------------------------------------------
-    # 2. External forces (optional)
-    # ------------------------------------------------------------
+    # Calculate Advection: (u . grad)u
+    adv_u = apply_op(U, "advection_u")
+    adv_v = apply_op(V, "advection_v")
+    adv_w = apply_op(W, "advection_w")
+
+    # 4. External Forces
     forces = state.config.get("external_forces", {})
     fx = forces.get("fx", 0.0)
     fy = forces.get("fy", 0.0)
     fz = forces.get("fz", 0.0)
 
-    # ------------------------------------------------------------
-    # 3. Compute U*, V*, W*
-    # ------------------------------------------------------------
-    U_star = U + dt * ((mu / rho) * Du + fx)
-    V_star = V + dt * ((mu / rho) * Dv + fy)
-    W_star = W + dt * ((mu / rho) * Dw + fz)
+    # 5. Compute Intermediate "Star" Velocities
+    # u* = u^n + dt * [ nu * laplacian - advection + forces ]
+    U_star = U + dt * (nu * diff_u - adv_u + fx)
+    V_star = V + dt * (nu * diff_v - adv_v + fy)
+    W_star = W + dt * (nu * diff_w - adv_w + fz)
 
-    # ------------------------------------------------------------
-    # 4. Zero faces adjacent to solid cells
-    # ------------------------------------------------------------
-    is_fluid = state.is_fluid
-    is_solid = ~is_fluid
+    # 6. Enforce No-Slip at Solid Boundaries (Staggered Grid logic)
+    if state.is_solid is not None:
+        mask = state.is_solid
+        # Zero out velocity components on faces shared with solid cells
+        U_star[1:-1, :, :][mask[:-1, :, :] | mask[1:, :, :]] = 0.0
+        V_star[:, 1:-1, :][mask[:, :-1, :] | mask[:, 1:, :]] = 0.0
+        W_star[:, :, 1:-1][mask[:, :, :-1] | mask[:, :, 1:]] = 0.0
+        
+        # Domain boundary condition enforcement (Static Walls)
+        U_star[0, :, :] = 0.0; U_star[-1, :, :] = 0.0
+        V_star[:, 0, :] = 0.0; V_star[:, -1, :] = 0.0
+        W_star[:, :, 0] = 0.0; W_star[:, :, -1] = 0.0
 
-    # U faces: between i-1 and i
-    solid_u = np.zeros_like(U_star, dtype=bool)
-    solid_u[1:-1, :, :] = is_solid[:-1, :, :] | is_solid[1:, :, :]
-    U_star = np.array(U_star, copy=True)
-    U_star[solid_u] = 0.0
-
-    # V faces: between j-1 and j
-    solid_v = np.zeros_like(V_star, dtype=bool)
-    solid_v[:, 1:-1, :] = is_solid[:, :-1, :] | is_solid[:, 1:, :]
-    V_star = np.array(V_star, copy=True)
-    V_star[solid_v] = 0.0
-
-    # W faces: between k-1 and k
-    solid_w = np.zeros_like(W_star, dtype=bool)
-    solid_w[:, :, 1:-1] = is_solid[:, :, :-1] | is_solid[:, :, 1:]
-    W_star = np.array(W_star, copy=True)
-    W_star[solid_w] = 0.0
-
-    return U_star, V_star, W_star
+    # 7. Update State
+    state.intermediate_fields["U_star"] = U_star
+    state.intermediate_fields["V_star"] = V_star
+    state.intermediate_fields["W_star"] = W_star
