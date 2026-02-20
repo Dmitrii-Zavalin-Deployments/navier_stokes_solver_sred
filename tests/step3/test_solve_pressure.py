@@ -7,7 +7,7 @@ from src.step3.solve_pressure import solve_pressure
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 def test_config_key_mapping_and_logic():
-    """Verify solver correctly utilizes ppe_tolerance and ppe_max_iter from config."""
+    """Verify solver correctly utilizes tolerance and atol from config."""
     state = make_step2_output_dummy(nx=2, ny=2, nz=2)
     p_size = state.fields["P"].size
     
@@ -15,10 +15,11 @@ def test_config_key_mapping_and_logic():
     state.ppe["A"] = eye(p_size, format="csr")
     state.ppe["ppe_is_singular"] = False
     
-    # Inject specific JSON-style config
+    # Inject specific JSON-style config including the new ppe_atol
     state.config["solver_settings"] = {
         "solver_type": "PCG",
-        "ppe_tolerance": 1e-10,
+        "ppe_tolerance": 1e-9,
+        "ppe_atol": 1e-11,
         "ppe_max_iter": 500
     }
     
@@ -26,7 +27,9 @@ def test_config_key_mapping_and_logic():
     rhs = np.full((2, 2, 2), 5.0)
     P_new, meta = solve_pressure(state, rhs)
 
-    assert meta["tolerance_used"] == 1e-10
+    # Assertions for metadata mapping
+    assert meta["tolerance_used"] == 1e-9
+    assert meta["absolute_tolerance_used"] == 1e-11
     assert np.allclose(P_new, 5.0)
     assert meta["converged"] is True
     assert meta["is_singular"] is False
@@ -38,6 +41,9 @@ def test_singular_mean_subtraction_physics():
     state.ppe["A"] = eye(p_size, format="csr")
     state.ppe["ppe_is_singular"] = True
     
+    # Setting a non-zero fluid mask to test masked mean subtraction
+    state.is_fluid = np.ones((3, 3, 3), dtype=bool)
+    
     # RHS = 10.0 results in P = 10.0 before mean subtraction
     rhs = np.full((3, 3, 3), 10.0)
     P_new, meta = solve_pressure(state, rhs)
@@ -45,6 +51,22 @@ def test_singular_mean_subtraction_physics():
     # After mean subtraction, result should be 0.0
     assert abs(np.mean(P_new)) < 1e-12
     assert meta["is_singular"] is True
+
+def test_fallback_tolerance_values():
+    """Ensure solver doesn't crash if config keys are missing (fallback logic)."""
+    state = make_step2_output_dummy(nx=2, ny=2, nz=2)
+    state.ppe["A"] = eye(state.fields["P"].size, format="csr")
+    
+    # Empty solver settings to trigger fallbacks
+    state.config["solver_settings"] = {}
+    
+    rhs = np.zeros((2, 2, 2))
+    P_new, meta = solve_pressure(state, rhs)
+    
+    # These should match the defaults in solve_pressure.py
+    assert meta["tolerance_used"] == 1e-6
+    assert meta["absolute_tolerance_used"] == 1e-12
+    assert meta["converged"] is True
 
 def test_minimal_grid_no_crash():
     """Minimal 1x1x1 grid check for solve_pressure."""

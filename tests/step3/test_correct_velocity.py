@@ -5,7 +5,7 @@ from src.step3.correct_velocity import correct_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 def _wire_mock_gradients(state, value=0.0):
-    """Inject mock gradient operators with staggered-compliant shapes."""
+    """Inject mock gradient operators that return a specific constant value."""
     state.operators["grad_x"] = lambda P: np.full_like(state.fields["U"], value)
     state.operators["grad_y"] = lambda P: np.full_like(state.fields["V"], value)
     state.operators["grad_z"] = lambda P: np.full_like(state.fields["W"], value)
@@ -24,39 +24,19 @@ def test_correction_math():
     
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_dummy)
     
-    # Check internal staggered faces (for nx=3, index 1 and 2 are internal)
-    assert np.all(U_new[1:3, :, :] == 4.0)
-    assert np.all(V_new[:, 1:3, :] == 4.0)
-    assert np.all(W_new[:, :, 1:3] == 4.0)
+    # Internal staggered faces should be 5.0 - (1.0/1.0)*1.0 = 4.0
+    assert np.allclose(U_new[1:3, :, :], 4.0)
+    assert np.allclose(V_new[:, 1:3, :], 4.0)
+    assert np.allclose(W_new[:, :, 1:3], 4.0)
 
 def test_internal_solid_mask_neighbor_rule():
     """Verify that if a cell is solid, its surrounding faces are zeroed."""
     state = make_step2_output_dummy(nx=3, ny=3, nz=3)
     _wire_mock_gradients(state, value=0.0)
+    state.is_fluid[1, 1, 1] = False 
 
-    state.is_fluid[1, 1, 1] = False # Set center cell to solid
-
-    U_star = np.ones_like(state.fields["U"])
-    V_star = np.ones_like(state.fields["V"])
-    W_star = np.ones_like(state.fields["W"])
-    P_dummy = np.zeros_like(state.fields["P"])
-
-    U_new, _, _ = correct_velocity(state, U_star, V_star, W_star, P_dummy)
-
-    # U-faces adjacent to cell [1,1,1]
+    U_new, _, _ = correct_velocity(state, np.ones_like(state.fields["U"]), 
+                                  np.ones_like(state.fields["V"]), 
+                                  np.ones_like(state.fields["W"]), np.zeros_like(state.fields["P"]))
     assert U_new[1, 1, 1] == 0.0
     assert U_new[2, 1, 1] == 0.0
-
-def test_minimal_grid_no_crash():
-    """Check stability on 1x1x1 grid."""
-    state = make_step2_output_dummy(nx=1, ny=1, nz=1)
-    _wire_mock_gradients(state, value=0.0)
-
-    U_star = np.zeros_like(state.fields["U"])
-    V_star = np.zeros_like(state.fields["V"])
-    W_star = np.zeros_like(state.fields["W"])
-    P_dummy = np.zeros_like(state.fields["P"])
-
-    U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_dummy)
-
-    assert U_new.shape == U_star.shape

@@ -17,25 +17,24 @@ def orchestrate_step3(
 ) -> SolverState:
     """
     Step 3 Conductor — Pressure projection and velocity correction.
-    Renamed for consistency. Coordinates the star-step and correction.
+    Coordinates the star-step, PPE solve, and divergence-free correction.
     """
 
     # 1. Apply pre‑prediction boundaries (Sets Inflow/Wall velocities)
     fields_pre = apply_boundary_conditions_pre(state, state.fields)
 
-    # 2. Predict intermediate velocity U* (Accepts fields_pre to satisfy updated signature)
-    U_star, V_star, W_star = predict_velocity(state, fields_pre)
+    # 2. Predict intermediate velocity U* U_star, V_star, W_star = predict_velocity(state, fields_pre)
 
     # 3. Build PPE RHS (Divergence of U*)
     rhs = build_ppe_rhs(state, U_star, V_star, W_star)
 
-    # 4. Solve for pressure (Handles Dirichlet/Neumann switching)
+    # 4. Solve for pressure (Handles Dirichlet/Neumann switching and tolerances)
     P_new, ppe_meta = solve_pressure(state, rhs)
 
     # 5. Correct velocity (Subtract Pressure Gradient)
     U_new, V_new, W_new = correct_velocity(state, U_star, V_star, W_star, P_new)
 
-    # 6. Apply post‑correction boundaries (Lock physical boundaries)
+    # 6. Apply post‑correction boundaries (Lock physical boundaries/no-slip)
     fields_post = apply_boundary_conditions_post(state, U_new, V_new, W_new, P_new)
 
     # 7. Write back fields (Synchronize State)
@@ -55,17 +54,22 @@ def orchestrate_step3(
         state.history = {}
         
     history = state.history
-    keys = ["times", "divergence_norms", "max_velocity_history", "ppe_iterations_history", "energy_history"]
+    keys = [
+        "times", "divergence_norms", "max_velocity_history", 
+        "ppe_status_history", "energy_history", "ppe_atol_history"
+    ]
     for key in keys:
         if key not in history: 
             history[key] = []
         
-    history["times"].append(diag["time"])
-    history["divergence_norms"].append(diag["divergence_norm"])
-    history["max_velocity_history"].append(diag["max_velocity"])
+    # Append step data
+    history["times"].append(float(current_time))
+    history["divergence_norms"].append(state.health.get("post_correction_divergence_norm", 0.0))
+    history["max_velocity_history"].append(state.health.get("max_velocity_magnitude", 0.0))
     
-    # Capture iteration count or status from metadata
-    history["ppe_iterations_history"].append(ppe_meta.get("iterations", 0))
-    history["energy_history"].append(diag["energy"])
+    # Capture PPE solver metadata
+    history["ppe_status_history"].append(ppe_meta.get("solver_status", "Unknown"))
+    history["ppe_atol_history"].append(ppe_meta.get("absolute_tolerance_used", 0.0))
+    history["energy_history"].append(diag.get("energy", 0.0))
 
     return state
