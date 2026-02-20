@@ -12,7 +12,7 @@ def parse_boundary_conditions(
     grid_config: Dict[str, Any],
 ) -> Dict[str, Dict[str, Any]]:
     """
-    Step 1: Parse and validate BCs based on the JSON Schema.
+    Step 1: Parse and validate BCs based on the JSON Schema and Theory of Operations.
     Returns a dictionary mapping locations to their normalized physical properties.
     """
     parsed_table = {}
@@ -23,35 +23,38 @@ def parse_boundary_conditions(
         if not loc or loc not in _VALID_LOCATIONS:
             raise ValueError(f"Invalid or missing boundary location: {loc}")
         
-        # 2. Check for Duplicates
+        # 2. Check for Duplicates (Collision Prevention)
         if loc in parsed_table:
-            raise ValueError(f"Duplicate boundary condition for location: {loc}")
+            raise ValueError(f"Duplicate boundary condition defined for location: {loc}")
 
-        # 3. Validate BC Type (Must match Schema: no-slip, etc.)
+        # 3. Validate BC Type (Must match Schema: no-slip, free-slip, inflow, outflow, pressure)
         bc_type = bc.get("type")
         if bc_type not in _VALID_TYPES:
             raise ValueError(f"Invalid boundary type: {bc_type}")
 
         values = bc.get("values", {})
         
-        # 4. Physical Logic Validations
+        # 4. Physical Logic Validations (Theory Compliance)
         if bc_type == "inflow":
+            # Action: Validates that an inflow BC actually provides numerical values for {u, v, w}
             for comp in ["u", "v", "w"]:
-                if comp not in values:
-                    raise ValueError(f"Inflow at {loc} requires velocity component '{comp}'")
+                val = values.get(comp)
+                if val is None or not isinstance(val, (int, float)):
+                    raise ValueError(f"Inflow boundary at {loc} must provide numerical u, v, and w.")
         
-        if bc_type == "pressure":
-            if "p" not in values:
-                raise ValueError(f"Pressure boundary at {loc} requires value 'p'")
+        elif bc_type == "pressure":
+            # Action: Validates that a pressure BC provides a numerical value for 'p'
+            p_val = values.get("p")
+            if p_val is None or not isinstance(p_val, (int, float)):
+                raise ValueError(f"Pressure boundary at {loc} must provide numerical p.")
 
-        if bc_type == "no-slip":
-            # Extra safety check: no-slip implies zero velocity, 
-            # and pressure is usually solved, not specified.
+        elif bc_type in ["no-slip", "free-slip", "outflow"]:
+            # Action: Prevents ambiguous "Pressure Dirichlet" on velocity-defined boundaries
             if "p" in values:
-                raise ValueError(f"No-slip boundary at {loc} cannot define pressure 'p'")
+                raise ValueError(f"Boundary type {bc_type} at {loc} does not allow pressure values.")
 
-        # 5. Normalization
-        # We cast to float here to ensure the SolverState remains numerically consistent.
+        # 5. Normalization & SolverState Compatibility
+        # We explicitly cast to float here to prevent integer-division debt in later steps.
         parsed_table[loc] = {
             "type": bc_type,
             "u": float(values.get("u", 0.0)),
