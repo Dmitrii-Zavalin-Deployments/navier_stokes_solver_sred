@@ -11,7 +11,7 @@ def test_config_key_mapping_and_logic():
     state = make_step2_output_dummy(nx=2, ny=2, nz=2)
     p_size = state.fields["P"].size
     
-    # Setup Identity Matrix as mock Laplacian
+    # Setup Identity Matrix as mock Laplacian (Non-singular case)
     state.ppe["A"] = eye(p_size, format="csr")
     state.ppe["ppe_is_singular"] = False
     
@@ -29,6 +29,7 @@ def test_config_key_mapping_and_logic():
     assert meta["tolerance_used"] == 1e-10
     assert np.allclose(P_new, 5.0)
     assert meta["converged"] is True
+    assert meta["is_singular"] is False
 
 def test_singular_mean_subtraction_physics():
     """Ensure that for singular systems, the mean pressure is zeroed."""
@@ -39,10 +40,11 @@ def test_singular_mean_subtraction_physics():
     
     # RHS = 10.0 results in P = 10.0 before mean subtraction
     rhs = np.full((3, 3, 3), 10.0)
-    P_new, _ = solve_pressure(state, rhs)
+    P_new, meta = solve_pressure(state, rhs)
 
     # After mean subtraction, result should be 0.0
     assert abs(np.mean(P_new)) < 1e-12
+    assert meta["is_singular"] is True
 
 def test_minimal_grid_no_crash():
     """Minimal 1x1x1 grid check for solve_pressure."""
