@@ -4,30 +4,29 @@ from __future__ import annotations
 import numpy as np
 from src.solver_state import SolverState
 
-
-def create_fluid_mask(state: SolverState) -> None:
+def create_fluid_mask(state: SolverState) -> tuple[np.ndarray, np.ndarray]:
     """
     Convert integer mask into boolean masks for operator use.
-
-    In the input schema:
-     1  = Pure Fluid
-     0  = Solid
-    -1  = Boundary-Fluid (Fluid cell adjacent to a wall)
-
-    Updates:
-      state.is_fluid: True for any cell where flow is calculated (1, -1).
-      state.is_boundary_cell: True for specialized boundary fluid cells (-1).
-      state.is_solid: True for cells where no flow occurs (0).
+    
+    Since state.mask is an Optional[np.ndarray], we ensure it exists 
+    before performing logical operations.
     """
+    if state.mask is None:
+        raise ValueError("Cannot create fluid mask: state.mask is None.")
 
-    mask = np.asarray(state.mask)
+    mask = state.mask
+
+    # Scale Guard: Reject non-integer masks to prevent numerical ambiguity
+    if not np.issubdtype(mask.dtype, np.integer):
+        raise ValueError(f"Mask must be an integer array, but got {mask.dtype}")
 
     # Logic: Fluid is anything that is NOT solid (values 1 and -1)
     state.is_fluid = (mask != 0)
     
-    # Logic: Specifically identify the boundary-fluid interface
+    # Logic: Specifically identify the boundary-fluid interface (-1)
     state.is_boundary_cell = (mask == -1)
     
-    # Logic: Identify solid cells to satisfy the Schema and Scale Guard
-    # This prevents state.is_solid from being None, which caused the test failure.
+    # Logic: Identify solid cells (0)
     state.is_solid = (mask == 0)
+
+    return state.is_fluid, state.is_boundary_cell
