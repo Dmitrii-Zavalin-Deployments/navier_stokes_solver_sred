@@ -2,6 +2,7 @@
 
 import pytest
 import numpy as np
+from scipy.sparse import csr_matrix, eye
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from src.step3.build_ppe_rhs import build_ppe_rhs
 from src.step3.solve_pressure import solve_pressure
@@ -20,6 +21,23 @@ def test_step3_pipeline_shape_integrity():
     state.constants["rho"] = 1.0
     state.config["dt"] = 0.1
     
+    # --- OPERATOR INJECTION (Fixes KeyError: 'grad_x') ---
+    u_size = (nx + 1) * ny * nz
+    v_size = nx * (ny + 1) * nz
+    w_size = nx * ny * (nz + 1)
+    p_size = nx * ny * nz
+    vel_total_size = u_size + v_size + w_size
+
+    # Inject mock divergence and PPE matrix
+    state.operators["divergence"] = csr_matrix((p_size, vel_total_size))
+    state.ppe["A"] = eye(p_size, format="csr") * -6.0
+
+    # Inject mock gradient operators (Required by correct_velocity)
+    state.operators["grad_x"] = lambda p: np.zeros((nx + 1, ny, nz))
+    state.operators["grad_y"] = lambda p: np.zeros((nx, ny + 1, nz))
+    state.operators["grad_z"] = lambda p: np.zeros((nx, ny, nz + 1))
+    # -----------------------------------------------------
+
     # 2. Check Input Integrity (Initial MAC Grid setup)
     inputs = {
         "U": state.fields["U"], 
