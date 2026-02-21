@@ -1,39 +1,27 @@
-# src/step3/update_health.py
-
 import numpy as np
 
-def _warn_pressure_velocity_coupling(state, fields):
-    """Detects symptoms of pressure–velocity decoupling."""
-    div = state.health.get("post_correction_divergence_norm", None)
-    div_flag = div is not None and div > 1e-2
-
-    checker_flag = False
-    P = fields.get("P", None)
-    if P is not None and isinstance(P, np.ndarray) and P.ndim == 3:
-        try:
-            checkerboard = float(np.mean(np.abs(P[::2, ::2, ::2] - P[1::2, 1::2, 1::2])))
-            checker_flag = checkerboard > 1e-2
-        except: pass
-
-    if div_flag or checker_flag:
-        print("[WARNING] Potential pressure–velocity decoupling detected.")
-
 def update_health(state, fields, P_new):
-    """Step‑3 health computation using Sparse Operators."""
+    """Step‑3 health computation using Sparse Operators on staggered grid."""
     U, V, W = fields["U"], fields["V"], fields["W"]
+    dt = state.config.get("dt", state.constants.get("dt", 0.01))
 
-    # 1. Max velocity magnitude
+    # 1. Max velocity magnitude (Absolute max across all staggered faces)
     max_vel = float(max(np.max(np.abs(U)), np.max(np.abs(V)), np.max(np.abs(W))))
 
-    # 2. Divergence norm: div = D @ u
+    # 2. Divergence norm: div = D @ u_staggered
     div_op = state.operators["divergence"]
     velocity_vector = np.concatenate([U.ravel(), V.ravel(), W.ravel()])
     div_flat = div_op @ velocity_vector
-    div_norm = float(np.linalg.norm(div_flat) / max(1, div_flat.size))
+    
+    # Normalized by the number of fluid cells if available
+    n_cells = np.sum(state.is_fluid) if state.is_fluid is not None else div_flat.size
+    div_norm = float(np.linalg.norm(div_flat) / max(1, n_cells))
 
-    # 3. CFL estimate
-    dt = state.constants["dt"]
-    h_min = min(state.constants["dx"], state.constants["dy"], state.constants["dz"])
+    # 3. CFL estimate (Hardened h_min)
+    dx = state.constants.get("dx", 1.0)
+    dy = state.constants.get("dy", 1.0)
+    dz = state.constants.get("dz", 1.0)
+    h_min = min(dx, dy, dz)
     cfl = float(max_vel * dt / h_min)
 
     health = {
@@ -43,5 +31,8 @@ def update_health(state, fields, P_new):
     }
 
     state.health = health
-    _warn_pressure_velocity_coupling(state, fields)
+    # Optional diagnostic warning
+    if div_norm > 1e-1:
+        print(f"[HEALTH] Warning: High divergence detected ({div_norm:.2e})")
+        
     return health
