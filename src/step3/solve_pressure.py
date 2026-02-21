@@ -5,6 +5,9 @@ from scipy.sparse import diags
 from scipy.sparse.linalg import cg
 
 def solve_pressure(state, rhs_ppe):
+    """
+    Step‑3 pressure solve using Preconditioned Conjugate Gradient (PCG).
+    """
     settings = state.config.get("solver_settings", {})
     tol = settings.get("ppe_tolerance", 1e-6)
     atol = settings.get("ppe_atol", 1e-12)
@@ -24,7 +27,7 @@ def solve_pressure(state, rhs_ppe):
 
     # RECOVERY: If CG fails or returns NaNs due to singularity
     if np.any(np.isnan(x)):
-        x = np.zeros_like(b) # Fallback to zero if exploded
+        x = np.zeros_like(b)
 
     P_new = x.reshape(state.fields["P"].shape)
 
@@ -37,10 +40,13 @@ def solve_pressure(state, rhs_ppe):
         else:
             P_new -= np.mean(P_new)
 
+    # Metadata includes explicit tolerance keys to satisfy unit tests
     metadata = {
         "converged": info == 0 and not np.any(np.isnan(x)),
         "solver_status": "Success" if (info == 0 and not np.any(np.isnan(x))) else "Singular/Failed",
         "method": "PCG (Jacobi)",
+        "tolerance_used": tol,
+        "absolute_tolerance_used": atol,
         "is_singular": is_singular
     }
 
