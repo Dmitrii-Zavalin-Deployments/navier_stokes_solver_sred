@@ -10,59 +10,44 @@ class SolverState:
     The Project Constitution: Article 3 (The Universal State Container).
     
     This object is the 'Living Container' for the Navier-Stokes simulation.
-    It enforces the 'Pure Path' by maintaining data in one specific location:
-    - No aliases (e.g., no self.grid = config['grid'])
-    - Data flows in a single direction
-    - Step-specific dictionaries isolate progress logic
+    It follows the Incremental Constructor pattern:
+    - Initialized empty to ensure total traceability.
+    - Data is populated step-by-step (Phase B, Article 5).
+    - No aliases; data exists in exactly one department.
     """
 
     # ---------------------------------------------------------
-    # Input / configuration (Step 0)
+    # Step 0: Input / configuration
     # ---------------------------------------------------------
-    # Raw input data and high-level solver settings
     config: Dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------
     # Step 1: Grid, fields, mask, constants, BCs
     # ---------------------------------------------------------
-    # The Grid is the ONLY place where x_min, nx, dx, etc., live.
     grid: Dict[str, Any] = field(default_factory=dict)            
-    
-    # Active simulation fields: P (Scalar), U, V, W (Staggered vectors)
     fields: Dict[str, np.ndarray] = field(default_factory=dict)   
-    
-    # Physical/Logical Domain Masks
     mask: Optional[np.ndarray] = None                             
     is_fluid: Optional[np.ndarray] = None
     is_boundary_cell: Optional[np.ndarray] = None
     is_solid: Optional[np.ndarray] = None
-    
-    # Simulation Parameters
     constants: Dict[str, Any] = field(default_factory=dict)       
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
     
-    # Global health tracking (metrics like divergence, residual norms)
+    # Global health tracking
     health: Dict[str, Any] = field(default_factory=dict)          
 
     # ---------------------------------------------------------
     # Step 2: Operators & PPE structure
     # ---------------------------------------------------------
-    # Discrete differential operators (Sparse Matrices)
     operators: Dict[str, Any] = field(default_factory=dict)       
-    
-    # Pressure Poisson Equation (PPE) setup
     ppe: Dict[str, Any] = field(default_factory=dict)             
 
     # ---------------------------------------------------------
     # Step 3: Projection & Intermediate Logic
     # ---------------------------------------------------------
-    # Intermediate 'Star' fields (U*, V*, W*) for the fractional step method
     intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
-    
-    # Performance and convergence diagnostics for Step 3
     step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
 
-    # Simulation History
     history: Dict[str, List[float]] = field(default_factory=lambda: {
         "times": [],
         "divergence_norms": [],
@@ -74,7 +59,6 @@ class SolverState:
     # ---------------------------------------------------------
     # Step 4: Extended fields + Boundary Logic
     # ---------------------------------------------------------
-    # Extended domains for boundary condition application (Ghost cells)
     P_ext: Optional[np.ndarray] = None
     U_ext: Optional[np.ndarray] = None
     V_ext: Optional[np.ndarray] = None
@@ -139,7 +123,8 @@ class SolverState:
             return value
 
         result = {}
-        for key, value in self.__getstate__().items() if hasattr(self, "__getstate__") else self.__dict__.items():
+        # Using self.__dict__ directly as we are a dataclass
+        for key, value in self.__dict__.items():
             result[key] = convert(value)
 
         return result
