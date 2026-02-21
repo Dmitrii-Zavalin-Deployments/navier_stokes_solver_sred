@@ -4,60 +4,65 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List
 import numpy as np
 
-
 @dataclass
 class SolverState:
     """
-    Central state object for the Navier–Stokes solver.
-    Aligned with Step 3 contracts and fractional-step requirements.
-
-    This object is progressively filled by Steps 1–5:
-      - Step 1: grid, fields, mask, constants, BCs
-      - Step 2: operators, PPE structure, health updates
-      - Step 3: corrected fields, health, diagnostics
-      - Step 4: extended fields (P_ext, U_ext, V_ext, W_ext), BC application diagnostics
-      - Step 5: final diagnostics / outputs
-
-    Step 6 serializes this object via `to_json_safe()` and validates it
-    against the final output schema.
+    The Project Constitution: Article 3 (The Universal State Container).
+    
+    This object is the 'Living Container' for the Navier-Stokes simulation.
+    It enforces the 'Pure Path' by maintaining data in one specific location:
+    - No aliases (e.g., no self.grid = config['grid'])
+    - Data flows in a single direction
+    - Step-specific dictionaries isolate progress logic
     """
 
     # ---------------------------------------------------------
     # Input / configuration (Step 0)
     # ---------------------------------------------------------
+    # Raw input data and high-level solver settings
     config: Dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------
     # Step 1: Grid, fields, mask, constants, BCs
     # ---------------------------------------------------------
-    grid: Dict[str, Any] = field(default_factory=dict)            # x_min, nx, dx, etc.
-    fields: Dict[str, np.ndarray] = field(default_factory=dict)   # P, U, V, W
-    mask: Optional[np.ndarray] = None                             # geometry mask
-    constants: Dict[str, Any] = field(default_factory=dict)       # rho, dt, nu, etc.
-    boundary_conditions: Dict[str, Any] = field(default_factory=dict)
+    # The Grid is the ONLY place where x_min, nx, dx, etc., live.
+    grid: Dict[str, Any] = field(default_factory=dict)            
     
-    # Global health tracking (post-Step 2 and post-Step 3 metrics)
-    health: Dict[str, Any] = field(default_factory=dict)          
-
-    # ---------------------------------------------------------
-    # Step 2: Operators, PPE structure, mask semantics
-    # ---------------------------------------------------------
-    operators: Dict[str, Any] = field(default_factory=dict)       # divergence, gradient, laplacian
-    ppe: Dict[str, Any] = field(default_factory=dict)             # PPE RHS, matrix structure
+    # Active simulation fields: P (Scalar), U, V, W (Staggered vectors)
+    fields: Dict[str, np.ndarray] = field(default_factory=dict)   
+    
+    # Physical/Logical Domain Masks
+    mask: Optional[np.ndarray] = None                             
     is_fluid: Optional[np.ndarray] = None
     is_boundary_cell: Optional[np.ndarray] = None
     is_solid: Optional[np.ndarray] = None
+    
+    # Simulation Parameters
+    constants: Dict[str, Any] = field(default_factory=dict)       
+    boundary_conditions: Dict[str, Any] = field(default_factory=dict)
+    
+    # Global health tracking (metrics like divergence, residual norms)
+    health: Dict[str, Any] = field(default_factory=dict)          
 
     # ---------------------------------------------------------
-    # Step 3: Projection, velocity correction, diagnostics
+    # Step 2: Operators & PPE structure
     # ---------------------------------------------------------
-    # Intermediate "Star" fields for Fractional Step method
+    # Discrete differential operators (Sparse Matrices)
+    operators: Dict[str, Any] = field(default_factory=dict)       
+    
+    # Pressure Poisson Equation (PPE) setup
+    ppe: Dict[str, Any] = field(default_factory=dict)             
+
+    # ---------------------------------------------------------
+    # Step 3: Projection & Intermediate Logic
+    # ---------------------------------------------------------
+    # Intermediate 'Star' fields (U*, V*, W*) for the fractional step method
     intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
     
-    # Specific diagnostics for the Step 3 execution phase
+    # Performance and convergence diagnostics for Step 3
     step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
 
-    # Simulation History (Internal update, not necessarily in output schemas)
+    # Simulation History
     history: Dict[str, List[float]] = field(default_factory=lambda: {
         "times": [],
         "divergence_norms": [],
@@ -67,8 +72,9 @@ class SolverState:
     })
 
     # ---------------------------------------------------------
-    # Step 4: Extended fields + BC application
+    # Step 4: Extended fields + Boundary Logic
     # ---------------------------------------------------------
+    # Extended domains for boundary condition application (Ghost cells)
     P_ext: Optional[np.ndarray] = None
     U_ext: Optional[np.ndarray] = None
     V_ext: Optional[np.ndarray] = None
@@ -76,7 +82,7 @@ class SolverState:
     step4_diagnostics: Dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------
-    # Step 5: Final diagnostics / outputs
+    # Step 5: Finalization & Outputs
     # ---------------------------------------------------------
     step5_outputs: Dict[str, Any] = field(default_factory=dict)
 
@@ -92,8 +98,9 @@ class SolverState:
     # ---------------------------------------------------------
     def to_json_safe(self) -> Dict[str, Any]:
         """
-        Convert state to JSON-safe dict. Replaces sparse matrices with metadata
-        and callables with None to prevent memory/serialization crashes.
+        Convert state to JSON-safe dict. 
+        Enforces Phase C, Article 7 (Anti-Density Rule): 
+        Sparse matrices are serialized as metadata, never densified.
         """
         try:
             from scipy.sparse import issparse
@@ -101,7 +108,7 @@ class SolverState:
             def issparse(obj): return False
 
         def convert(value):
-            # 1. SciPy Sparse Matrices
+            # 1. SciPy Sparse Matrices (Scale Guard: Do not use .todense())
             if issparse(value):
                 return {
                     "type": str(value.format),
@@ -117,22 +124,22 @@ class SolverState:
             if isinstance(value, dict):
                 return {k: convert(v) for k, v in value.items()}
             
-            # 4. Lists (Recursive - for History)
+            # 4. Lists (Recursive)
             if isinstance(value, list):
                 return [convert(v) for v in value]
 
-            # 5. Callables
+            # 5. Callables (Discarded for JSON)
             if callable(value):
                 return None
 
-            # 6. NumPy scalars
-            if hasattr(value, "item") and not isinstance(value, (list, dict)):
+            # 6. NumPy scalars (Fixing serialization types)
+            if hasattr(value, "item") and not isinstance(value, (list, dict, np.ndarray)):
                 return value.item()
 
             return value
 
         result = {}
-        for key, value in self.__dict__.items():
+        for key, value in self.__getstate__().items() if hasattr(self, "__getstate__") else self.__dict__.items():
             result[key] = convert(value)
 
         return result
