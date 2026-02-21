@@ -5,71 +5,52 @@ import numpy as np
 def apply_domain_boundaries(state, fields):
     """
     Surgically applies domain-level boundary conditions (x_min, x_max, etc.)
-    based on the JSON config enum: no-slip, free-slip, inflow.
-    
-    Direct Indexing Architecture: Uses slices to avoid ghost cells and minimize memory.
+    based on the JSON config enum: no-slip, free-slip, inflow, outflow.
     """
+    # Work on copies to ensure we don't mutate the input dictionary unexpectedly
     U = fields["U"]
     V = fields["V"]
     W = fields["W"]
+    P = fields["P"]
     
-    # boundary_conditions in config is a list of objects per the schema
     bc_list = state.config.get("boundary_conditions", [])
     
     for bc in bc_list:
-        loc = bc["location"] # e.g., "x_min"
-        b_type = bc["type"]  # e.g., "no-slip"
+        loc = bc["location"]
+        b_type = bc["type"]
         vals = bc.get("values", {})
         
-        # --- X Boundaries (Affect U normal component) ---
-        if loc == "x_min":
-            _enforce_face(U, V, W, axis=0, index=0, b_type=b_type, vals=vals, component='u')
-        elif loc == "x_max":
-            _enforce_face(U, V, W, axis=0, index=-1, b_type=b_type, vals=vals, component='u')
-            
-        # --- Y Boundaries (Affect V normal component) ---
-        elif loc == "y_min":
-            _enforce_face(U, V, W, axis=1, index=0, b_type=b_type, vals=vals, component='v')
-        elif loc == "y_max":
-            _enforce_face(U, V, W, axis=1, index=-1, b_type=b_type, vals=vals, component='v')
-            
-        # --- Z Boundaries (Affect W normal component) ---
-        elif loc == "z_min":
-            _enforce_face(U, V, W, axis=2, index=0, b_type=b_type, vals=vals, component='w')
-        elif loc == "z_max":
-            _enforce_face(U, V, W, axis=2, index=-1, b_type=b_type, vals=vals, component='w')
+        # Component mapping: loc string -> (axis, index, velocity_component)
+        mapping = {
+            "x_min": (0, 0, 'u'), "x_max": (0, -1, 'u'),
+            "y_min": (1, 0, 'v'), "y_max": (1, -1, 'v'),
+            "z_min": (2, 0, 'w'), "z_max": (2, -1, 'w')
+        }
+        
+        if loc in mapping:
+            axis, idx, comp = mapping[loc]
+            _enforce_face(U, V, W, axis=axis, index=idx, b_type=b_type, vals=vals, component=comp)
 
-    return {"U": U, "V": V, "W": W, "P": fields["P"]}
+    return {"U": U, "V": V, "W": W, "P": P}
 
 def _enforce_face(U, V, W, axis, index, b_type, vals, component):
-    """Helper to apply specific enum logic to a face slice."""
-    # Target the normal velocity array for this face
     target_array = {"u": U, "v": V, "w": W}[component]
     
-    # Slice selection: e.g., if axis=0, index=0 -> [0, :, :]
     slc = [slice(None)] * 3
     slc[axis] = index
     slc = tuple(slc)
 
-    if b_type == "no-slip":
-        # Normal component is 0. 
-        # (Tangential components would be handled via ghost cells or zeroed 
-        # in the internal mask logic if touching a solid).
+    if b_type in ["no-slip", "free-slip"]:
         target_array[slc] = 0.0
     
-    elif b_type == "free-slip":
-        # Normal component is 0 (No-penetration)
-        target_array[slc] = 0.0
-        
     elif b_type == "inflow":
-        # Set normal component to specified value
         v_val = vals.get(component, 0.0)
         target_array[slc] = v_val
         
     elif b_type == "outflow":
-        # Zero-gradient (Neumann) for the normal component
-        # U[index] = U[neighbor]
+        # Neighbor Rule for zero-gradient
         neighbor_idx = 1 if index == 0 else -2
         slc_neigh = [slice(None)] * 3
         slc_neigh[axis] = neighbor_idx
-        target_array[slc] = target_array[tuple(slc_neigh)]
+        # Use np.copy to prevent potential view/reference issues during the update
+        target_array[slc] = np.copy(target_array[tuple(slc_neigh)])
