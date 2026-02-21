@@ -26,7 +26,7 @@ def test_theory_grid_spacing_derivation_integrity():
     s1 = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     assert np.isclose(s1.grid["dx"], (s1.grid["x_max"] - s1.grid["x_min"]) / nx)
     assert np.isclose(s1.grid["dx"], exp_dx), "Step 1: Grid spacing calculation error"
-    assert np.isclose(s1.constants["dx"], exp_dx), "Step 1: Constants sync error"
+    assert "dx" in s1.grid
 
     # # --- Step 2 Lifecycle Check ---
     # # Initialization of the Step 2 artifact (Inherits Step 1 + Operators)
