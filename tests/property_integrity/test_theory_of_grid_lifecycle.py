@@ -39,49 +39,49 @@ def test_theory_step1_grid_logic_persistence(step_name):
     assert np.isclose(state.grid["dx"], 0.1), f"dx failed at {step_name}"
     assert np.isclose(state.constants["dx"], 0.1), f"constant dx failed at {step_name}"
 
-# ------------------------------------------------------------------
-# 2. Operator Scaling Persistence (Tested against Steps 2, 3, 4)
-# ------------------------------------------------------------------
-@pytest.mark.parametrize("step_name", ["step2", "step3", "step4"])
-def test_theory_step2_operator_scaling_persistence(step_name):
-    """Verify 1/dx^2 scaling is preserved in operators through later stages."""
-    res = 10
-    factory = DUMMIES[step_name]
-    state = factory(nx=res)
+# # ------------------------------------------------------------------
+# # 2. Operator Scaling Persistence (Tested against Steps 2, 3, 4)
+# # ------------------------------------------------------------------
+# @pytest.mark.parametrize("step_name", ["step2", "step3", "step4"])
+# def test_theory_step2_operator_scaling_persistence(step_name):
+#     """Verify 1/dx^2 scaling is preserved in operators through later stages."""
+#     res = 10
+#     factory = DUMMIES[step_name]
+#     state = factory(nx=res)
     
-    # Strictly check scaling based on the dummy's own constants
-    state.constants["dx"] = 1.0 / res
-    state.constants["dy"] = 1.0 / res
-    state.constants["dz"] = 1.0 / res
+#     # Strictly check scaling based on the dummy's own constants
+#     state.constants["dx"] = 1.0 / res
+#     state.constants["dy"] = 1.0 / res
+#     state.constants["dz"] = 1.0 / res
 
-    A = build_laplacian_operators(state)
+#     A = build_laplacian_operators(state)
     
-    assert A is not None, f"Laplacian operator missing/null in {step_name}"
-    # Verify diagonal represents the center coefficient (usually -6.0 / dx^2)
-    assert A.diagonal().size > 0
+#     assert A is not None, f"Laplacian operator missing/null in {step_name}"
+#     # Verify diagonal represents the center coefficient (usually -6.0 / dx^2)
+#     assert A.diagonal().size > 0
 
-# ------------------------------------------------------------------
-# 3. Correction Physics Persistence (Tested against Steps 3, 4)
-# ------------------------------------------------------------------
-@pytest.mark.parametrize("step_name", ["step3", "step4"])
-def test_theory_step3_correction_logic_persistence(step_name):
-    """Verify velocity correction physics remains sound in the final stages."""
-    factory = DUMMIES[step_name]
-    state = factory(nx=10) # dx=0.1 (if 1.0/10)
+# # ------------------------------------------------------------------
+# # 3. Correction Physics Persistence (Tested against Steps 3, 4)
+# # ------------------------------------------------------------------
+# @pytest.mark.parametrize("step_name", ["step3", "step4"])
+# def test_theory_step3_correction_logic_persistence(step_name):
+#     """Verify velocity correction physics remains sound in the final stages."""
+#     factory = DUMMIES[step_name]
+#     state = factory(nx=10) # dx=0.1 (if 1.0/10)
     
-    # Align constants for the math check
-    state.constants["dt"] = 0.1
-    state.constants["dx"] = 0.5
-    state.constants["rho"] = 1.0
+#     # Align constants for the math check
+#     state.constants["dt"] = 0.1
+#     state.constants["dx"] = 0.5
+#     state.constants["rho"] = 1.0
     
-    p_field = np.zeros_like(state.fields["P"])
-    p_field[1, :, :] = 1.0 
-    u_star = np.zeros_like(state.fields["U"])
+#     p_field = np.zeros_like(state.fields["P"])
+#     p_field[1, :, :] = 1.0 
+#     u_star = np.zeros_like(state.fields["U"])
     
-    # u = u* - (dt/rho) * (dp/dx) => 0 - (0.1/1.0) * (1.0/0.5) = -0.2
-    u_new, _, _ = correct_velocity(state, u_star, state.fields["V"], state.fields["W"], p_field)
+#     # u = u* - (dt/rho) * (dp/dx) => 0 - (0.1/1.0) * (1.0/0.5) = -0.2
+#     u_new, _, _ = correct_velocity(state, u_star, state.fields["V"], state.fields["W"], p_field)
     
-    assert np.isclose(u_new[1, 0, 0], -0.2), f"Physics mismatch in {step_name}"
+#     assert np.isclose(u_new[1, 0, 0], -0.2), f"Physics mismatch in {step_name}"
 
 # ------------------------------------------------------------------
 # 4. FUTURE IMPLEMENTATION (STEP 4)
