@@ -22,15 +22,20 @@ class SolverState:
     config: Dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------
-    # Step 1: Grid, fields, mask, constants, BCs
+    # Step 1: Grid, fields, mask, constants, BCs, Fluid Physics
     # ---------------------------------------------------------
     grid: Dict[str, Any] = field(default_factory=dict)            
     fields: Dict[str, np.ndarray] = field(default_factory=dict)   
+    
+    # Spatial Masks (Initialized as None to avoid Boolean type-mismatch in JSON)
     mask: Optional[np.ndarray] = None                             
     is_fluid: Optional[np.ndarray] = None
     is_boundary_cell: Optional[np.ndarray] = None
     is_solid: Optional[np.ndarray] = None
+    
+    # Physics & Environment
     constants: Dict[str, Any] = field(default_factory=dict)       
+    fluid_properties: Dict[str, Any] = field(default_factory=dict) # Added for Step 1 compliance
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
     
     # Global health tracking
@@ -119,6 +124,10 @@ class SolverState:
             # 6. NumPy scalars (Fixing serialization types)
             if hasattr(value, "item") and not isinstance(value, (list, dict, np.ndarray)):
                 return value.item()
+            
+            # 7. Explicitly handle None (translates to null in JSON)
+            if value is None:
+                return None
 
             return value
 

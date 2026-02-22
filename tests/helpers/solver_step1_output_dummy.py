@@ -6,11 +6,14 @@ from src.solver_state import SolverState
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     Step 1 Implementation: Initialization & Allocation.
-    Ensures all masks are arrays (lists) to satisfy the contract.
+    
+    Ensures the state is fully populated with Step 1 data, 
+    satisfying both the JSON Schema contract and physics property tests.
     """
     state = SolverState()
 
-    # 1. Grid Definition (Essential for Step 1)
+    # 1. Grid Definition
+    # Dynamically calculated based on input resolution to keep Theory tests passing.
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
@@ -26,36 +29,60 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "total_cells": nx * ny * nz
     }
 
-    # 2. Field Allocation (Step 1 Output)
-    state.fields = {
-        "P": np.zeros((nx, ny, nz)),
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
+    # 2. Fluid Physics (Step 1 Department)
+    # This prevents the AttributeError in property integrity tests.
+    state.fluid_properties = {
+        "rho": 1000.0,      # Density
+        "mu": 0.001,        # Dynamic Viscosity
+        "nu": 0.000001      # Kinematic Viscosity
     }
 
-    # 3. MASKING (THE FIX FOR THE ERROR)
-    # The error says "False is not of type 'array'". 
-    # We must overwrite the default Boolean with a List.
-    mask_shape = (nx, ny, nz)
-    fluid_mask = np.ones(mask_shape, dtype=int).tolist() # All fluid for Step 1
-    solid_mask = np.zeros(mask_shape, dtype=int).tolist()
-    
-    state.mask = fluid_mask
-    state.is_fluid = fluid_mask
-    state.is_solid = solid_mask
-    state.is_boundary_cell = solid_mask
+    # 3. Field Allocation (Staggered Grid Layout)
+    state.fields = {
+        "P": np.zeros((nx, ny, nz)),           # Cell-centered
+        "U": np.zeros((nx + 1, ny, nz)),       # X-faces
+        "V": np.zeros((nx, ny + 1, nz)),       # Y-faces
+        "W": np.zeros((nx, ny, nz + 1)),       # Z-faces
+    }
 
-    # 4. Department Initialization
-    # PPE dimension must be present to pass property integrity tests
+    # 4. Masking (Type Compliance)
+    # Converts NumPy arrays to nested lists to satisfy Schema 'array' type.
+    mask_shape = (nx, ny, nz)
+    fluid_mask_arr = np.ones(mask_shape, dtype=int)
+    
+    state.mask = fluid_mask_arr.tolist()
+    state.is_fluid = fluid_mask_arr.tolist()
+    state.is_solid = np.zeros(mask_shape, dtype=int).tolist()
+    state.is_boundary_cell = np.zeros(mask_shape, dtype=int).tolist()
+
+    # 5. Department Initialization & PPE Intent
+    # PPE 'dimension' is required for lifecycle allocation tests.
     state.ppe = {"dimension": nx * ny * nz}
     
-    state.config = {"solver_type": "projection", "precision": "float64"}
-    state.constants = {"nu": 0.01, "dt": 0.001}
-    state.history = {
-        "times": [], "divergence_norms": [], "energy_history": [],
-        "max_velocity_history": [], "ppe_iterations_history": []
+    state.config = {
+        "solver_type": "projection", 
+        "precision": "float64",
+        "case_name": "dummy_verification"
     }
-    state.health = {"status": "initialized"}
+    
+    state.constants = {
+        "nu": 0.01, 
+        "dt": 0.001,
+        "g": 9.81
+    }
+    
+    state.boundary_conditions = {
+        "west": "noslip",
+        "east": "noslip",
+        "north": "moving_wall",
+        "south": "noslip",
+        "top": "noslip",
+        "bottom": "noslip"
+    }
+
+    # 6. Global Health & History
+    state.health = {"status": "initialized", "errors": []}
+    state.iteration = 0
+    state.time = 0.0
 
     return state
