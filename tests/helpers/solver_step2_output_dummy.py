@@ -10,44 +10,39 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     Updated to comply with Phase C, Rule 7 (Scale Guard) and Departmental Integrity.
 
     Step 2 adds:
-      - Refined mask semantics (Inherited and consistent with Step 1)
+      - Refined mask semantics (Inherited from Step 1, cast to JSON-safe lists)
       - Operators as SciPy Sparse Matrices (Laplacian, Divergence, Gradient)
       - PPE (Pressure Poisson Equation) system matrix and metadata
       - Initialized health diagnostics for Step 2 logic
     """
 
     # 1. Start from the refined Step 1 dummy (The Geometry/Physics foundation)
-    # This inherits grid["total_cells"] and the basic grid metrics
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # 2. Calculate Degrees of Freedom (DOF) for matrix dimensions
-    # Pressure is at cell centers (Scalar)
     dof_p = nx * ny * nz
-    # Velocity components are staggered (Faces)
     dof_u = (nx + 1) * ny * nz
     dof_v = nx * (ny + 1) * nz
     dof_w = nx * ny * (nz + 1)
     total_vel_dof = dof_u + dof_v + dof_w
 
     # ------------------------------------------------------------------
-    # 3. Mask Semantics (Refining definitions from Step 1)
+    # 3. Mask Semantics (Fixing the Boolean Leak)
     # ------------------------------------------------------------------
-    state.is_fluid = (state.mask == 1)
-    state.is_solid = (state.mask == 0)
-    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool) 
+    # Convert inherited mask back to numpy for element-wise comparison
+    mask_arr = np.array(state.mask)
+    
+    # Cast boolean results to int then to list to satisfy JSON 'array' contract
+    state.is_fluid = (mask_arr == 1).astype(int).tolist()
+    state.is_solid = (mask_arr == 0).astype(int).tolist()
+    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=int).tolist() 
 
     # ------------------------------------------------------------------
     # 4. Operators (Sparsity Guard Compliant)
-    # Using empty CSR matrices to define the expected structure
     # ------------------------------------------------------------------
     state.operators = {
-        # Laplacian matrix maps Pressure to Pressure
         "laplacian": csr_matrix((dof_p, dof_p)),
-        
-        # Divergence maps Velocity (U,V,W) to Pressure
         "divergence": csr_matrix((dof_p, total_vel_dof)),
-        
-        # Gradient maps Pressure to Velocity (U,V,W)
         "gradient": csr_matrix((total_vel_dof, dof_p)),
     }
 
@@ -55,7 +50,7 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     # 5. PPE (Pressure Poisson Equation) structure
     # ------------------------------------------------------------------
     state.ppe = {
-        "dimension": dof_p,          # FIX: Critical for Property Integrity tests
+        "dimension": dof_p,
         "solver_type": "sparse_cg",  
         "A": state.operators["laplacian"],
         "tolerance": 1e-6,

@@ -17,13 +17,13 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     """
 
     # 1. Start from the Operator Foundation (Step 2)
-    # Inherits: grid["total_cells"], ppe["dimension"], and Sparse Operators
+    # Inherits: grid["total_cells"], ppe["dimension"], and JSON-safe masks
     state = make_step2_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # ------------------------------------------------------------------
     # 2. Activate Fluid Physics (Required for Step 3 Projection Scaling)
     # ------------------------------------------------------------------
-    # Density (rho) is now strictly required for the correction: u = u* - (dt/rho) * grad(P)
+    # Standardizing keys to "density" and "viscosity" to match Physics Integrity tests
     state.fluid_properties.update({
         "density": 1000.0,
         "viscosity": 1e-3,
@@ -43,7 +43,6 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     # 4. Add Intermediate Fields (The Predictor/Star step)
     # ------------------------------------------------------------------
-    # Predictor fields follow the same staggered staggering as core fields.
     state.intermediate_fields = {
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
@@ -82,6 +81,7 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     state.iteration = 1
     
+    # Calculate next time step safely
     dt = state.constants.get("dt", 0.01)
     state.time += dt
     
