@@ -13,7 +13,8 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     - Ensured mask types remain JSON-safe lists.
     - Added simulation_parameters to align with Input Schema.
     - Linked simulation_parameters.time_step to constants.dt.
-    - Standardized boundary_conditions to List[Dict] format for Schema compliance.
+    - Standardized boundary_conditions to List[Dict] format.
+    - Added external_forces (Physical Intent) for Step 3 momentum prediction.
     """
     state = SolverState()
 
@@ -79,13 +80,19 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "case_name": "dummy_verification"
     }
     
+    # 8. External Forces (Physical Intent - Established in Step 1)
+    state.external_forces = {
+        "force_vector": [0.0, 0.0, -9.81],
+        "type": "constant_acceleration"
+    }
+
     # Internal math constants
     state.constants = {
         "dt": state.simulation_parameters["time_step"], 
         "g": 9.81
     }
     
-    # NEW: Boundary Conditions (Schema-compliant List Format)
+    # Boundary Conditions (Schema-compliant List Format)
     state.boundary_conditions = [
         {"location": "x_min", "type": "no-slip"},
         {"location": "x_max", "type": "no-slip"},
@@ -95,7 +102,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_max", "type": "no-slip"}
     ]
 
-    # 8. Global Health & History
+    # 9. Global Health & History
     state.health = {"status": "initialized", "errors": []}
     state.history = {
         "times": [],
