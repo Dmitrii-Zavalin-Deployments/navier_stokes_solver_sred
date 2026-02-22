@@ -7,13 +7,14 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     Step 1 Implementation: Initialization & Allocation.
     
-    Ensures the state is fully populated with Step 1 data, 
-    satisfying both the JSON Schema contract and physics property tests.
+    Updated Feb 2026:
+    - Standardized fluid_properties keys (density, viscosity).
+    - Added initial_conditions department for lifecycle tracking.
+    - Ensured mask types remain JSON-safe lists.
     """
     state = SolverState()
 
     # 1. Grid Definition
-    # Dynamically calculated based on input resolution to keep Theory tests passing.
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
@@ -30,23 +31,30 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # 2. Fluid Physics (Step 1 Department)
-    # This prevents the AttributeError in property integrity tests.
+    # Keys standardized for test_physics_fluid_constants.py
     state.fluid_properties = {
-        "rho": 1000.0,      # Density
-        "mu": 0.001,        # Dynamic Viscosity
-        "nu": 0.000001      # Kinematic Viscosity
+        "density": 1000.0,
+        "viscosity": 0.001,
+        "kinematic_viscosity": 1e-6
     }
 
-    # 3. Field Allocation (Staggered Grid Layout)
+    # 3. Initial Conditions (NEW: Property Tracking Matrix Element)
+    # This represents the user's intent: u(t=0) = u0
+    state.initial_conditions = {
+        "velocity": [0.0, 0.0, 0.0],
+        "pressure": 0.0
+    }
+
+    # 4. Field Allocation (Staggered Grid Layout)
+    # Staggering: Faces (nx+1) for primary direction vectors
     state.fields = {
-        "P": np.zeros((nx, ny, nz)),           # Cell-centered
-        "U": np.zeros((nx + 1, ny, nz)),       # X-faces
-        "V": np.zeros((nx, ny + 1, nz)),       # Y-faces
-        "W": np.zeros((nx, ny, nz + 1)),       # Z-faces
+        "P": np.zeros((nx, ny, nz)),           
+        "U": np.zeros((nx + 1, ny, nz)),       
+        "V": np.zeros((nx, ny + 1, nz)),       
+        "W": np.zeros((nx, ny, nz + 1)),       
     }
 
-    # 4. Masking (Type Compliance)
-    # Converts NumPy arrays to nested lists to satisfy Schema 'array' type.
+    # 5. Masking (Type Compliance)
     mask_shape = (nx, ny, nz)
     fluid_mask_arr = np.ones(mask_shape, dtype=int)
     
@@ -55,8 +63,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.is_solid = np.zeros(mask_shape, dtype=int).tolist()
     state.is_boundary_cell = np.zeros(mask_shape, dtype=int).tolist()
 
-    # 5. Department Initialization & PPE Intent
-    # PPE 'dimension' is required for lifecycle allocation tests.
+    # 6. Department Initialization & PPE Intent
     state.ppe = {"dimension": nx * ny * nz}
     
     state.config = {
@@ -66,22 +73,25 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     }
     
     state.constants = {
-        "nu": 0.01, 
         "dt": 0.001,
         "g": 9.81
     }
     
     state.boundary_conditions = {
-        "west": "noslip",
-        "east": "noslip",
-        "north": "moving_wall",
-        "south": "noslip",
-        "top": "noslip",
-        "bottom": "noslip"
+        "west": "noslip", "east": "noslip",
+        "north": "moving_wall", "south": "noslip",
+        "top": "noslip", "bottom": "noslip"
     }
 
-    # 6. Global Health & History
+    # 7. Global Health & History
     state.health = {"status": "initialized", "errors": []}
+    state.history = {
+        "times": [],
+        "divergence_norms": [],
+        "max_velocity_history": [],
+        "ppe_iterations_history": [],
+        "energy_history": []
+    }
     state.iteration = 0
     state.time = 0.0
 
