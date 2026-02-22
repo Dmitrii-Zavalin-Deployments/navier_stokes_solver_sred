@@ -5,8 +5,8 @@ from src.solver_state import SolverState
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
-    High-Fidelity Step 1 Dummy using production SolverState.
-    Manually overrides the to_json_safe behavior to satisfy the strict schema.
+    Finalized Step 1 Dummy using production SolverState.
+    Satisfies extensible schema and strict mask type requirements.
     """
     state = SolverState()
 
@@ -15,7 +15,9 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
     
-    dx, dy, dz = (x_max-x_min)/nx, (y_max-y_min)/ny, (z_max-z_min)/nz
+    dx = (x_max - x_min) / nx
+    dy = (y_max - y_min) / ny
+    dz = (z_max - z_min) / nz
 
     state.grid = {
         "nx": nx, "ny": ny, "nz": nz,
@@ -26,7 +28,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "total_cells": nx * ny * nz
     }
 
-    # --- DEPARTMENTS ---
+    # --- DEPARTMENTS (additionalProperties: true allows these) ---
     state.constants = {"nu": 0.001, "dt": 0.01}
     state.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
     state.config = {"solver_type": "projection", "precision": "float64"}
@@ -40,21 +42,22 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),
     }
 
-    # Extended Fields (Ghost Cells N+2)
+    # Extended Fields (Ghost cells N+2)
     ext_shape = (nx + 2, ny + 2, nz + 2)
     state.P_ext = np.zeros(ext_shape)
     state.U_ext = np.zeros(ext_shape)
     state.V_ext = np.zeros(ext_shape)
     state.W_ext = np.zeros(ext_shape)
 
-    # --- MASKING (Fixed: Schema expects arrays/null, not bool) ---
+    # --- MASKING (Fixes: False is not of type 'array') ---
+    # We generate actual 3D arrays and convert to lists for JSON safety
     mask_arr = np.ones((nx, ny, nz), dtype=int)
     state.mask = mask_arr.tolist()
-    state.is_fluid = mask_arr.tolist() # Convert from bool to list
-    state.is_solid = (1 - mask_arr).tolist() # Convert from bool to list
+    state.is_fluid = mask_arr.tolist() 
+    state.is_solid = (1 - mask_arr).tolist()
+    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=int).tolist()
 
     # --- DIAGNOSTICS & HISTORY ---
-    state.ppe = {"dimension": nx * ny * nz}
     state.history = {
         "times": [],
         "divergence_norms": [],
@@ -63,20 +66,5 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "energy_history": []
     }
     state.health = {"status": "initialized"}
-
-    # --- OVERRIDE SERIALIZATION BRIDGE ---
-    # We monkey-patch the instance to ensure the contract test only sees 
-    # properties allowed by the schema.
-    original_to_json = state.to_json_safe
-
-    def schema_compliant_json():
-        data = original_to_json()
-        # Remove properties forbidden by the 'additionalProperties: false' constraint
-        forbidden = ["fluid_properties", "operators", "intermediate_fields"]
-        for key in forbidden:
-            data.pop(key, None)
-        return data
-
-    state.to_json_safe = schema_compliant_json
 
     return state
