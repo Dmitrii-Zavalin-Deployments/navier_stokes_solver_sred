@@ -4,13 +4,14 @@ import numpy as np
 
 class MockState:
     """
-    Decoupled State Container with Serialization Bridge.
-    Restored with dynamic grid derivation and full Schema support.
+    Decoupled State Container.
+    Maintains departmental isolation while satisfying JSON schema requirements.
     """
     def __init__(self):
         self.grid = {}
         self.constants = {}
         self.fields = {}
+        self.fluid_properties = {}  # Added to fix AttributeError
         self.config = {}
         self.mask = None
         self.boundary_conditions = {}
@@ -26,6 +27,7 @@ class MockState:
         self.ready_for_time_loop = False
 
     def to_json_safe(self) -> dict:
+        """Type-casting bridge for JSON Schema validation."""
         def serialize(obj):
             if isinstance(obj, dict):
                 return {k: serialize(v) for k, v in obj.items()}
@@ -43,6 +45,7 @@ class MockState:
             "grid": serialize(self.grid),
             "constants": serialize(self.constants),
             "fields": serialize(self.fields),
+            "fluid_properties": serialize(self.fluid_properties), # Added to map
             "config": serialize(self.config),
             "mask": serialize(self.mask),
             "boundary_conditions": serialize(self.boundary_conditions),
@@ -60,26 +63,30 @@ class MockState:
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state = MockState()
 
-    # --- DYNAMIC GEOMETRY DERIVATION ---
-    # Here we define spacing first, then derive bounds, 
-    # matching the original 'Theory' logic.
-    dx, dy, dz = 0.1, 0.1, 0.1 
+    # --- GEOMETRY THEORY CONFORMANCE ---
+    # Bounds defined first to satisfy Δx = (max - min) / N
+    x_min, x_max = 0.0, 1.0
+    y_min, y_max = 0.0, 1.0
+    z_min, z_max = 0.0, 1.0
     
+    dx, dy, dz = x_max/nx, y_max/ny, z_max/nz
+
     state.grid = {
         "nx": nx, "ny": ny, "nz": nz,
         "dx": dx, "dy": dy, "dz": dz,
-        "x_min": 0.0, "x_max": nx * dx,
-        "y_min": 0.0, "y_max": ny * dy,
-        "z_min": 0.0, "z_max": nz * dz,
+        "x_min": x_min, "x_max": x_max,
+        "y_min": y_min, "y_max": y_max,
+        "z_min": z_min, "z_max": z_max,
         "total_cells": nx * ny * nz
     }
 
-    # --- CONTRACT MANDATES ---
+    # --- DEPARTMENTAL DATA ---
     state.constants = {"nu": 0.001, "dt": 0.01}
+    state.fluid_properties = {"density": 1.0, "viscosity": 0.001}
     state.config = {"solver_type": "projection", "precision": "float64"}
     state.boundary_conditions = {"type": "lid_driven_cavity"}
     
-    # Staggered Primary Fields
+    # Primary Staggered Fields
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
@@ -87,16 +94,15 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),
     }
     
-    # Masking (Must be 3D list for JSON compatibility)
+    # JSON-Safe Mask (List instead of Array)
     state.mask = np.ones((nx, ny, nz)).tolist()
     
-    # Extended Fields (N+2 for Ghost Cells)
+    # Extended Fields (Ghost Nodes)
     state.U_ext = np.zeros((nx + 2, ny + 2, nz + 2))
     state.V_ext = np.zeros((nx + 2, ny + 2, nz + 2))
     state.W_ext = np.zeros((nx + 2, ny + 2, nz + 2))
     state.P_ext = np.zeros((nx + 2, ny + 2, nz + 2))
 
-    # PPE & Diagnostics
     state.ppe = {"dimension": nx * ny * nz}
     state.history = {"times": [], "divergence_norms": []}
     state.health = {"status": "initialized"}
