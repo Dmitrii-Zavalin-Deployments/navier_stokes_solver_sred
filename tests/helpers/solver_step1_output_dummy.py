@@ -8,6 +8,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     Step 1 Implementation: Initialization & Allocation.
     
     Updated Feb 2026:
+    - Flattened mask to 1D (Article 8) to resolve test AssertionErrors.
     - Maintained all Health/History departments to prevent test regressions.
     - Explicitly mapped simulation_parameters.output_interval for Archivist logic.
     - Added 'values' sub-dictionary to boundary_conditions for Step 2/3 parity.
@@ -61,14 +62,16 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),       
     }
 
-    # 6. Masking (Type Compliance)
+    # 6. Masking (FIXED: Flattening for Canonical Compliance)
     mask_shape = (nx, ny, nz)
     fluid_mask_arr = np.ones(mask_shape, dtype=int)
+    zero_mask_arr = np.zeros(mask_shape, dtype=int)
     
-    state.mask = fluid_mask_arr.tolist()
-    state.is_fluid = fluid_mask_arr.tolist()
-    state.is_solid = np.zeros(mask_shape, dtype=int).tolist()
-    state.is_boundary_cell = np.zeros(mask_shape, dtype=int).tolist()
+    # Use .flatten().tolist() to produce a 1D array of length nx*ny*nz
+    state.mask = fluid_mask_arr.flatten().tolist()
+    state.is_fluid = fluid_mask_arr.flatten().tolist()
+    state.is_solid = zero_mask_arr.flatten().tolist()
+    state.is_boundary_cell = zero_mask_arr.flatten().tolist()
 
     # 7. Department Initialization & PPE Intent
     state.ppe = {"dimension": nx * ny * nz}
@@ -92,7 +95,6 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     }
     
     # Boundary Conditions (Updated with 'values' for Step 2/3 numerical roles)
-    # Physical Logic: 'no-slip' allows velocity (u,v,w) but forbids pressure (p).
     velocity_only = {"u": 0.0, "v": 0.0, "w": 0.0}
     state.boundary_conditions = [
         {"location": "x_min", "type": "no-slip", "values": velocity_only.copy()},
