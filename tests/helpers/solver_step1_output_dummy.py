@@ -11,10 +11,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     - Standardized fluid_properties keys (density, viscosity).
     - Added initial_conditions department for lifecycle tracking.
     - Ensured mask types remain JSON-safe lists.
+    - Added simulation_parameters to align with Input Schema.
+    - Linked simulation_parameters.time_step to constants.dt.
     """
     state = SolverState()
 
     # 1. Grid Definition
+    # Dynamically calculated based on input resolution to keep Theory tests passing.
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
@@ -38,23 +41,31 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "kinematic_viscosity": 1e-6
     }
 
-    # 3. Initial Conditions (NEW: Property Tracking Matrix Element)
+    # 3. Initial Conditions (Property Tracking Matrix Element)
     # This represents the user's intent: u(t=0) = u0
     state.initial_conditions = {
         "velocity": [0.0, 0.0, 0.0],
         "pressure": 0.0
     }
 
-    # 4. Field Allocation (Staggered Grid Layout)
-    # Staggering: Faces (nx+1) for primary direction vectors
-    state.fields = {
-        "P": np.zeros((nx, ny, nz)),           
-        "U": np.zeros((nx + 1, ny, nz)),       
-        "V": np.zeros((nx, ny + 1, nz)),       
-        "W": np.zeros((nx, ny, nz + 1)),       
+    # 4. Simulation Parameters (New: Required for Temporal Integrity)
+    # Matches the "Solver Input Schema" properties.
+    state.simulation_parameters = {
+        "time_step": 0.001,
+        "total_time": 1.0,
+        "output_interval": 10
     }
 
-    # 5. Masking (Type Compliance)
+    # 5. Field Allocation (Staggered Grid Layout)
+    state.fields = {
+        "P": np.zeros((nx, ny, nz)),           # Cell-centered
+        "U": np.zeros((nx + 1, ny, nz)),       # X-faces
+        "V": np.zeros((nx, ny + 1, nz)),       # Y-faces
+        "W": np.zeros((nx, ny, nz + 1)),       # Z-faces
+    }
+
+    # 6. Masking (Type Compliance)
+    # Converts NumPy arrays to nested lists to satisfy Schema 'array' type.
     mask_shape = (nx, ny, nz)
     fluid_mask_arr = np.ones(mask_shape, dtype=int)
     
@@ -63,7 +74,8 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.is_solid = np.zeros(mask_shape, dtype=int).tolist()
     state.is_boundary_cell = np.zeros(mask_shape, dtype=int).tolist()
 
-    # 6. Department Initialization & PPE Intent
+    # 7. Department Initialization & PPE Intent
+    # PPE 'dimension' is required for lifecycle allocation tests.
     state.ppe = {"dimension": nx * ny * nz}
     
     state.config = {
@@ -72,18 +84,22 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "case_name": "dummy_verification"
     }
     
+    # Internal math constants, mapping dt from simulation_parameters
     state.constants = {
-        "dt": 0.001,
+        "dt": state.simulation_parameters["time_step"], 
         "g": 9.81
     }
     
     state.boundary_conditions = {
-        "west": "noslip", "east": "noslip",
-        "north": "moving_wall", "south": "noslip",
-        "top": "noslip", "bottom": "noslip"
+        "west": "noslip",
+        "east": "noslip",
+        "north": "moving_wall",
+        "south": "noslip",
+        "top": "noslip",
+        "bottom": "noslip"
     }
 
-    # 7. Global Health & History
+    # 8. Global Health & History
     state.health = {"status": "initialized", "errors": []}
     state.history = {
         "times": [],
