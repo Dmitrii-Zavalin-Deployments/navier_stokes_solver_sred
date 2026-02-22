@@ -8,13 +8,8 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     Step 1 Implementation: Initialization & Allocation.
     
     Updated Feb 2026:
-    - Standardized fluid_properties keys (density, viscosity).
-    - Added initial_conditions department for lifecycle tracking.
-    - Ensured mask types remain JSON-safe lists.
-    - Added simulation_parameters to align with Input Schema.
-    - Linked simulation_parameters.time_step to constants.dt.
-    - Standardized boundary_conditions to List[Dict] format.
-    - Added external_forces (Physical Intent) for Step 3 momentum prediction.
+    - Maintained all Health/History departments to prevent test regressions.
+    - Explicitly mapped simulation_parameters.output_interval for Archivist logic.
     """
     state = SolverState()
 
@@ -47,11 +42,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "pressure": 0.0
     }
 
-    # 4. Simulation Parameters
+    # 4. Simulation Parameters (Source of Truth for the Archivist)
+    dt_val = 0.001
+    interval_val = 10
     state.simulation_parameters = {
-        "time_step": 0.001,
+        "time_step": dt_val,
         "total_time": 1.0,
-        "output_interval": 10
+        "output_interval": interval_val
     }
 
     # 5. Field Allocation (Staggered Grid Layout)
@@ -86,7 +83,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "type": "constant_acceleration"
     }
 
-    # Internal math constants
+    # Internal math constants (Synced with simulation_parameters)
     state.constants = {
         "dt": state.simulation_parameters["time_step"], 
         "g": 9.81
@@ -102,7 +99,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_max", "type": "no-slip"}
     ]
 
-    # 9. Global Health & History
+    # 9. Global Health & History (CRITICAL: Do not delete, used by Step 2-5)
     state.health = {"status": "initialized", "errors": []}
     state.history = {
         "times": [],
