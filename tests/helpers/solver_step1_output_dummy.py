@@ -6,11 +6,12 @@ from src.solver_state import SolverState
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     High-Fidelity Step 1 Dummy using production SolverState.
-    Fixes mask type violations and ensures PPE dimension intent is preserved.
+    Forces mask conversion to nested lists to satisfy JSON Schema 'array' type.
     """
     state = SolverState()
 
     # --- DYNAMIC GEOMETRY ---
+    # Derive spacing from N to keep Theory tests happy
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
@@ -34,7 +35,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.config = {"solver_type": "projection", "precision": "float64"}
     state.boundary_conditions = {"type": "lid_driven_cavity"}
 
-    # --- FIELDS ---
+    # --- FIELD ALLOCATION ---
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
@@ -42,22 +43,23 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),
     }
 
-    # Extended Fields (N+2)
+    # Extended Fields (Ghost node padding: N+2)
     ext_shape = (nx + 2, ny + 2, nz + 2)
     state.P_ext = np.zeros(ext_shape)
     state.U_ext = np.zeros(ext_shape)
     state.V_ext = np.zeros(ext_shape)
     state.W_ext = np.zeros(ext_shape)
 
-    # --- MASKING (Fixes: False is not of type 'array') ---
-    # Convert numpy arrays to lists so jsonschema sees 'array' type
+    # --- MASKING (THE FIX) ---
+    # We must provide full 3D lists, not just 'False'
     mask_arr = np.ones((nx, ny, nz), dtype=int)
     state.mask = mask_arr.tolist()
     state.is_fluid = mask_arr.tolist() 
     state.is_solid = (1 - mask_arr).tolist()
     state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=int).tolist()
 
-    # --- PPE & DIAGNOSTICS (Fixes: AssertionError on PPE 'dimension') ---
+    # --- PPE & HISTORY ---
+    # Ensure PPE has the 'dimension' key to satisfy Property Integrity tests
     state.ppe = {"dimension": nx * ny * nz}
     
     state.history = {
@@ -67,6 +69,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "ppe_iterations_history": [],
         "energy_history": []
     }
+    
     state.health = {"status": "initialized"}
 
     return state
