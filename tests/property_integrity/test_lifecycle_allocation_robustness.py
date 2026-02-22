@@ -23,22 +23,30 @@ LIFECYCLE_STAGES = [
 def test_lifecycle_grid_dimensions_match_fields(stage_name, factory):
     """
     Robustness: Verifies that core field shapes (P, U, V, W) match 
-    the grid dimensions (nx, ny, nz) across all 5 stages.
+    the Arakawa C-Grid staggered convention across all 5 stages.
     """
     nx, ny, nz = 8, 6, 4
     state = factory(nx=nx, ny=ny, nz=nz)
-    expected_shape = (nx, ny, nz)
-    expected_total = nx * ny * nz
-
+    
     # 1. Metadata Agreement
+    expected_total = nx * ny * nz
     assert state.grid["nx"] == nx
     assert state.grid["total_cells"] == expected_total, f"Total cells mismatch at {stage_name}"
 
-    # 2. Core Field Shapes (verify_shape_consistency logic)
-    for field in ["P", "U", "V", "W"]:
-        assert state.fields[field].shape == expected_shape, (
+    # 2. Core Field Shapes (Staggered Grid Logic)
+    # P is cell-centered: (nx, ny, nz)
+    # U, V, W are face-centered: (nx+1, ny, nz), etc.
+    expected_shapes = {
+        "P": (nx, ny, nz),
+        "U": (nx + 1, ny, nz),
+        "V": (nx, ny + 1, nz),
+        "W": (nx, ny, nz + 1)
+    }
+
+    for field, shape in expected_shapes.items():
+        assert state.fields[field].shape == shape, (
             f"{stage_name}: Field '{field}' shape mismatch. "
-            f"Expected {expected_shape}, got {state.fields[field].shape}"
+            f"Expected {shape}, got {state.fields[field].shape}"
         )
 
 @pytest.mark.parametrize("stage_name, factory", LIFECYCLE_STAGES)
@@ -52,25 +60,33 @@ def test_lifecycle_ppe_dimension_intent(stage_name, factory):
     expected_dim = nx * ny * nz
     
     # Validates that the PPE department 'plan' survives every orchestrator
-    assert state.ppe["dimension"] == expected_dim, f"PPE dimension lost at {stage_name}"
+    assert "dimension" in state.ppe, f"PPE 'dimension' key missing at {stage_name}"
+    assert state.ppe["dimension"] == expected_dim, f"PPE dimension value mismatch at {stage_name}"
 
 def test_step3_intermediate_field_allocation():
     """
     Specific check for Step 3: Projection requires intermediate velocity 
-    storage (U*, V*, W*) which must match internal grid dimensions.
+    storage (U*, V*, W*) which must follow staggered face dimensions.
     """
     nx, ny, nz = 5, 5, 5
     state = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
     
-    for comp in ["U", "V", "W"]:
-        assert state.intermediate_fields[comp].shape == (nx, ny, nz), \
-            f"Step 3 intermediate field {comp} shape mismatch."
+    # Intermediate (Predictor) fields must match the staggering of core fields
+    expected_shapes = {
+        "U": (nx + 1, ny, nz),
+        "V": (nx, ny + 1, nz),
+        "W": (nx, ny, nz + 1)
+    }
+    
+    for comp, shape in expected_shapes.items():
+        assert state.intermediate_fields[comp].shape == shape, \
+            f"Step 3 intermediate field {comp} shape mismatch. Expected {shape}."
 
 def test_ghost_cell_allocation_logic():
     """
     Verify the 'Ghost Cell' expansion logic in Step 4 and Final Output.
     Formula: Extended = Interior + 2 (one ghost on each side).
-    Note: Staggered velocity faces (e.g., U) have nx+1 faces internally.
+    Note: Staggered velocity faces (e.g., U) start at nx+1 faces internally.
     """
     nx, ny, nz = 10, 10, 10
     
@@ -83,7 +99,7 @@ def test_ghost_cell_allocation_logic():
         assert state.P_ext.shape == (nx + 2, ny + 2, nz + 2), f"{stage_name} P_ext failure"
         
         # Velocity U (Face-centered in X): (10+1) + 2 = 13
-        # centered in Y, Z: 10 + 2 = 12
+        # Centered in Y, Z: 10 + 2 = 12
         assert state.U_ext.shape == (nx + 3, ny + 2, nz + 2), f"{stage_name} U_ext failure"
         assert state.V_ext.shape == (nx + 2, ny + 3, nz + 2), f"{stage_name} V_ext failure"
         assert state.W_ext.shape == (nx + 2, ny + 2, nz + 3), f"{stage_name} W_ext failure"

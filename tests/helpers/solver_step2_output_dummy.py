@@ -17,6 +17,7 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     """
 
     # 1. Start from the refined Step 1 dummy (The Geometry/Physics foundation)
+    # This inherits grid["total_cells"] and the basic grid metrics
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # 2. Calculate Degrees of Freedom (DOF) for matrix dimensions
@@ -31,10 +32,9 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     # 3. Mask Semantics (Refining definitions from Step 1)
     # ------------------------------------------------------------------
-    # Following Step 1: 1 = fluid, 0 = boundary/solid
     state.is_fluid = (state.mask == 1)
     state.is_solid = (state.mask == 0)
-    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool) # To be filled by Step 2 logic
+    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool) 
 
     # ------------------------------------------------------------------
     # 4. Operators (Sparsity Guard Compliant)
@@ -55,6 +55,7 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     # 5. PPE (Pressure Poisson Equation) structure
     # ------------------------------------------------------------------
     state.ppe = {
+        "dimension": dof_p,          # FIX: Critical for Property Integrity tests
         "solver_type": "sparse_cg",  
         "A": state.operators["laplacian"],
         "tolerance": 1e-6,
@@ -66,7 +67,6 @@ def make_step2_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     # 6. Step‑2 Health Diagnostics
     # ------------------------------------------------------------------
-    # We update the dictionary to keep existing keys or add new ones
     state.health.update({
         "divergence_norm": 0.0,
         "max_velocity": 0.0,
