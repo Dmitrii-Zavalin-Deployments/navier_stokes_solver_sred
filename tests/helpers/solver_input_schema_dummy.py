@@ -11,6 +11,7 @@ Updated for the new contract:
 - mask is now a flat 1D array of length nx*ny*nz
 - mask values ∈ {-1, 0, 1}
 - canonical flattening rule is i + nx*(j + ny*k)
+- boundary_conditions now includes numerical 'values' for Step 2/3 parity.
 """
 
 def solver_input_schema_dummy():
@@ -63,8 +64,19 @@ def solver_input_schema_dummy():
             "output_interval": 1,
         },
 
-        # Minimal valid BC list: empty list is allowed
-        "boundary_conditions": [],
+        # Updated: Non-empty list with mandatory 'values' sub-dictionary
+        "boundary_conditions": [
+            {
+                "location": "x_min", 
+                "type": "no-slip", 
+                "values": {"u": 0.0, "v": 0.0, "w": 0.0}
+            },
+            {
+                "location": "x_max", 
+                "type": "outflow", 
+                "values": {"p": 0.0}
+            }
+        ],
 
         # Flat mask (canonical)
         "mask": mask_flat,

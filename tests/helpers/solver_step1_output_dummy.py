@@ -10,6 +10,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     Updated Feb 2026:
     - Maintained all Health/History departments to prevent test regressions.
     - Explicitly mapped simulation_parameters.output_interval for Archivist logic.
+    - Added 'values' sub-dictionary to boundary_conditions for Step 2/3 parity.
     """
     state = SolverState()
 
@@ -89,14 +90,16 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "g": 9.81
     }
     
-    # Boundary Conditions (Schema-compliant List Format)
+    # Boundary Conditions (Updated with 'values' for Step 2/3 numerical roles)
+    # Defaulting to 0.0 satisfies no-slip and standard pressure outlets.
+    default_vals = {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
     state.boundary_conditions = [
-        {"location": "x_min", "type": "no-slip"},
-        {"location": "x_max", "type": "no-slip"},
-        {"location": "y_min", "type": "no-slip"},
-        {"location": "y_max", "type": "no-slip"},
-        {"location": "z_min", "type": "no-slip"},
-        {"location": "z_max", "type": "no-slip"}
+        {"location": "x_min", "type": "no-slip", "values": default_vals.copy()},
+        {"location": "x_max", "type": "no-slip", "values": default_vals.copy()},
+        {"location": "y_min", "type": "no-slip", "values": default_vals.copy()},
+        {"location": "y_max", "type": "no-slip", "values": default_vals.copy()},
+        {"location": "z_min", "type": "no-slip", "values": default_vals.copy()},
+        {"location": "z_max", "type": "no-slip", "values": default_vals.copy()}
     ]
 
     # 9. Global Health & History (CRITICAL: Do not delete, used by Step 2-5)
