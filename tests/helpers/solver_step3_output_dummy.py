@@ -10,20 +10,20 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     
     Step 3 adds:
       - Density activation in fluid_properties (Required for projection scaling)
-      - Intermediate fields (U, V, W) representing the 'Star' state
+      - Intermediate fields (U_star, V_star, W_star) representing the 'Star' state
+      - Step 3 Diagnostics: Confirms external force application (The Momentum receipt)
       - Pressure Poisson Solve results (PPE metadata updates)
       - Velocity Correction (Field updates to U, V, W)
       - Health diagnostics post-projection
     """
 
     # 1. Start from the Operator Foundation (Step 2)
-    # Inherits: grid["total_cells"], ppe["dimension"], and JSON-safe masks
+    # Inherits: grid, external_forces, ppe["dimension"], and JSON-safe masks
     state = make_step2_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # ------------------------------------------------------------------
     # 2. Activate Fluid Physics (Required for Step 3 Projection Scaling)
     # ------------------------------------------------------------------
-    # Standardizing keys to "density" and "viscosity" to match Physics Integrity tests
     state.fluid_properties.update({
         "density": 1000.0,
         "viscosity": 1e-3,
@@ -32,7 +32,6 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     # 3. Update Fields (The Corrected/Projected Fields)
     # ------------------------------------------------------------------
-    # Staggered shapes: nx+1 for the primary direction.
     state.fields.update({
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
@@ -43,14 +42,26 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     # 4. Add Intermediate Fields (The Predictor/Star step)
     # ------------------------------------------------------------------
+    # Using '_star' naming convention to differentiate from final corrected fields
     state.intermediate_fields = {
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
+        "U_star": np.zeros((nx + 1, ny, nz)),
+        "V_star": np.zeros((nx, ny + 1, nz)),
+        "W_star": np.zeros((nx, ny, nz + 1)),
     }
 
     # ------------------------------------------------------------------
-    # 5. Update PPE Metadata (Reflecting Linear Algebra Solve)
+    # 5. NEW: Step 3 Diagnostics (The "Execution Proof")
+    # ------------------------------------------------------------------
+    # This specifically fixes the test_external_forces_integrity.py failure
+    state.step3_diagnostics = {
+        "source_term_applied": True,           
+        "force_magnitude_applied": state.constants.get("g", 9.81),
+        "convection_scheme": "upwind",
+        "diffusion_scheme": "central_difference"
+    }
+
+    # ------------------------------------------------------------------
+    # 6. Update PPE Metadata (Reflecting Linear Algebra Solve)
     # ------------------------------------------------------------------
     state.ppe.update({
         "iterations": 12,           
@@ -59,7 +70,7 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     })
 
     # ------------------------------------------------------------------
-    # 6. Update Health Diagnostics (Post-Correction metrics)
+    # 7. Update Health Diagnostics (Post-Correction metrics)
     # ------------------------------------------------------------------
     state.health.update({
         "post_correction_divergence_norm": 1e-12,
@@ -68,7 +79,7 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     })
 
     # ------------------------------------------------------------------
-    # 7. Append to History (Time-series tracking)
+    # 8. Append to History (Time-series tracking)
     # ------------------------------------------------------------------
     state.history["times"].append(state.time)
     state.history["divergence_norms"].append(1e-12)
@@ -77,7 +88,7 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     state.history["energy_history"].append(0.0)
 
     # ------------------------------------------------------------------
-    # 8. Progression Flags & Metadata
+    # 9. Progression Flags & Metadata
     # ------------------------------------------------------------------
     state.iteration = 1
     
