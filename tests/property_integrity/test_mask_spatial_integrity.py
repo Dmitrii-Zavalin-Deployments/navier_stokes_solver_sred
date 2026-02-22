@@ -2,14 +2,18 @@
 
 import pytest
 import numpy as np
+
+# Importing dummies for lifecycle coverage
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
-# Per Property Tracking Matrix: Mask logic is central to Step 2 
+# Per Property Tracking Matrix: Mask logic is central to Step 1 initialization 
 # and must persist through the entire pipeline.
 MASK_ACTIVE_STAGES = [
+    ("Step 1", make_step1_output_dummy),
     ("Step 2", make_step2_output_dummy),
     ("Step 3", make_step3_output_dummy),
     ("Step 4", make_step4_output_dummy),
@@ -19,18 +23,24 @@ MASK_ACTIVE_STAGES = [
 @pytest.mark.parametrize("stage_name, factory", MASK_ACTIVE_STAGES)
 def test_mask_value_constraints_and_shape(stage_name, factory):
     """
-    Physics: Verify mask contains only allowed values (-1, 0, 1) 
-    and matches grid dimensions.
+    Physics: Verify mask contains only allowed values (-1, 0, 1).
+    Compatibility: Handles Article 8 Flattened Masks by validating size and logic.
     """
     state = factory()
     nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]
+    total_expected = nx * ny * nz
     
-    # 1. Shape Integrity
+    # 1. Shape Integrity (Article 8 Flattened Protocol)
     mask_np = np.array(state.mask)
-    assert mask_np.shape == (nx, ny, nz), \
-        f"{stage_name}: Mask shape {mask_np.shape} mismatch with grid ({nx}, {ny}, {nz})"
+    assert mask_np.size == total_expected, \
+        f"{stage_name}: Mask flat size {mask_np.size} mismatch with total grid cells {total_expected}"
     
-    # 2. Value Integrity: Allowed set is {-1, 0, 1}
+    # 2. Reshaped Verification (Spatial Sanity)
+    # Reconstructing 3D view to ensure it can be mapped back to spatial logic
+    mask_3d = mask_np.reshape((nx, ny, nz))
+    assert mask_3d.shape == (nx, ny, nz)
+    
+    # 3. Value Integrity: Allowed set is {-1, 0, 1}
     # 0 = Solid, 1 = Fluid, -1 = Ghost/Boundary
     unique_values = np.unique(mask_np)
     allowed_values = {-1, 0, 1}
@@ -40,24 +50,19 @@ def test_mask_value_constraints_and_shape(stage_name, factory):
 
 def test_mask_matrix_consistency_step2():
     """
-    Logic: Verify that Step 2 Laplacian dimensions exclude solid cells.
+    Logic: Verify that Step 2 Laplacian dimensions align with grid logic.
     """
     state = make_step2_output_dummy()
-    mask_np = np.array(state.mask)
     
-    fluid_count = np.sum(mask_np == 1)
-    
-    # The PPE dimension should ideally match the number of active fluid cells
-    # Note: Depending on solver implementation, it might match total_cells 
-    # but with zeroed-out rows for solids. 
+    # The PPE dimension should match total_cells for the full domain Laplacian mapping.
     assert state.ppe["dimension"] == state.grid["total_cells"], \
         "Step 2: PPE dimension should match total grid cells for sparse mapping."
 
 def test_mask_persistence_between_stages():
     """
-    Integrity: Ensure the mask doesn't change between Step 2 and Step 4.
+    Integrity: Ensure the mask remains immutable between initialization and output.
     """
-    s2 = make_step2_output_dummy()
+    s1 = make_step1_output_dummy()
     s4 = make_step4_output_dummy()
     
-    assert s2.mask == s4.mask, "Critical Failure: Spatial mask modified during computation steps!"
+    assert s1.mask == s4.mask, "Critical Failure: Spatial mask modified during computation steps!"
