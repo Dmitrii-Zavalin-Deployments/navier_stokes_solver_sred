@@ -12,6 +12,7 @@ Updated for the new contract:
 - mask values ∈ {-1, 0, 1}
 - canonical flattening rule is i + nx*(j + ny*k)
 - boundary_conditions now includes numerical 'values' for Step 2/3 parity.
+- Physical Logic Fix: 'outflow' type no longer defines 'p' to avoid validation errors.
 """
 
 def solver_input_schema_dummy():
@@ -65,6 +66,7 @@ def solver_input_schema_dummy():
         },
 
         # Updated: Non-empty list with mandatory 'values' sub-dictionary
+        # Note: 'outflow' values dict is empty to satisfy parse_boundary_conditions.py logic
         "boundary_conditions": [
             {
                 "location": "x_min", 
@@ -74,7 +76,7 @@ def solver_input_schema_dummy():
             {
                 "location": "x_max", 
                 "type": "outflow", 
-                "values": {"p": 0.0}
+                "values": {} 
             }
         ],
 

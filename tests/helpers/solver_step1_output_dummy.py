@@ -11,6 +11,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     - Maintained all Health/History departments to prevent test regressions.
     - Explicitly mapped simulation_parameters.output_interval for Archivist logic.
     - Added 'values' sub-dictionary to boundary_conditions for Step 2/3 parity.
+    - Physical Logic Fix: Removed 'p' from no-slip values to satisfy src/step1 parser.
     """
     state = SolverState()
 
@@ -91,15 +92,15 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     }
     
     # Boundary Conditions (Updated with 'values' for Step 2/3 numerical roles)
-    # Defaulting to 0.0 satisfies no-slip and standard pressure outlets.
-    default_vals = {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
+    # Physical Logic: 'no-slip' allows velocity (u,v,w) but forbids pressure (p).
+    velocity_only = {"u": 0.0, "v": 0.0, "w": 0.0}
     state.boundary_conditions = [
-        {"location": "x_min", "type": "no-slip", "values": default_vals.copy()},
-        {"location": "x_max", "type": "no-slip", "values": default_vals.copy()},
-        {"location": "y_min", "type": "no-slip", "values": default_vals.copy()},
-        {"location": "y_max", "type": "no-slip", "values": default_vals.copy()},
-        {"location": "z_min", "type": "no-slip", "values": default_vals.copy()},
-        {"location": "z_max", "type": "no-slip", "values": default_vals.copy()}
+        {"location": "x_min", "type": "no-slip", "values": velocity_only.copy()},
+        {"location": "x_max", "type": "no-slip", "values": velocity_only.copy()},
+        {"location": "y_min", "type": "no-slip", "values": velocity_only.copy()},
+        {"location": "y_max", "type": "no-slip", "values": velocity_only.copy()},
+        {"location": "z_min", "type": "no-slip", "values": velocity_only.copy()},
+        {"location": "z_max", "type": "no-slip", "values": velocity_only.copy()}
     ]
 
     # 9. Global Health & History (CRITICAL: Do not delete, used by Step 2-5)
