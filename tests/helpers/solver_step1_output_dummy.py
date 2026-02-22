@@ -26,6 +26,38 @@ class MockState:
         self.iteration = 0
         self.ready_for_time_loop = False
 
+    def to_json_safe(self) -> dict:
+        """
+        Recursively converts the state into a JSON-serializable dictionary.
+        This fixes the AttributeError in test_external_contracts.py.
+        """
+        def serialize(obj):
+            if isinstance(obj, dict):
+                return {k: serialize(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [serialize(i) for i in obj]
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.float32, np.float64)):
+                return float(obj)
+            elif isinstance(obj, (np.int32, np.int64)):
+                return int(obj)
+            return obj
+
+        # Map the internal attributes to the dictionary structure expected by the schema
+        return serialize({
+            "grid": self.grid,
+            "constants": self.constants,
+            "fields": self.fields,
+            "fluid_properties": self.fluid_properties,
+            "ppe": self.ppe,
+            "history": self.history,
+            "health": self.health,
+            "time": self.time,
+            "iteration": self.iteration,
+            "ready_for_time_loop": self.ready_for_time_loop
+        })
+
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     Step 1 Dummy: The Physical Foundation.
@@ -62,13 +94,10 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "reynolds_number": 1000.0
     }
 
-    # --- Step 1 Responsibility: Fluid Properties (The Invariant Gate) ---
-    # Initialized as empty in Step 1; populated with strictly positive 
-    # density values in Step 3 to support projection scaling.
+    # --- Step 1 Responsibility: Fluid Properties ---
     state.fluid_properties = {}
 
     # --- Step 1 Responsibility: Basic Staggered Fields ---
-    # 
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
