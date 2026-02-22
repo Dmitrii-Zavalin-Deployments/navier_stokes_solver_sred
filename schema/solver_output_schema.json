@@ -132,5 +132,5 @@
     "iteration",
     "time"
   ],
-  "additionalProperties": false
+  "additionalProperties": true
 }
