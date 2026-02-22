@@ -29,7 +29,8 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "dx": dx, "dy": dy, "dz": dz,
         "x_min": x_min, "x_max": x_max,
         "y_min": y_min, "y_max": y_max,
-        "z_min": z_min, "z_max": z_max
+        "z_min": z_min, "z_max": z_max,
+        "total_cells": nx * ny * nz  # FIX: Satisfies Property Integrity tests
     }
 
     # --- Step 1 Responsibility: Constants (Physics Only) ---
@@ -40,11 +41,17 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     }
 
     # --- Step 1 Responsibility: Basic Staggered Fields ---
+    # Staggered Grid Logic: One extra face node in the primary direction
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
         "W": np.zeros((nx, ny, nz + 1)),
+    }
+
+    # --- Step 1 Responsibility: PPE Department Plan ---
+    state.ppe = {
+        "dimension": nx * ny * nz  # FIX: Required for Step 2/3 matrix scaling
     }
 
     # --- Step 1 Responsibility: Basic Masking ---
