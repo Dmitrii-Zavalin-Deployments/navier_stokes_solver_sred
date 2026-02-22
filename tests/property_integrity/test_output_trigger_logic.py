@@ -14,11 +14,12 @@ def test_output_interval_persistence(stage_name, factory):
     inherited and persistent through the late-stage pipeline.
     """
     state = factory()
-    data = state if isinstance(state, dict) else state.__dict__
     
-    # Validation of the inheritance from Step 1
-    assert "simulation_parameters" in data, f"{stage_name}: Department lost in transit"
-    params = data["simulation_parameters"]
+    # Adaptive Access: Check if it's a dict (serialized) or object (live)
+    if isinstance(state, dict):
+        params = state.get("simulation_parameters", {})
+    else:
+        params = getattr(state, "simulation_parameters", {})
     
     assert "output_interval" in params, f"{stage_name}: Property 'output_interval' lost"
     assert isinstance(params["output_interval"], (int, float)), "Interval must be numeric"
@@ -26,18 +27,25 @@ def test_output_interval_persistence(stage_name, factory):
 def test_step5_write_trigger_logic():
     """
     Logic: Verify that the Step 5 'Snapshot' is only generated 
-    when the iteration matches the interval condition: (iter % interval == 0).
+    when (iter % interval == 0).
     """
     state = make_output_schema_dummy()
     
-    # Extract values from serialized output
-    iteration = state.get("iteration", 0)
-    interval = state["simulation_parameters"]["output_interval"]
+    # Adaptive Extraction for live object or dictionary
+    if isinstance(state, dict):
+        iteration = state.get("iteration", 0)
+        params = state.get("simulation_parameters", {})
+        diagnostics = state.get("step5_diagnostics", {})
+    else:
+        iteration = getattr(state, "iteration", 0)
+        params = getattr(state, "simulation_parameters", {})
+        diagnostics = getattr(state, "step5_diagnostics", {})
     
-    # Access the 'receipt' from Step 5 orchestration
-    assert "step5_diagnostics" in state, "Step 5 failed to log execution diagnostics"
+    interval = params.get("output_interval")
     
-    # If the output exists, the modulo math must be correct
-    if state["step5_diagnostics"].get("snapshot_generated"):
+    # Validation
+    assert diagnostics, "Step 5 failed to log execution diagnostics"
+    
+    if diagnostics.get("snapshot_generated"):
         assert iteration % interval == 0, \
             f"Trigger Error: Snapshot generated at iter {iteration} with interval {interval}"
