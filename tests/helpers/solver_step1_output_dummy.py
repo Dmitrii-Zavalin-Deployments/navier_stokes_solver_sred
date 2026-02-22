@@ -1,103 +1,38 @@
 # tests/helpers/solver_step1_output_dummy.py
 
 import numpy as np
-
-class MockState:
-    """
-    Decoupled State Container.
-    Definition is local to the helper to prevent ImportErrors during 
-    CI collection while the src/ directory is under construction.
-    """
-    def __init__(self):
-        self.grid = {}
-        self.constants = {}
-        self.fields = {}
-        self.fluid_properties = {}  # Department for Step 3+ Physics Invariants
-        self.ppe = {}
-        self.operators = {}
-        self.intermediate_fields = {}
-        self.mask = None
-        self.is_fluid = None
-        self.is_solid = None
-        self.is_boundary_cell = None
-        self.history = {}
-        self.health = {}
-        self.time = 0.0
-        self.iteration = 0
-        self.ready_for_time_loop = False
-
-    def to_json_safe(self) -> dict:
-        """
-        Recursively converts the state into a JSON-serializable dictionary.
-        This fixes the AttributeError in test_external_contracts.py.
-        """
-        def serialize(obj):
-            if isinstance(obj, dict):
-                return {k: serialize(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [serialize(i) for i in obj]
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, (np.float32, np.float64)):
-                return float(obj)
-            elif isinstance(obj, (np.int32, np.int64)):
-                return int(obj)
-            return obj
-
-        # Map the internal attributes to the dictionary structure expected by the schema
-        return serialize({
-            "grid": self.grid,
-            "constants": self.constants,
-            "fields": self.fields,
-            "fluid_properties": self.fluid_properties,
-            "ppe": self.ppe,
-            "history": self.history,
-            "health": self.health,
-            "time": self.time,
-            "iteration": self.iteration,
-            "ready_for_time_loop": self.ready_for_time_loop
-        })
+# Import the actual production class
+from src.solver_state import SolverState
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
-    Step 1 Dummy: The Physical Foundation.
-    Follows the 'No Aliasing' rule:
-    - Geometry metrics (dx, nx, bounds) live ONLY in .grid
-    - Physics constants (rho, mu, dt) live ONLY in .constants
-    - Invariants (density) live ONLY in .fluid_properties
+    High-Fidelity Step 1 Dummy using the production SolverState class.
+    Populates mandatory fields to satisfy both Physics Theory and Schema Contracts.
     """
-    # Initialize the Decoupled 'Empty Slate'
-    state = MockState()
+    # Initialize the real production object
+    state = SolverState()
 
-    # --- Step 1 Responsibility: Geometry Department ---
-    x_min, x_max = 0.0, 1.0
-    y_min, y_max = 0.0, 1.0
-    z_min, z_max = 0.0, 1.0
-
-    dx = (x_max - x_min) / nx
-    dy = (y_max - y_min) / ny
-    dz = (z_max - z_min) / nz
-
+    # --- DYNAMIC GEOMETRY ---
+    # Derived to satisfy: dx = (x_max - x_min) / nx
+    dx, dy, dz = 0.25, 0.25, 0.25
+    
     state.grid = {
         "nx": nx, "ny": ny, "nz": nz,
         "dx": dx, "dy": dy, "dz": dz,
-        "x_min": x_min, "x_max": x_max,
-        "y_min": y_min, "y_max": y_max,
-        "z_min": z_min, "z_max": z_max,
+        "x_min": 0.0, "x_max": nx * dx,
+        "y_min": 0.0, "y_max": ny * dy,
+        "z_min": 0.0, "z_max": nz * dz,
         "total_cells": nx * ny * nz
     }
 
-    # --- Step 1 Responsibility: Constants (Pipeline Parameters) ---
-    state.constants = {
-        "nu": 0.001,
-        "dt": 0.01,
-        "reynolds_number": 1000.0
-    }
+    # --- PHYSICS & CONFIG ---
+    state.constants = {"nu": 0.001, "dt": 0.01}
+    state.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
+    state.config = {"solver_type": "projection", "precision": "float64"}
+    state.boundary_conditions = {"type": "lid_driven_cavity"}
 
-    # --- Step 1 Responsibility: Fluid Properties ---
-    state.fluid_properties = {}
-
-    # --- Step 1 Responsibility: Basic Staggered Fields ---
+    # --- FIELD ALLOCATION ---
+    # Primary staggered fields
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
@@ -105,26 +40,21 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),
     }
 
-    # --- Step 1 Responsibility: PPE Department Plan ---
-    state.ppe = {
-        "dimension": nx * ny * nz
-    }
+    # Extended fields (Ghost cells N+2) - required by Step 5 schema
+    ext_shape = (nx + 2, ny + 2, nz + 2)
+    state.P_ext = np.zeros(ext_shape)
+    state.U_ext = np.zeros(ext_shape)
+    state.V_ext = np.zeros(ext_shape)
+    state.W_ext = np.zeros(ext_shape)
 
-    # --- Step 1 Responsibility: Basic Masking ---
-    state.mask = np.ones((nx, ny, nz), dtype=int)
-    state.is_fluid = (state.mask == 1)
-    state.is_solid = ~state.is_fluid
-    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool)
-
-    # Initialize history to avoid Step 3 attribute errors
+    # --- MASKING & DIAGNOSTICS ---
+    state.mask = np.ones((nx, ny, nz), dtype=int).tolist()
+    state.ppe = {"dimension": nx * ny * nz}
     state.history = {
-        "times": [],
+        "times": [], 
         "divergence_norms": [],
-        "max_velocity_history": [],
-        "ppe_iterations_history": [],
-        "energy_history": [],
+        "energy_history": []
     }
-    
-    state.health = {}
+    state.health = {"status": "initialized"}
 
     return state
