@@ -8,54 +8,63 @@ from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
-def test_theory_grid_spacing_derivation_integrity():
+# Define the lifecycle stages for parametrization to ensure recursive coverage
+LIFECYCLE_STAGES = [
+    ("Step 1", make_step1_output_dummy),
+    ("Step 2", make_step2_output_dummy),
+    ("Step 3", make_step3_output_dummy),
+    ("Step 4", make_step4_output_dummy),
+    ("Final Output", make_output_schema_dummy),
+]
+
+@pytest.mark.parametrize("stage_name, factory", LIFECYCLE_STAGES)
+def test_theory_grid_spacing_derivation_integrity(stage_name, factory):
     """
     Theory: Verify that Δx = (x_max - x_min) / nx is consistent across all steps.
     This validates the logic: Bound Definitions -> Metric Calculation -> Departmental Integrity.
     
-    We verify that 'dx' lives in the 'grid' department and is consistent from Step 1 through Step 4.
+    We verify that 'dx' lives in the 'grid' department and is consistent through the entire lifecycle.
     """
     nx, ny, nz = 50, 20, 10
     
     # Expected derived metrics based on the domain [0, 1]^3
-    exp_dx = 1.0 / nx  # 0.02
-    exp_dy = 1.0 / ny  # 0.05
-    exp_dz = 1.0 / nz  # 0.10
+    exp_dx = 1.0 / nx
+    exp_dy = 1.0 / ny
+    exp_dz = 1.0 / nz
 
-    # --- Step 1 Lifecycle Check ---
-    s1 = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
-    assert np.isclose(s1.grid["dx"], (s1.grid["x_max"] - s1.grid["x_min"]) / nx)
-    assert np.isclose(s1.grid["dx"], exp_dx), "Step 1: Grid spacing calculation error"
-    assert "dx" in s1.grid, "Step 1: Geometry department missing 'dx'"
+    state = factory(nx=nx, ny=ny, nz=nz)
 
-    # --- Step 2 Lifecycle Check ---
-    # Step 2 adds operators but must preserve grid integrity
-    s2 = make_step2_output_dummy(nx=nx, ny=ny, nz=nz)
-    assert np.isclose(s2.grid["dx"], (s2.grid["x_max"] - s2.grid["x_min"]) / nx)
-    assert np.isclose(s2.grid["dx"], exp_dx), "Step 2: Grid spacing calculation error"
-    assert "dx" in s2.grid, "Step 2: Geometry department missing 'dx'"
+    # 1. Verification of Departmental Integrity
+    assert "dx" in state.grid, f"{stage_name}: Geometry department missing 'dx'"
+    assert "dy" in state.grid, f"{stage_name}: Geometry department missing 'dy'"
+    assert "dz" in state.grid, f"{stage_name}: Geometry department missing 'dz'"
 
-    # --- Step 3 Lifecycle Check ---
-    # Step 3 performs the projection solve but grid remains fixed
-    s3 = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
-    assert np.isclose(s3.grid["dx"], (s3.grid["x_max"] - s3.grid["x_min"]) / nx)
-    assert np.isclose(s3.grid["dx"], exp_dx), "Step 3: Grid spacing calculation error"
-    assert "dx" in s3.grid, "Step 3: Geometry department missing 'dx'"
+    # 2. Verification of Derivation Consistency
+    # Formula: Δx must equal the range divided by cell count
+    calc_dx = (state.grid["x_max"] - state.grid["x_min"]) / nx
+    assert np.isclose(state.grid["dx"], calc_dx), f"{stage_name}: Grid spacing drift from bounds"
+    assert np.isclose(state.grid["dx"], exp_dx), f"{stage_name}: Grid spacing mismatch with theory"
 
-    # --- Step 4 Lifecycle Check ---
-    # Step 4 extends fields and adds diagnostics; grid must still match
-    s4 = make_step4_output_dummy(nx=nx, ny=ny, nz=nz)
-    assert np.isclose(s4.grid["dx"], (s4.grid["x_max"] - s4.grid["x_min"]) / nx)
-    assert np.isclose(s4.grid["dx"], exp_dx), "Step 4: Grid spacing calculation error"
-    assert "dx" in s4.grid, "Step 4: Geometry department missing 'dx'"
-
-def test_theory_step4_extended_geometry_consistency():
-    """Verify that extended fields in Step 4 maintain coordinate alignment."""
+def test_theory_extended_geometry_consistency():
+    """
+    Verify that extended fields in Step 4 and Final Output maintain coordinate alignment.
+    Staggered check: U-velocity faces = nx + 1, plus 2 ghosts = nx + 3.
+    """
     nx, ny, nz = 10, 10, 10
-    state = make_step4_output_dummy(nx=nx, ny=ny, nz=nz)
     
-    # Logic: If interior is nx, extended must be nx + 2 ghosts
-    assert state.P_ext.shape == (nx + 2, ny + 2, nz + 2)
-    # Staggered check: U-velocity faces = nx + 1, plus 2 ghosts = nx + 3
-    assert state.U_ext.shape == (nx + 3, ny + 2, nz + 2)
+    # Test both Step 4 and the Final Step 5 Output Schema
+    for factory in [make_step4_output_dummy, make_output_schema_dummy]:
+        state = factory(nx=nx, ny=ny, nz=nz)
+        
+        # Logic: If interior is nx, extended pressure must be nx + 2 ghosts
+        assert state.P_ext.shape == (nx + 2, ny + 2, nz + 2)
+        
+        # Staggered Logic: 
+        # U faces (nx+1) + 2 ghosts = nx + 3
+        # V faces (ny+1) + 2 ghosts = ny + 3
+        # W faces (nz+1) + 2 ghosts = nz + 3
+        assert state.U_ext.shape == (nx + 3, ny + 2, nz + 2)
+        assert state.V_ext.shape == (nx + 2, ny + 3, nz + 2)
+        assert state.W_ext.shape == (nx + 2, ny + 2, nz + 3)
