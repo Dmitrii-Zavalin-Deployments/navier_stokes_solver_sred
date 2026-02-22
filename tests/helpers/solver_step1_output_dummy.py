@@ -5,31 +5,27 @@ import numpy as np
 class MockState:
     """
     Decoupled State Container with Serialization Bridge.
-    Restored with to_json_safe() to satisfy external contract tests.
+    Restored with dynamic grid derivation and full Schema support.
     """
     def __init__(self):
         self.grid = {}
         self.constants = {}
         self.fields = {}
-        self.fluid_properties = {} 
-        self.ppe = {}
-        self.operators = {}
-        self.intermediate_fields = {}
+        self.config = {}
         self.mask = None
-        self.is_fluid = None
-        self.is_solid = None
-        self.is_boundary_cell = None
+        self.boundary_conditions = {}
+        self.ppe = {}
         self.history = {}
         self.health = {}
+        self.U_ext = None
+        self.V_ext = None
+        self.W_ext = None
+        self.P_ext = None
         self.time = 0.0
         self.iteration = 0
         self.ready_for_time_loop = False
 
     def to_json_safe(self) -> dict:
-        """
-        Recursively converts the state into a JSON-serializable dictionary.
-        Specifically handles the conversion of NumPy types.
-        """
         def serialize(obj):
             if isinstance(obj, dict):
                 return {k: serialize(v) for k, v in obj.items()}
@@ -43,52 +39,66 @@ class MockState:
                 return int(obj)
             return obj
 
-        # Capture all departmental attributes
-        data = {
+        return {
             "grid": serialize(self.grid),
             "constants": serialize(self.constants),
             "fields": serialize(self.fields),
-            "fluid_properties": serialize(self.fluid_properties),
+            "config": serialize(self.config),
+            "mask": serialize(self.mask),
+            "boundary_conditions": serialize(self.boundary_conditions),
             "ppe": serialize(self.ppe),
             "history": serialize(self.history),
             "health": serialize(self.health),
+            "U_ext": serialize(self.U_ext),
+            "V_ext": serialize(self.V_ext),
+            "W_ext": serialize(self.W_ext),
+            "P_ext": serialize(self.P_ext),
             "time": float(self.time),
-            "iteration": int(self.iteration),
-            "ready_for_time_loop": bool(self.ready_for_time_loop)
+            "iteration": int(self.iteration)
         }
-        return data
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
-    """
-    Factory remains unchanged, but now produces a 'MockState' 
-    capable of serialization.
-    """
     state = MockState()
 
-    # Geometry
+    # --- DYNAMIC GEOMETRY DERIVATION ---
+    # Here we define spacing first, then derive bounds, 
+    # matching the original 'Theory' logic.
+    dx, dy, dz = 0.1, 0.1, 0.1 
+    
     state.grid = {
         "nx": nx, "ny": ny, "nz": nz,
-        "dx": 1.0/nx, "dy": 1.0/ny, "dz": 1.0/nz,
+        "dx": dx, "dy": dy, "dz": dz,
+        "x_min": 0.0, "x_max": nx * dx,
+        "y_min": 0.0, "y_max": ny * dy,
+        "z_min": 0.0, "z_max": nz * dz,
         "total_cells": nx * ny * nz
     }
 
-    # Constants & Fluid Properties
+    # --- CONTRACT MANDATES ---
     state.constants = {"nu": 0.001, "dt": 0.01}
-    state.fluid_properties = {} 
-
-    # Staggered Fields
+    state.config = {"solver_type": "projection", "precision": "float64"}
+    state.boundary_conditions = {"type": "lid_driven_cavity"}
+    
+    # Staggered Primary Fields
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
         "W": np.zeros((nx, ny, nz + 1)),
     }
+    
+    # Masking (Must be 3D list for JSON compatibility)
+    state.mask = np.ones((nx, ny, nz)).tolist()
+    
+    # Extended Fields (N+2 for Ghost Cells)
+    state.U_ext = np.zeros((nx + 2, ny + 2, nz + 2))
+    state.V_ext = np.zeros((nx + 2, ny + 2, nz + 2))
+    state.W_ext = np.zeros((nx + 2, ny + 2, nz + 2))
+    state.P_ext = np.zeros((nx + 2, ny + 2, nz + 2))
 
+    # PPE & Diagnostics
     state.ppe = {"dimension": nx * ny * nz}
-    state.history = {
-        "times": [], "divergence_norms": [], "max_velocity_history": [],
-        "ppe_iterations_history": [], "energy_history": [],
-    }
-    state.health = {}
+    state.history = {"times": [], "divergence_norms": []}
+    state.health = {"status": "initialized"}
 
     return state
