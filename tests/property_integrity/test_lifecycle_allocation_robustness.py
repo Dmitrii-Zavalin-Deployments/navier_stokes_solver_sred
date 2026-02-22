@@ -43,10 +43,13 @@ def test_lifecycle_grid_dimensions_match_fields(stage_name, factory):
         "W": (nx, ny, nz + 1)
     }
 
+    # Handle both SolverState objects and dictionary-serialized outputs
+    fields = state["fields"] if isinstance(state, dict) else state.fields
+
     for field, shape in expected_shapes.items():
-        assert state.fields[field].shape == shape, (
+        assert fields[field].shape == shape, (
             f"{stage_name}: Field '{field}' shape mismatch. "
-            f"Expected {shape}, got {state.fields[field].shape}"
+            f"Expected {shape}, got {fields[field].shape}"
         )
 
 @pytest.mark.parametrize("stage_name, factory", LIFECYCLE_STAGES)
@@ -59,23 +62,27 @@ def test_lifecycle_ppe_dimension_intent(stage_name, factory):
     state = factory(nx=nx, ny=ny, nz=nz)
     expected_dim = nx * ny * nz
     
+    ppe = state["ppe"] if isinstance(state, dict) else state.ppe
+    
     # Validates that the PPE department 'plan' survives every orchestrator
-    assert "dimension" in state.ppe, f"PPE 'dimension' key missing at {stage_name}"
-    assert state.ppe["dimension"] == expected_dim, f"PPE dimension value mismatch at {stage_name}"
+    assert "dimension" in ppe, f"PPE 'dimension' key missing at {stage_name}"
+    assert ppe["dimension"] == expected_dim, f"PPE dimension value mismatch at {stage_name}"
 
 def test_step3_intermediate_field_allocation():
     """
     Specific check for Step 3: Projection requires intermediate velocity 
     storage (U*, V*, W*) which must follow staggered face dimensions.
+    
+    Updated Feb 2026: Validates '_star' suffix for predictor fields.
     """
     nx, ny, nz = 5, 5, 5
     state = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
     
     # Intermediate (Predictor) fields must match the staggering of core fields
     expected_shapes = {
-        "U": (nx + 1, ny, nz),
-        "V": (nx, ny + 1, nz),
-        "W": (nx, ny, nz + 1)
+        "U_star": (nx + 1, ny, nz),
+        "V_star": (nx, ny + 1, nz),
+        "W_star": (nx, ny, nz + 1)
     }
     
     for comp, shape in expected_shapes.items():
