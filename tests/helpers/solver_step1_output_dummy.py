@@ -5,71 +5,46 @@ import numpy as np
 class MockState:
     """
     Decoupled State Container.
-    Maintains departmental isolation while satisfying JSON schema requirements.
+    Definition is local to the helper to prevent ImportErrors during 
+    CI collection while the src/ directory is under construction.
     """
     def __init__(self):
         self.grid = {}
         self.constants = {}
         self.fields = {}
-        self.fluid_properties = {}  # Added to fix AttributeError
-        self.config = {}
-        self.mask = None
-        self.boundary_conditions = {}
+        self.fluid_properties = {}  # Department for Step 3+ Physics Invariants
         self.ppe = {}
+        self.operators = {}
+        self.intermediate_fields = {}
+        self.mask = None
+        self.is_fluid = None
+        self.is_solid = None
+        self.is_boundary_cell = None
         self.history = {}
         self.health = {}
-        self.U_ext = None
-        self.V_ext = None
-        self.W_ext = None
-        self.P_ext = None
         self.time = 0.0
         self.iteration = 0
         self.ready_for_time_loop = False
 
-    def to_json_safe(self) -> dict:
-        """Type-casting bridge for JSON Schema validation."""
-        def serialize(obj):
-            if isinstance(obj, dict):
-                return {k: serialize(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [serialize(i) for i in obj]
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, (np.float32, np.float64)):
-                return float(obj)
-            elif isinstance(obj, (np.int32, np.int64)):
-                return int(obj)
-            return obj
-
-        return {
-            "grid": serialize(self.grid),
-            "constants": serialize(self.constants),
-            "fields": serialize(self.fields),
-            "fluid_properties": serialize(self.fluid_properties), # Added to map
-            "config": serialize(self.config),
-            "mask": serialize(self.mask),
-            "boundary_conditions": serialize(self.boundary_conditions),
-            "ppe": serialize(self.ppe),
-            "history": serialize(self.history),
-            "health": serialize(self.health),
-            "U_ext": serialize(self.U_ext),
-            "V_ext": serialize(self.V_ext),
-            "W_ext": serialize(self.W_ext),
-            "P_ext": serialize(self.P_ext),
-            "time": float(self.time),
-            "iteration": int(self.iteration)
-        }
-
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
+    """
+    Step 1 Dummy: The Physical Foundation.
+    Follows the 'No Aliasing' rule:
+    - Geometry metrics (dx, nx, bounds) live ONLY in .grid
+    - Physics constants (rho, mu, dt) live ONLY in .constants
+    - Invariants (density) live ONLY in .fluid_properties
+    """
+    # Initialize the Decoupled 'Empty Slate'
     state = MockState()
 
-    # --- GEOMETRY THEORY CONFORMANCE ---
-    # Bounds defined first to satisfy Δx = (max - min) / N
+    # --- Step 1 Responsibility: Geometry Department ---
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
-    
-    dx, dy, dz = x_max/nx, y_max/ny, z_max/nz
+
+    dx = (x_max - x_min) / nx
+    dy = (y_max - y_min) / ny
+    dz = (z_max - z_min) / nz
 
     state.grid = {
         "nx": nx, "ny": ny, "nz": nz,
@@ -80,31 +55,47 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "total_cells": nx * ny * nz
     }
 
-    # --- DEPARTMENTAL DATA ---
-    state.constants = {"nu": 0.001, "dt": 0.01}
-    state.fluid_properties = {"density": 1.0, "viscosity": 0.001}
-    state.config = {"solver_type": "projection", "precision": "float64"}
-    state.boundary_conditions = {"type": "lid_driven_cavity"}
-    
-    # Primary Staggered Fields
+    # --- Step 1 Responsibility: Constants (Pipeline Parameters) ---
+    state.constants = {
+        "nu": 0.001,
+        "dt": 0.01,
+        "reynolds_number": 1000.0
+    }
+
+    # --- Step 1 Responsibility: Fluid Properties (The Invariant Gate) ---
+    # Initialized as empty in Step 1; populated with strictly positive 
+    # density values in Step 3 to support projection scaling.
+    state.fluid_properties = {}
+
+    # --- Step 1 Responsibility: Basic Staggered Fields ---
+    # 
     state.fields = {
         "P": np.zeros((nx, ny, nz)),
         "U": np.zeros((nx + 1, ny, nz)),
         "V": np.zeros((nx, ny + 1, nz)),
         "W": np.zeros((nx, ny, nz + 1)),
     }
-    
-    # JSON-Safe Mask (List instead of Array)
-    state.mask = np.ones((nx, ny, nz)).tolist()
-    
-    # Extended Fields (Ghost Nodes)
-    state.U_ext = np.zeros((nx + 2, ny + 2, nz + 2))
-    state.V_ext = np.zeros((nx + 2, ny + 2, nz + 2))
-    state.W_ext = np.zeros((nx + 2, ny + 2, nz + 2))
-    state.P_ext = np.zeros((nx + 2, ny + 2, nz + 2))
 
-    state.ppe = {"dimension": nx * ny * nz}
-    state.history = {"times": [], "divergence_norms": []}
-    state.health = {"status": "initialized"}
+    # --- Step 1 Responsibility: PPE Department Plan ---
+    state.ppe = {
+        "dimension": nx * ny * nz
+    }
+
+    # --- Step 1 Responsibility: Basic Masking ---
+    state.mask = np.ones((nx, ny, nz), dtype=int)
+    state.is_fluid = (state.mask == 1)
+    state.is_solid = ~state.is_fluid
+    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=bool)
+
+    # Initialize history to avoid Step 3 attribute errors
+    state.history = {
+        "times": [],
+        "divergence_norms": [],
+        "max_velocity_history": [],
+        "ppe_iterations_history": [],
+        "energy_history": [],
+    }
+    
+    state.health = {}
 
     return state
