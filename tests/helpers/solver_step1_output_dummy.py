@@ -13,11 +13,11 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     - Ensured mask types remain JSON-safe lists.
     - Added simulation_parameters to align with Input Schema.
     - Linked simulation_parameters.time_step to constants.dt.
+    - Standardized boundary_conditions to List[Dict] format for Schema compliance.
     """
     state = SolverState()
 
     # 1. Grid Definition
-    # Dynamically calculated based on input resolution to keep Theory tests passing.
     x_min, x_max = 0.0, 1.0
     y_min, y_max = 0.0, 1.0
     z_min, z_max = 0.0, 1.0
@@ -33,23 +33,20 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "total_cells": nx * ny * nz
     }
 
-    # 2. Fluid Physics (Step 1 Department)
-    # Keys standardized for test_physics_fluid_constants.py
+    # 2. Fluid Physics
     state.fluid_properties = {
         "density": 1000.0,
         "viscosity": 0.001,
         "kinematic_viscosity": 1e-6
     }
 
-    # 3. Initial Conditions (Property Tracking Matrix Element)
-    # This represents the user's intent: u(t=0) = u0
+    # 3. Initial Conditions
     state.initial_conditions = {
         "velocity": [0.0, 0.0, 0.0],
         "pressure": 0.0
     }
 
-    # 4. Simulation Parameters (New: Required for Temporal Integrity)
-    # Matches the "Solver Input Schema" properties.
+    # 4. Simulation Parameters
     state.simulation_parameters = {
         "time_step": 0.001,
         "total_time": 1.0,
@@ -58,14 +55,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
 
     # 5. Field Allocation (Staggered Grid Layout)
     state.fields = {
-        "P": np.zeros((nx, ny, nz)),           # Cell-centered
-        "U": np.zeros((nx + 1, ny, nz)),       # X-faces
-        "V": np.zeros((nx, ny + 1, nz)),       # Y-faces
-        "W": np.zeros((nx, ny, nz + 1)),       # Z-faces
+        "P": np.zeros((nx, ny, nz)),           
+        "U": np.zeros((nx + 1, ny, nz)),       
+        "V": np.zeros((nx, ny + 1, nz)),       
+        "W": np.zeros((nx, ny, nz + 1)),       
     }
 
     # 6. Masking (Type Compliance)
-    # Converts NumPy arrays to nested lists to satisfy Schema 'array' type.
     mask_shape = (nx, ny, nz)
     fluid_mask_arr = np.ones(mask_shape, dtype=int)
     
@@ -75,7 +71,6 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.is_boundary_cell = np.zeros(mask_shape, dtype=int).tolist()
 
     # 7. Department Initialization & PPE Intent
-    # PPE 'dimension' is required for lifecycle allocation tests.
     state.ppe = {"dimension": nx * ny * nz}
     
     state.config = {
@@ -84,20 +79,21 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "case_name": "dummy_verification"
     }
     
-    # Internal math constants, mapping dt from simulation_parameters
+    # Internal math constants
     state.constants = {
         "dt": state.simulation_parameters["time_step"], 
         "g": 9.81
     }
     
-    state.boundary_conditions = {
-        "west": "noslip",
-        "east": "noslip",
-        "north": "moving_wall",
-        "south": "noslip",
-        "top": "noslip",
-        "bottom": "noslip"
-    }
+    # NEW: Boundary Conditions (Schema-compliant List Format)
+    state.boundary_conditions = [
+        {"location": "x_min", "type": "no-slip"},
+        {"location": "x_max", "type": "no-slip"},
+        {"location": "y_min", "type": "no-slip"},
+        {"location": "y_max", "type": "no-slip"},
+        {"location": "z_min", "type": "no-slip"},
+        {"location": "z_max", "type": "no-slip"}
+    ]
 
     # 8. Global Health & History
     state.health = {"status": "initialized", "errors": []}
