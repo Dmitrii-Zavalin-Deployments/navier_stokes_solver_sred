@@ -21,11 +21,8 @@ LIFECYCLE_STAGES = [
 def test_termination_persistence_across_lifecycle(stage_name, factory):
     """
     Integrity: Ensure total_time survives every transition in the pipeline.
-    If this fails, a step is dropping simulation_parameters.
     """
     state = factory()
-    
-    # Requirement: total_time must exist and be positive
     assert "total_time" in state.simulation_parameters, f"{stage_name} lost total_time metadata"
     assert state.simulation_parameters["total_time"] > 0, f"{stage_name} has non-physical total_time"
 
@@ -44,13 +41,11 @@ def test_termination_logic_math_precision():
     current_time = 0.0
     iterations = 0
     
-    # Logic simulation
     while current_time < state.simulation_parameters["total_time"]:
         current_time += state.simulation_parameters["time_step"]
         iterations += 1
         
     assert iterations == 5
-    # Use approx for floating point safety in boundary checks
     assert current_time == pytest.approx(total_time)
 
 def test_final_state_exit_condition():
