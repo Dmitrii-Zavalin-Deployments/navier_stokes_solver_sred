@@ -5,8 +5,8 @@ from src.solver_state import SolverState
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
-    Finalized Step 1 Dummy using production SolverState.
-    Satisfies extensible schema and strict mask type requirements.
+    High-Fidelity Step 1 Dummy using production SolverState.
+    Fixes mask type violations and ensures PPE dimension intent is preserved.
     """
     state = SolverState()
 
@@ -28,7 +28,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "total_cells": nx * ny * nz
     }
 
-    # --- DEPARTMENTS (additionalProperties: true allows these) ---
+    # --- DEPARTMENTS ---
     state.constants = {"nu": 0.001, "dt": 0.01}
     state.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
     state.config = {"solver_type": "projection", "precision": "float64"}
@@ -42,7 +42,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         "W": np.zeros((nx, ny, nz + 1)),
     }
 
-    # Extended Fields (Ghost cells N+2)
+    # Extended Fields (N+2)
     ext_shape = (nx + 2, ny + 2, nz + 2)
     state.P_ext = np.zeros(ext_shape)
     state.U_ext = np.zeros(ext_shape)
@@ -50,14 +50,16 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.W_ext = np.zeros(ext_shape)
 
     # --- MASKING (Fixes: False is not of type 'array') ---
-    # We generate actual 3D arrays and convert to lists for JSON safety
+    # Convert numpy arrays to lists so jsonschema sees 'array' type
     mask_arr = np.ones((nx, ny, nz), dtype=int)
     state.mask = mask_arr.tolist()
     state.is_fluid = mask_arr.tolist() 
     state.is_solid = (1 - mask_arr).tolist()
     state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=int).tolist()
 
-    # --- DIAGNOSTICS & HISTORY ---
+    # --- PPE & DIAGNOSTICS (Fixes: AssertionError on PPE 'dimension') ---
+    state.ppe = {"dimension": nx * ny * nz}
+    
     state.history = {
         "times": [],
         "divergence_norms": [],
