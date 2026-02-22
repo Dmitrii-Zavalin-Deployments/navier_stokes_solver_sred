@@ -12,50 +12,42 @@
     "fields": {
       "type": "object",
       "properties": {
-        "P": {
-          "type": "array"
-        },
-        "U": {
-          "type": "array"
-        },
-        "V": {
-          "type": "array"
-        },
-        "W": {
-          "type": "array"
-        }
+        "P": { "type": "array" },
+        "U": { "type": "array" },
+        "V": { "type": "array" },
+        "W": { "type": "array" }
       },
       "additionalProperties": true
     },
     "mask": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "is_fluid": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "is_boundary_cell": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "is_solid": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "constants": {
       "type": "object"
     },
     "boundary_conditions": {
-      "type": "object"
+      "type": "array",
+      "description": "Schema-compliant list of spatial boundary constraints",
+      "items": {
+        "type": "object",
+        "required": ["location", "type"],
+        "properties": {
+          "location": { "type": "string" },
+          "type": { 
+            "type": "string",
+            "enum": ["no-slip", "free-slip", "inflow", "outflow", "pressure", "moving_wall"]
+          }
+        }
+      }
     },
     "health": {
       "type": "object"
@@ -76,28 +68,16 @@
       "type": "object"
     },
     "P_ext": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "U_ext": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "V_ext": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "W_ext": {
-      "type": [
-        "array",
-        "null"
-      ]
+      "type": ["array", "null"]
     },
     "step4_diagnostics": {
       "type": "object"
