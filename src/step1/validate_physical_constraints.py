@@ -10,48 +10,45 @@ if TYPE_CHECKING:
 
 def _ensure_positive(name: str, value: float) -> None:
     if not math.isfinite(value) or value <= 0.0:
-        raise ValueError(f"{name} must be a finite number > 0, got {value}")
+        raise ValueError(f"Stability Violation: {name} must be finite and > 0, got {value}")
 
 def _ensure_non_negative(name: str, value: float) -> None:
     if not math.isfinite(value) or value < 0.0:
-        raise ValueError(f"{name} must be a finite number >= 0, got {value}")
+        raise ValueError(f"Physicality Violation: {name} must be finite and >= 0, got {value}")
 
 def _ensure_positive_int(name: str, value: int) -> None:
     if not isinstance(value, (int, np.integer)) or value <= 0:
-        raise ValueError(f"{name} must be a positive integer, got {value}")
+        raise ValueError(f"Topology Violation: {name} must be a positive integer, got {value}")
 
 def _ensure_finite(name: str, value: float) -> None:
     if not math.isfinite(value):
-        raise ValueError(f"{name} must be finite, got {value}")
+        raise ValueError(f"Precision Error: {name} must be finite, got {value}")
 
 def validate_physical_constraints(state: SolverState) -> None:
     """
-    Fatal physical checks for the Step 1 state.
-    Accesses state attributes: grid, constants, fields, and mask.
+    Final integrity gate for Step 1.
+    Ensures all state attributes are mathematically and physically coherent.
+    
+    Constitutional Role: Logical Firewall.
+    Audit: Phase F Data Completeness.
     """
-
-    # 1. Access sections via attribute access (SolverState object)
     grid = state.grid
     constants = state.constants
     fields = state.fields
     mask = state.mask
 
-    # 2. Structural Guard: Ensure grid metadata is present before unpacking
-    # This prevents KeyError: 'nx' when running tests with corrupted/empty states
+    # 1. Structural Integrity Guard
     required_grid_keys = ["nx", "ny", "nz", "dx", "dy", "dz"]
     missing_keys = [k for k in required_grid_keys if k not in grid]
     if missing_keys:
-        raise ValueError(
-            f"Physical validation failed: Grid is missing required keys: {missing_keys}. "
-            "Ensure initialize_grid was successful."
-        )
+        raise ValueError(f"Incomplete Grid Definition: Missing keys {missing_keys}")
 
-    # 3. Fluid properties & Time step
+    # 2. Fluid & Temporal Constraints
     _ensure_positive("density (rho)", float(constants["rho"]))
     _ensure_non_negative("viscosity (mu)", float(constants["mu"]))
     _ensure_positive("time step (dt)", float(constants["dt"]))
 
-    # 4. Grid counts & Spacing
+    # 3. Spatial Resolution Constraints
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
     _ensure_positive_int("nx", nx)
     _ensure_positive_int("ny", ny)
@@ -61,43 +58,26 @@ def validate_physical_constraints(state: SolverState) -> None:
     _ensure_positive("dy", float(grid["dy"]))
     _ensure_positive("dz", float(grid["dz"]))
 
-    # 5. Grid extents validation
-    x_min, x_max = grid.get("x_min"), grid.get("x_max")
-    y_min, y_max = grid.get("y_min"), grid.get("y_max")
-    z_min, z_max = grid.get("z_min"), grid.get("z_max")
+    # 4. Domain Extent Validation (Directional Integrity)
+    for dim in ['x', 'y', 'z']:
+        v_min, v_max = grid.get(f"{dim}_min"), grid.get(f"{dim}_max")
+        if v_min is not None and v_max is not None:
+            _ensure_finite(f"{dim}_min", v_min)
+            _ensure_finite(f"{dim}_max", v_max)
+            if v_max <= v_min:
+                raise ValueError(f"Domain Inversion: {dim}_max ({v_max}) <= {dim}_min ({v_min})")
 
-    if x_min is not None and x_max is not None:
-        _ensure_finite("x_min", x_min)
-        _ensure_finite("x_max", x_max)
-        if x_max <= x_min:
-            raise ValueError(f"x_max ({x_max}) must be > x_min ({x_min})")
-
-    if y_min is not None and y_max is not None:
-        _ensure_finite("y_min", y_min)
-        _ensure_finite("y_max", y_max)
-        if y_max <= y_min:
-            raise ValueError(f"y_max ({y_max}) must be > y_min ({y_min})")
-
-    if z_min is not None and z_max is not None:
-        _ensure_finite("z_min", z_min)
-        _ensure_finite("z_max", z_max)
-        if z_max <= z_min:
-            raise ValueError(f"z_max ({z_max}) must be > z_min ({z_min})")
-
-    # 6. Mask consistency
+    # 5. Topological Consistency
     if mask is not None:
         expected_shape = (nx, ny, nz)
         if mask.shape != expected_shape:
-            raise ValueError(
-                f"Mask shape {mask.shape} does not match grid counts {expected_shape}"
-            )
-        
+            raise ValueError(f"Mask Shape Mismatch: {mask.shape} != {expected_shape}")
         if not np.all(np.isin(mask, [-1, 0, 1])):
-            raise ValueError("Mask contains invalid entries (only -1, 0, 1 allowed)")
+            raise ValueError("Forbidden Topology: Mask contains values outside the range {-1, 0, 1}")
 
-    # 7. Field Finiteness
+    # 6. Field Sanity Check (NaN/Inf Propagation Prevention)
+    # Checks both cell-centered Pressure and staggered Velocity fields
     for field_name in ["U", "V", "W", "P"]:
         if field_name in fields:
-            arr = fields[field_name]
-            if not np.all(np.isfinite(arr)):
-                raise ValueError(f"Initial field '{field_name}' contains non-finite values (Inf/NaN)")
+            if not np.all(np.isfinite(fields[field_name])):
+                raise ValueError(f"Genesis Error: Field '{field_name}' contains non-finite values.")
