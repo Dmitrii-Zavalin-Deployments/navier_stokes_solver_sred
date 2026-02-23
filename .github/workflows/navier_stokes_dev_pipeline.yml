@@ -1,6 +1,4 @@
-# .github/workflows/navier_stokes_dev_pipeline.yml
-
-name: Navier–Stokes Solver
+name: Navier–Stokes Solver Development Pipeline
 
 on:
   push:
@@ -9,63 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  # code_quality_check:
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: 🛎️ Checkout repository
-  #       uses: actions/checkout@v3
-
-  #     - name: 🐍 Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: "3.11"
-
-  #     - name: 🐍 Install Python dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r requirements.txt
-
-  #     # ---------------------------------------------------------
-  #     # OPTIONAL: jq installation (needed only for integration tests)
-  #     # ---------------------------------------------------------
-  #     # - name: 📦 Install jq (if needed later)
-  #     #   run: |
-  #     #     sudo apt-get update
-  #     #     sudo apt-get install -y jq
-  #     # ---------------------------------------------------------
-
-  #     - name: 🧹 Autoflake (remove unused imports)
-  #       run: |
-  #         pip install autoflake
-  #         autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
-
-  #     - name: 💀 Vulture (dead code detection)
-  #       run: |
-  #         pip install vulture
-  #         vulture src --min-confidence 70
-
-  #     - name: 🧬 JSCPD (duplicate code detection)
-  #       run: |
-  #         npm install -g jscpd
-  #         jscpd src --min-lines 5 --threshold 5 --reporters console
-
-  #     - name: 🚀 Commit autoflake changes
-  #       env:
-  #         GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
-  #         GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
-  #       run: |
-  #         git config --global user.name "${GIT_USER_NAME}"
-  #         git config --global user.email "${GIT_USER_EMAIL}"
-  #         git add .
-  #         git diff --cached --quiet || (
-  #           git commit -m "🧹 Auto-clean: removed unused imports and variables"
-  #           git push || echo "No changes to push"
-  #         )
-
-  unit_tests_only:
-    # needs: code_quality_check
+  integrated_dev_flow:
     runs-on: ubuntu-latest
 
     env:
@@ -74,28 +16,63 @@ jobs:
     steps:
       - name: 🗂️ Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: 🐍 Setup Python & Install Dependencies
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install Core Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest coverage numpy
+          pip install -r requirements.txt pytest coverage numpy autoflake vulture
 
-      - name: 🧪 Run Unit Tests Only (No Integration Tests)
+      - name: 🧹 Auto-Clean (Autoflake)
         run: |
-          echo "🔍 Running unit tests only..."
+          autoflake --in-place --recursive --remove-unused-variables --remove-all-unused-imports src
+
+      - name: 🚀 Commit & Push Auto-Clean Changes
+        env:
+          GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
+          GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
+        run: |
+          git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
+          git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
+          git add .
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "🧹 Auto-clean: removed unused imports and variables"
+            git push
+          else
+            echo "No cleaning required."
+          fi
+
+      - name: 💀 Dead Code Audit (Vulture)
+        run: |
+          vulture src --min-confidence 70
+
+      - name: 🧬 Duplicate Code Audit (JSCPD)
+        run: |
+          npm install -g jscpd
+          jscpd src --min-lines 5 --threshold 5 --reporters console
+
+      - name: 🧪 Run Unit Tests (Pytest + Coverage)
+        run: |
+          echo "🔍 Running unit tests..."
           pytest tests/ --verbose --cov=src --cov-report=term-missing
           echo "✅ Unit tests completed."
 
       # ---------------------------------------------------------
       # ❌ REAL SOLVER EXECUTION DISABLED DURING DEVELOPMENT
       # ---------------------------------------------------------
-      # - name: 🚀 Run Main Solver (DISABLED)
-      #   run: |
-      #     echo "⚠️ Solver execution disabled during development phase."
-      #     # python core/master_solver.py input.json
+      - name: 🚀 Run Main Solver (DISABLED)
+        run: |
+          echo "⚠️ Solver execution disabled during development phase."
+          # python core/master_solver.py input.json
       # ---------------------------------------------------------
 
-      - name: 📦 List repository structure
+      - name: 📦 Final Structure Audit
         run: |
-          echo "📁 Repository structure:"
+          echo "📁 Repository structure after pipeline:"
           ls -R
