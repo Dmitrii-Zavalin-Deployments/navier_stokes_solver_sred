@@ -38,7 +38,7 @@ def test_duplicate_location_rejected(dummy_grid):
 def test_inflow_action_requires_numerical_uvw(dummy_grid):
     """Action Item: Validates that an inflow BC provides numerical u, v, and w."""
     bc_missing = [{"location": "x_min", "type": "inflow", "values": {"u": 1.0}}]
-    with pytest.raises(ValueError, match="(?i)u, v, and w"):
+    with pytest.raises(ValueError, match="requires numeric velocity"):
         parse_boundary_conditions(bc_missing, dummy_grid)
         
     bc_bad_type = [{"location": "x_min", "type": "inflow", "values": {"u": 1, "v": 0, "w": "fast"}}]

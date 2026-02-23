@@ -17,6 +17,7 @@ class TestBoundaryLogicCompliance:
 
     def test_inflow_action_compliance(self, dummy_grid):
         """Theory Check: Inflow requires numerical u, v, w"""
+        # Note: This fails logic validation BEFORE the 6-face audit triggers
         incomplete_inflow = [{"location": "x_min", "type": "inflow", "values": {"u": 5.0}}]
         with pytest.raises(ValueError, match="requires numeric velocity"):
             parse_boundary_conditions(incomplete_inflow, dummy_grid)
@@ -43,11 +44,19 @@ class TestBoundaryLogicCompliance:
             parse_boundary_conditions(bad_outflow, dummy_grid)
 
     def test_full_schema_valid_config(self, dummy_grid):
-        """Verify valid config parsing and float conversion"""
+        """Verify valid config parsing and float conversion with all 6 faces."""
+        # Must provide all 6 faces to pass the Final Audit (Zero-Debt Mandate)
         valid_bcs = [
             {"location": "x_min", "type": "inflow", "values": {"u": 1, "v": 0, "w": 0}},
-            {"location": "x_max", "type": "pressure", "values": {"p": 0.0}}
+            {"location": "x_max", "type": "pressure", "values": {"p": 0.0}},
+            {"location": "y_min", "type": "no-slip", "values": {}},
+            {"location": "y_max", "type": "no-slip", "values": {}},
+            {"location": "z_min", "type": "no-slip", "values": {}},
+            {"location": "z_max", "type": "no-slip", "values": {}}
         ]
         parsed = parse_boundary_conditions(valid_bcs, dummy_grid)
-        assert len(parsed) == 2
+        
+        # In a 3D domain, we expect exactly 6 entries
+        assert len(parsed) == 6
         assert isinstance(parsed["x_min"]["u"], float)
+        assert parsed["x_max"]["p"] == 0.0

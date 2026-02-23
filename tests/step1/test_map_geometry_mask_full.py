@@ -54,5 +54,5 @@ def test_map_geometry_mask_invalid_values(dummy_input):
     # Value 5 is outside the physical definition range
     flat[0] = 5  
     
-    with pytest.raises(ValueError, match="(?i)entries must be -1, 0, or 1"):
+    with pytest.raises(ValueError, match="Mask contains unauthorized values"):
         map_geometry_mask(flat, grid)

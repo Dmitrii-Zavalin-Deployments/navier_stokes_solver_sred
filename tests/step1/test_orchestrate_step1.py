@@ -108,7 +108,7 @@ def test_step1_output_schema_failure(monkeypatch):
 
     monkeypatch.setattr(mod, "assemble_simulation_state", broken)
 
-    with pytest.raises(ValueError, match="Physical validation failed"):
+    with pytest.raises(ValueError, match="Incomplete Grid Definition"):
         orchestrate_step1_state(solver_input_schema_dummy())
 
 

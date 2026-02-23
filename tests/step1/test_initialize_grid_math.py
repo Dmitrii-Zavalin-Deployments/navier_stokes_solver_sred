@@ -45,7 +45,7 @@ def test_grid_dimensions_must_be_positive(base_input):
     # Check zero and negative for nx
     for val in [0, -5]:
         grid["nx"] = val
-        with pytest.raises(ValueError, match="(?i)nx"):
+        with pytest.raises(ValueError, match="Grid dimensions must be positive"):
             initialize_grid(grid)
 
 def test_extents_must_be_finite(base_input):
