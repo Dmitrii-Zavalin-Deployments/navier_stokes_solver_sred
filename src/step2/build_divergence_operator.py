@@ -1,6 +1,5 @@
 # src/step2/build_divergence_operator.py
 from __future__ import annotations
-import numpy as np
 import scipy.sparse as sp
 from src.solver_state import SolverState
 

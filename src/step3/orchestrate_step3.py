@@ -21,7 +21,7 @@ def orchestrate_step3(
     """
 
     # 1. Apply pre‑prediction boundaries (Ghost cell filling)
-    fields_pre = apply_boundary_conditions_pre(state, state.fields)
+    apply_boundary_conditions_pre(state, state.fields)
 
     # 2. Predict intermediate velocity U* # Accounts for advection and diffusion; ignores pressure.
     U_star, V_star, W_star = predict_velocity(state)

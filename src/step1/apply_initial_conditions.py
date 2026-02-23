@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import Dict, Any
-import numpy as np
 
 
 def apply_initial_conditions(fields: Dict[str, Any], initial_conditions: Dict[str, Any]) -> None:
