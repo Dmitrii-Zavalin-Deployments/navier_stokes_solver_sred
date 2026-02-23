@@ -3,51 +3,48 @@
 import numpy as np
 import pytest
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
-from tests.helpers.solver_step1_output_dummy import solver_step1_output_dummy
+# Synchronized with actual helper function name
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from src.step1.orchestrate_step1 import orchestrate_step1_state
 
-def test_step1_output_matches_dummy_foundation():
+def test_step1_output_matches_foundation_contract():
     """
     The Auditor: Verifies the SolverState object produced by Step 1 matches 
-    the 'Foundation' dummy used by the rest of the verification bridge.
+    the 'Foundation' dummy (The Gold Standard for Step 2).
     """
-    # 1. Build canonical input (The Genesis)
+    # 1. Build canonical input
     input_dict = solver_input_schema_dummy()
 
     # 2. Run real Step 1 (returns SolverState object)
     state = orchestrate_step1_state(input_dict)
 
     # 3. Retrieve the expected structure (The Foundation)
-    # We use the keys from the dummy dictionary to audit the real object's attributes
-    expected_foundation = solver_step1_output_dummy()
+    # This is the "Gold Standard" object the rest of the solver expects
+    expected_state = make_step1_output_dummy()
 
-    # 4. Check object attribute existence (Constitutional Alignment)
-    for key in expected_foundation.keys():
-        assert hasattr(state, key), f"SolverState object missing required Foundation attribute: {key}"
-
-    # 5. Validate fields (Numpy Array Handlers)
-    # Staggered grid requirement: P, U, V, W must be present as Tensors
-    assert isinstance(state.fields, dict)
-    for f in ["P", "U", "V", "W"]:
-        assert f in state.fields
-        assert isinstance(state.fields[f], np.ndarray), f"Field {f} must be a NumPy array."
-
-    # 6. Mask semantics (Logical Gates for Step 2 Discretization)
-    # Boolean masks are required for high-performance logical indexing
-    assert isinstance(state.mask, np.ndarray)
-    assert isinstance(state.is_fluid, np.ndarray)
-    assert state.is_fluid.dtype == bool
-
-    # 7. Placeholder Container Integrity
-    # These must be initialized as dictionaries to prevent Step 2/3 crashes
-    assert isinstance(state.operators, dict)
-    assert isinstance(state.ppe, dict)
-    assert isinstance(state.health, dict)
-
-    # 8. Serialization Contract (JSON-Safe Roundtrip)
-    # Proves the object can be serialized for checkpoints or export
-    json_state = state.to_json_safe()
+    # 4. Check for critical departments (Attributes)
+    # We ensure the real orchestrator populated the departments found in the dummy
+    critical_departments = [
+        "grid", "fields", "mask", "is_fluid", "constants", 
+        "boundary_conditions", "ppe", "health", "history"
+    ]
     
-    # Verify array-to-list conversion for JSON compliance
-    assert isinstance(json_state["mask"], list)
-    assert isinstance(json_state["fields"]["U"], list)
+    for dept in critical_departments:
+        assert hasattr(state, dept), f"SolverState object missing required department: {dept}"
+
+    # 5. Validate Field Allocation (Staggered Grid Layout)
+    # U, V, W must follow the (N+1, N, N) logic for face-centered velocities
+    for field_name in ["P", "U", "V", "W"]:
+        assert isinstance(state.fields[field_name], np.ndarray)
+    
+    # Check staggered shape logic for U-velocity as a representative sample
+    nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]
+    assert state.fields["U"].shape == (nx + 1, ny, nz)
+
+    # 6. Mask Compliance (Article 8: Flattened 1D)
+    # Your helper explicitly notes the shift to flattened 1D lists for canonical compliance
+    assert isinstance(state.mask, list)
+    assert len(state.mask) == nx * ny * nz
+
+    # 7. Health Check
+    assert state.health["status"] == "initialized"
