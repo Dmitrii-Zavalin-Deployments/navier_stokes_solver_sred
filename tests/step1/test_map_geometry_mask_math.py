@@ -72,7 +72,7 @@ def test_semantic_validation_allows_valid_entries():
     grid = dummy["grid"]
     flat_mask = dummy["mask"]
 
-    arr = map_geometry_mask(flat_mask, grid)
+     arr, _, _ = map_geometry_mask(flat_mask, grid)
     state = SolverState(mask=arr, grid=grid)
 
     assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
@@ -90,7 +90,7 @@ def test_canonical_f_order_mapping():
     flat = [1, 0, -1, 1]
     grid = {"nx": 2, "ny": 2, "nz": 1}
     
-    arr = map_geometry_mask(flat, grid)
+     arr, _, _ = map_geometry_mask(flat, grid)
     
     assert arr[0, 0, 0] == 1   # i=0, j=0
     assert arr[1, 0, 0] == 0   # i=1, j=0

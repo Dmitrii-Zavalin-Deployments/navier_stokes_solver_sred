@@ -58,7 +58,7 @@ def test_step1_input_coverage_sensitivity():
     assert state.pressure[0, 0, 0] == 9.99
 
     # Boundary Condition Structure Survival
-    assert len(state.boundary_conditions) == 2
+    assert len(state.boundary_conditions) == 6
     assert "x_min" in state.boundary_conditions
 
     print("\n[DATA AUDIT PASS] Canonical Dummy data successfully traced to SolverState.")
