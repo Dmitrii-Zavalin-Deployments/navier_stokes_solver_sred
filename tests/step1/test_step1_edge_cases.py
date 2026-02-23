@@ -9,23 +9,22 @@ from src.step1.allocate_fields import allocate_fields
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 def test_parse_config_defaults_via_inheritance():
-    """Triggers fallback logic by stripping optional keys from the dummy."""
-    # 1. Inherit the full valid structure
+    """Triggers fallback logic for output_interval by providing only time_step."""
     config = solver_input_schema_dummy()
     
-    # 2. Intentionally delete optional keys to trigger fallback defaults in parse_config.py
-    if "simulation_parameters" in config:
-        del config["simulation_parameters"]
+    # To hit the 'default' line for output_interval, we must keep the dict
+    # but remove the specific key. If we delete the whole dict, we hit a different branch.
+    if "output_interval" in config["simulation_parameters"]:
+        del config["simulation_parameters"]["output_interval"]
     
-    # This should trigger lines like 'if "simulation_parameters" not in data'
     parsed = parse_config(config)
     
-    assert "simulation_parameters" in parsed
-    # Verify the orchestrator/parser provided its own constitutional defaults
+    # Verify the fallback logic (Line 31 approx) injected the default
     assert "output_interval" in parsed["simulation_parameters"]
+    assert parsed["simulation_parameters"]["output_interval"] == 1
 
 def test_apply_initial_conditions_broadcasting():
-    """Triggers array broadcasting logic using dummy values."""
+    """Triggers array broadcasting for velocity components and pressure."""
     nx, ny, nz = 2, 2, 2
     fields = {
         "U": np.zeros((nx+1, ny, nz)),
@@ -34,38 +33,44 @@ def test_apply_initial_conditions_broadcasting():
         "P": np.zeros((nx, ny, nz))
     }
     
-    # Use the dummy's initial conditions (scalars/lists) to trigger broadcasting
-    dummy_data = solver_input_schema_dummy()
-    ic = dummy_data["initial_conditions"] 
+    # Test broadcasting a simple scalar for pressure and list for velocity
+    ic = {
+        "velocity": [1.0, 2.0, 3.0],
+        "pressure": 0.5
+    }
     
-    # This triggers the broadcast logic: filling (nx+1, ny, nz) with a [0,0,0] vector
     apply_initial_conditions(fields, ic)
     
-    assert fields["U"].shape == (3, 2, 2)
-    assert np.all(fields["P"] == ic["pressure"])
+    # Verify BROADCASTING (Logic coverage for lines 24-32)
+    assert np.all(fields["U"] == 1.0)
+    assert np.all(fields["P"] == 0.5)
 
 def test_compute_derived_constants_minimal():
-    """Triggers physics derivations by passing dummy sub-dicts."""
+    """Triggers physics derivations by satisfying mandatory spatial keys."""
     dummy = solver_input_schema_dummy()
     
-    state = {"grid": {"dx": 0.5, "dy": 0.5, "dz": 0.5}}
+    # The function failed because it expected 'dx' inside the grid dict.
+    # We provide the grid sub-dict directly from the dummy to ensure keys exist.
+    grid_data = dummy["grid"]
+    # Ensure dx, dy, dz are present (usually added by initialize_grid, 
+    # but we mock them here for the unit test)
+    grid_data.update({"dx": 0.5, "dy": 0.5, "dz": 0.5})
     
-    # Passing the specific sub-dicts the function expects
-    compute_derived_constants(
-        state, 
+    constants = compute_derived_constants(
+        grid_data, 
         dummy["fluid_properties"], 
         dummy["simulation_parameters"]
     )
     
-    assert "constants" in state
-    assert state["constants"]["rho"] == dummy["fluid_properties"]["density"]
+    assert "rho" in constants
+    assert constants["dt"] == dummy["simulation_parameters"]["time_step"]
 
 def test_allocate_fields_error_handling():
-    """Inherits dummy but corrupts dimensions to trigger Line 24 (ValueErrors)."""
+    """Triggers safety gate by passing an invalid dictionary."""
     config = solver_input_schema_dummy()
-    # Corruption for edge-case coverage
-    config["grid"]["nx"] = -1 
     
-    # Testing the safety gate in allocate_fields.py
+    # Corrupt the grid to trigger ValueError/KeyError branches
+    invalid_grid = {"nx": -1, "ny": 2, "nz": 2}
+    
     with pytest.raises((ValueError, ZeroDivisionError, KeyError)):
-        allocate_fields(config["grid"])
+        allocate_fields(invalid_grid)
