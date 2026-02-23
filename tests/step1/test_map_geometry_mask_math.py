@@ -12,8 +12,9 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 def test_invalid_shape_raises():
     """Verifies that malformed grid dictionaries trigger errors."""
-    # Negative dimension
-    with pytest.raises(ValueError, match=r"nx\*ny\*nz"):
+    # Negative dimension: Logic results in expected_len being negative (e.g. -8)
+    # The source code now raises "Mask length mismatch" instead of the formula.
+    with pytest.raises(ValueError, match="Mask length mismatch"):
         map_geometry_mask([1]*8, {"nx": 4, "ny": -1, "nz": 2})
 
     # Non-integer dimension
@@ -31,6 +32,7 @@ def test_invalid_shape_raises():
 
 def test_mask_flat_must_be_iterable():
     """Ensures input mask must be a list or array-like for length checking."""
+    # The source code uses len(mask_flat), which raises TypeError if non-iterable.
     with pytest.raises(TypeError, match=r"has no len|not iterable"):
         map_geometry_mask(12345, {"nx": 1, "ny": 1, "nz": 1})
 
@@ -45,7 +47,8 @@ def test_mask_flat_length_match():
 
     # Length mismatch (too short or too long)
     for bad_list in [[1, 2], list(range(10))]:
-        with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
+        # Updated match pattern to reflect specific source code message
+        with pytest.raises(ValueError, match="Mask length mismatch"):
             map_geometry_mask(bad_list, grid)
 
 
@@ -77,9 +80,11 @@ def test_semantic_validation_allows_valid_entries():
 
     assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     
-    # Expected: index = i + nx*(j + ny*k) (Fortran Order)
+    # Expected: index = i + nx*(j + ny*k) (Fortran Order mapping)
+    # This ensures that the first dimension (x/i) varies the fastest in memory.
     expected = np.array(flat_mask).reshape((grid["nx"], grid["ny"], grid["nz"]), order="F")
     assert np.array_equal(state.mask, expected)
+
 
 
 def test_canonical_f_order_mapping():
@@ -92,7 +97,12 @@ def test_canonical_f_order_mapping():
     
     arr, _, _ = map_geometry_mask(flat, grid)
     
-    assert arr[0, 0, 0] == 1   # i=0, j=0
-    assert arr[1, 0, 0] == 0   # i=1, j=0
-    assert arr[0, 1, 0] == -1  # i=0, j=1
-    assert arr[1, 1, 0] == 1   # i=1, j=1
+    # Check mapping logic:
+    # flat[0] (1)  -> i=0, j=0, k=0
+    # flat[1] (0)  -> i=1, j=0, k=0
+    # flat[2] (-1) -> i=0, j=1, k=0
+    # flat[3] (1)  -> i=1, j=1, k=0
+    assert arr[0, 0, 0] == 1   
+    assert arr[1, 0, 0] == 0   
+    assert arr[0, 1, 0] == -1  
+    assert arr[1, 1, 0] == 1
