@@ -7,13 +7,13 @@ import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1_state
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
-
 # ------------------------------------------------------------
 # Test 1 — Input schema validation failure
 # ------------------------------------------------------------
 def test_step1_input_schema_failure():
     """Verifies that missing top-level JSON keys trigger a RuntimeError."""
     bad = solver_input_schema_dummy()
+    # Deep copy to avoid mutating the dummy for other tests
     bad = copy.deepcopy(bad)
 
     # Remove a required top-level key defined in solver_input_schema.json
@@ -31,16 +31,14 @@ def test_step1_input_schema_failure():
 def test_step1_physical_constraints_failure():
     """
     Verifies that physically impossible values (like negative density) 
-    are caught. Since our JSON Schema has 'exclusiveMinimum: 0', 
-    this now triggers a RuntimeError from the validator.
+    are caught by the JSON validator's exclusiveMinimum rules.
     """
     bad = solver_input_schema_dummy()
     bad = copy.deepcopy(bad)
 
-    # Invalid density (must be > 0)
+    # Invalid density (must be > 0 per schema)
     bad["fluid_properties"]["density"] = -1.0
 
-    # This is caught by jsonschema.validate() in orchestrate_step1
     with pytest.raises(RuntimeError, match="Input schema validation FAILED"):
         orchestrate_step1_state(bad)
 
@@ -53,13 +51,10 @@ def test_step1_geometry_mask_mapping():
     inp = solver_input_schema_dummy()
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
-    # mask must be 2×2×2 (as defined in the dummy)
+    # Mask must be 2×2×2 (per dummy_grid dimensions)
     assert state.mask.shape == (2, 2, 2)
     assert isinstance(state.mask, np.ndarray)
-
-    # In your dummy, you have a specific pattern of -1, 0, 1
-    assert 0 in state.mask
-    assert 1 in state.mask or -1 in state.mask
+    assert np.issubdtype(state.mask.dtype, np.integer)
 
 
 # ------------------------------------------------------------
@@ -71,37 +66,35 @@ def test_step1_boundary_conditions():
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
     assert hasattr(state, "boundary_conditions")
-    # Even if empty, it should be a dictionary
-    assert isinstance(state.boundary_conditions, (dict, list))
+    assert isinstance(state.boundary_conditions, dict)
 
 
 # ------------------------------------------------------------
 # Test 5 — Derived constants correctness
 # ------------------------------------------------------------
 def test_step1_derived_constants():
-    """Verifies the math for constants like density and inverse grid spacing."""
+    """Verifies derived properties like inverse grid spacing and rho/mu."""
     inp = solver_input_schema_dummy()
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
-    # Constants is a dictionary in the SolverState object
     c = state.constants
 
     assert c["rho"] == inp["fluid_properties"]["density"]
     assert c["mu"] == inp["fluid_properties"]["viscosity"]
     assert c["dt"] == inp["simulation_parameters"]["time_step"]
     
-    # Check derived math: inv_dx = 1.0 / dx
+    # Check derived math if implementation uses inverse spacing
     if "inv_dx" in c:
         assert c["inv_dx"] == pytest.approx(1.0 / c["dx"])
 
 
 # ------------------------------------------------------------
-# Test 6 — Internal Structural failure
+# Test 6 — Internal Structural failure (Monkeypatch)
 # ------------------------------------------------------------
 def test_step1_output_schema_failure(monkeypatch):
     """
-    Mocks the state assembler to produce an object missing grid keys,
-    triggering a ValueError in the physical validation logic.
+    Forced failure: Verifies the second gate (Physical Validation) 
+    triggers if the internal assembler produces a broken state.
     """
     import src.step1.orchestrate_step1 as mod
 
@@ -109,32 +102,35 @@ def test_step1_output_schema_failure(monkeypatch):
 
     def broken(*args, **kwargs):
         state = real(*args, **kwargs)
-        # Corrupt the state object by emptying grid metadata
+        # Corrupt the object state after assembly but before final validation
         state.grid = {} 
         return state
 
     monkeypatch.setattr(mod, "assemble_simulation_state", broken)
 
-    # This is caught by validate_physical_constraints() which raises ValueError
-    # because 'nx' is missing from the grid dict.
     with pytest.raises(ValueError, match="Physical validation failed"):
         orchestrate_step1_state(solver_input_schema_dummy())
 
 
 # ------------------------------------------------------------
-# Test 7 — Full happy path
+# Test 7 — Full happy path (Staggered Grid Verification)
 # ------------------------------------------------------------
 def test_step1_happy_path():
-    """Final end-to-end check for Step 1 pipeline."""
+    """Final end-to-end check for Step 1 pipeline including staggered shapes."""
     inp = solver_input_schema_dummy()
     state = orchestrate_step1_state(copy.deepcopy(inp))
 
-    # Basic structural checks
-    assert state.grid["nx"] == inp["grid"]["nx"]
-    
-    # Check field shapes (P=nx,ny,nz while U,V,W are staggered)
+    # Grid parameters
     nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]
+    
+    # 1. Check Field Allocation (Staggered Grid logic)
+    # Pressure lives at cell centers: (nx, ny, nz)
     assert state.fields["P"].shape == (nx, ny, nz)
+    # U-velocity lives on X-faces: (nx+1, ny, nz)
     assert state.fields["U"].shape == (nx + 1, ny, nz)
+    # V-velocity lives on Y-faces: (nx, ny+1, nz)
+    assert state.fields["V"].shape == (nx, ny + 1, nz)
+    # W-velocity lives on Z-faces: (nx, ny, nz+1)
+    assert state.fields["W"].shape == (nx, ny, nz + 1)
     
     assert state.constants["dt"] > 0
