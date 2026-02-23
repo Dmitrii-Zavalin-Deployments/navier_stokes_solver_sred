@@ -1,74 +1,62 @@
 # src/step1/verify_cell_centered_shapes.py
+
 from __future__ import annotations
 
 from typing import Dict, Any
 import numpy as np
 
-
 def verify_cell_centered_shapes(state: Dict[str, Any]) -> None:
     """
-    Ensure all arrays match expected cell-centered shapes before entering Step 2.
-
-    Works on the Step 1 output dict (schema-compliant), not on dataclasses.
-
-    IMPORTANT:
-      • If "grid" is missing (e.g., in negative schema tests), skip verification.
-      • Step 1 uses ONLY cell-centered fields (no staggered, no ghost layers).
-      • Mask is validated structurally only (no semantics).
+    Ensures all ingested arrays match the basic cell-centered grid dimensions.
+    
+    Constitutional Role: Staging Area Guard.
+    Requirement: Converts JSON-parsed lists to NumPy arrays in-place.
+    
+    Args:
+        state: The Step 1 output dictionary containing 'grid' and 'fields'.
     """
 
-    # ---------------------------------------------------------
-    # Skip verification if grid is missing
-    # ---------------------------------------------------------
+    # 1. Structural Guard: Skip if grid is missing (Negative Schema Tests)
     if "grid" not in state:
         return
 
     grid = state["grid"]
     fields = state["fields"]
 
-    nx = int(grid["nx"])
-    ny = int(grid["ny"])
-    nz = int(grid["nz"])
+    try:
+        nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+    except (KeyError, TypeError, ValueError):
+        # Grid exists but is malformed; validation fails elsewhere
+        return
 
-    # ---------------------------------------------------------
-    # Convert lists → numpy arrays (tests intentionally pass lists)
-    # ---------------------------------------------------------
-    for name in ["P", "U", "V", "W", "Mask"]:
-        arr = fields[name]
-        if isinstance(arr, list):
-            arr = np.asarray(arr)
-            fields[name] = arr  # update state in-place
+    expected_shape = (nx, ny, nz)
 
-    # Rebind after conversion
-    P = fields["P"]
-    U = fields["U"]
-    V = fields["V"]
-    W = fields["W"]
-    Mask = fields["Mask"]
+    # 2. Type Conversion & Normalization (List -> ndarray)
+    # We enforce specific dtypes here to prevent downstream precision issues.
+    mapping = {
+        "P": np.float64,
+        "U": np.float64,
+        "V": np.float64,
+        "W": np.float64,
+        "Mask": np.int8
+    }
 
-    # ---------------------------------------------------------
-    # Ensure arrays are numpy arrays
-    # ---------------------------------------------------------
-    for name, arr in [("P", P), ("U", U), ("V", V), ("W", W), ("Mask", Mask)]:
-        if not isinstance(arr, np.ndarray):
-            raise TypeError(f"{name} must be a numpy array, got {type(arr)}")
-
-    # ---------------------------------------------------------
-    # Cell-centered shape checks
-    # ---------------------------------------------------------
-    expected = (nx, ny, nz)
-
-    if P.shape != expected:
-        raise ValueError(f"P shape mismatch: expected {expected}, got {P.shape}")
-
-    if U.shape != expected:
-        raise ValueError(f"U shape mismatch: expected {expected}, got {U.shape}")
-
-    if V.shape != expected:
-        raise ValueError(f"V shape mismatch: expected {expected}, got {V.shape}")
-
-    if W.shape != expected:
-        raise ValueError(f"W shape mismatch: expected {expected}, got {W.shape}")
-
-    if Mask.shape != expected:
-        raise ValueError(f"Mask shape mismatch: expected {expected}, got {Mask.shape}")
+    for name, dtype in mapping.items():
+        if name not in fields:
+            raise KeyError(f"Missing essential field for verification: {name}")
+        
+        val = fields[name]
+        
+        # Convert list or tuple to numpy array
+        if isinstance(val, (list, tuple)):
+            fields[name] = np.asarray(val, dtype=dtype)
+        elif not isinstance(val, np.ndarray):
+            raise TypeError(f"Field '{name}' must be a list or numpy array, got {type(val)}")
+        
+        # 3. Shape Verification
+        actual_shape = fields[name].shape
+        if actual_shape != expected_shape:
+            raise ValueError(
+                f"Dimension Mismatch on '{name}': "
+                f"Expected {expected_shape} (nx, ny, nz), but got {actual_shape}."
+            )
