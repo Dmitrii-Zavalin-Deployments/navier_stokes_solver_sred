@@ -8,7 +8,7 @@ from src.solver_state import SolverState
 def assemble_simulation_state(
     config: Dict[str, Any],
     grid: Dict[str, Any],
-    fields: Dict[str, Any],
+    fields: Dict[str, np.ndarray],
     mask: np.ndarray,
     constants: Dict[str, Any],
     boundary_conditions: Dict[str, Any],
@@ -17,15 +17,16 @@ def assemble_simulation_state(
     **kwargs
 ) -> SolverState:
     """
-    Assembles the SolverState and creates the 'Traceability Mappings' 
-    required for the Phase E Data Audit.
+    Unifies all initialized components into the SolverState container.
     
-    Compliance: Uses Dictionary Injection. Direct property assignment is 
-    forbidden to prevent desynchronization (No-Setter Mandate).
+    Constitutional Role: Synthesis Hub.
+    Compliance: Vertical Integrity Mandate (Traceability Mapping).
+    
+    Returns:
+        SolverState: The 'Frozen' state ready for the Phase B synchronization cycle.
     """
 
-    # 1. Primary Object Initialization
-    # Data is passed into the 'fields' dict, which properties will read.
+    # 1. Primary Object Initialization (Dictionary Injection)
     state = SolverState(
         config=config,
         grid=grid,
@@ -37,21 +38,26 @@ def assemble_simulation_state(
         is_boundary_cell=is_boundary_cell
     )
 
-    # 2. Physics Mapping (Internal Shorthand -> Schema Names)
-    # This solves the KeyError: 'density' in the Data Coverage Audit
+    # 2. Physics Mapping (Internal Shorthand -> Schema Compliance)
+    # This enables the 'Data Completeness Audit' to find parameters in state.
     state.fluid_properties = {
         "density": constants.get("rho"),
         "viscosity": constants.get("mu")
     }
 
-    # 3. Validation of Field Integrity
-    # Instead of assigning to properties, we verify the keys exist in the dict
+    # 3. Validation of Field Integrity (Anti-Debt Check)
+    # Verify the existence and staggered shapes before finalizing the state.
     required_fields = ["U", "V", "W", "P"]
     for f in required_fields:
         if f not in state.fields:
             raise KeyError(f"Genesis Error: Required field '{f}' missing from allocation.")
+        
+    # Dimension Audit: Ensure masks and grids are spatially coherent
+    expected_shape = (grid["nx"], grid["ny"], grid["nz"])
+    if state.mask.shape != expected_shape:
+         raise ValueError(f"Spatial Incoherence: Mask shape {state.mask.shape} != {expected_shape}")
 
-    # 4. Logical State
+    # 4. Status Flag
     state.ready_for_time_loop = kwargs.get("ready_for_time_loop", False)
     
     return state
