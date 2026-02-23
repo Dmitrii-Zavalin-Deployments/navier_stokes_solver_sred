@@ -66,7 +66,6 @@ def orchestrate_step1(
     fields = allocate_fields(grid)
     
     # 3. Apply Initial Conditions (Crucial for Data Audit)
-    # This "paints" the loud values onto the zeroed 'fields' arrays
     apply_initial_conditions(fields, json_input["initial_conditions"])
 
     # 4. Mask & Boundary Processing
@@ -85,21 +84,18 @@ def orchestrate_step1(
     is_boundary_cell = (mask == -1)
 
     # 7. Assemble the State Object
-    # assemble_simulation_state is responsible for mapping density/velocity_u
+    # FIX: Argument names now match assemble_simulation_state signature exactly.
+    # Positional order: config, grid, fields, mask, constants, boundary_conditions, is_fluid, is_boundary_cell
     state = assemble_simulation_state(
-        state=SolverState(), # Initialize the blank container
         config=config,
-        grid_data=grid,
+        grid=grid,
         fields=fields,
-        constants=constants,
         mask=mask,
-        bcs=bc_table if bc_table else {}
+        constants=constants,
+        boundary_conditions=bc_table if bc_table else {},
+        is_fluid=is_fluid,
+        is_boundary_cell=is_boundary_cell
     )
-
-    # Add logical flags
-    state.is_fluid = is_fluid
-    state.is_boundary_cell = is_boundary_cell
-    state.is_solid = (mask == 0)
 
     # 8. Physical Validation
     validate_physical_constraints(state)
