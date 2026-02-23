@@ -12,43 +12,51 @@ def test_step1_unit_cube_mms():
     Scenario: The Unit Cube ($2 \times 2 \times 2$, $L=1.0$)
     Verification of: grid spacing, staggered allocation, and state assembly.
     
+    Compliance: Vertical Integrity & Zero-Debt Mandate.
     This test uses the canonical dummy input to satisfy the JSON schema gate.
     """
-    # 1. Setup Input: Use the helper and override specific fields if necessary
+    # 1. Setup Input: Use the helper and override specific fields for the Unit Cube
     raw_input = solver_input_schema_dummy()
+    nx, ny, nz = 2, 2, 2
     
-    # Example of overriding for the specific MMS scenario
     raw_input["grid"].update({
-        "nx": 2, "ny": 2, "nz": 2,
-        "x_max": 1.0, "y_max": 1.0, "z_max": 1.0
+        "nx": nx, "ny": ny, "nz": nz,
+        "x_min": 0.0, "x_max": 1.0,
+        "y_min": 0.0, "y_max": 1.0,
+        "z_min": 0.0, "z_max": 1.0
     })
     raw_input["fluid_properties"]["density"] = 1.0
     raw_input["fluid_properties"]["viscosity"] = 0.01
 
     # 2. Execute Step 1 Pipeline
-    # FIXED: We pass the raw dictionary to satisfy jsonschema.validate
-    # The orchestrator returns a fully initialized SolverState object.
+    # Passes raw dict to validator; returns fully initialized SolverState
     state = orchestrate_step1(raw_input)
     
     # 3. Mathematical Verification (The 'Constitutional' Truths)
     
     # TRUTH A: Grid Spacing
-    # nx=2 over 1.0 units means dx = 1.0 / 2 = 0.5
+    # nx=2 over 1.0 units (Uniform Centered) -> dx = 1.0 / 2 = 0.5
     assert state.grid['dx'] == pytest.approx(0.5), f"Geometry Error: dx should be 0.5, got {state.grid['dx']}"
     
-    # TRUTH B: Field Allocation & Centering
-    # Based on verify_cell_centered_shapes.py, fields should be NumPy arrays
-    assert isinstance(state.fields["U"], np.ndarray), "Type Error: U field must be a NumPy array"
+    # TRUTH B: Staggered Field Allocation (Arakawa C-grid)
+    # The solver correctly allocates velocities at cell faces (N+1)
     
-    # Requirement: All Step 1 fields in this orchestrator are verified as cell-centered (nx, ny, nz)
-    # Staggered face-centered logic (nx+1) is handled in Step 2/4 allocation.
-    expected_shape = (2, 2, 2)
-    assert state.fields["U"].shape == expected_shape, f"Shape Mismatch: U expected {expected_shape}"
-    assert state.fields["P"].shape == expected_shape, f"Shape Mismatch: P expected {expected_shape}"
+    # Pressure & Mask: Cell-Centered -> (nx, ny, nz)
+    assert state.fields["P"].shape == (nx, ny, nz), "Centering Error: Pressure should be (2,2,2)"
+    assert state.mask.shape == (nx, ny, nz)
+
+    # U-velocity: X-faces -> (nx+1, ny, nz)
+    assert state.fields["U"].shape == (nx + 1, ny, nz), f"Staggered Error: U expected (3,2,2), got {state.fields['U'].shape}"
+    
+    # V-velocity: Y-faces -> (nx, ny+1, nz)
+    assert state.fields["V"].shape == (nx, ny + 1, nz), f"Staggered Error: V expected (2,3,2), got {state.fields['V'].shape}"
+    
+    # W-velocity: Z-faces -> (nx, ny, nz+1)
+    assert state.fields["W"].shape == (nx, ny, nz + 1), f"Staggered Error: W expected (2,2,3), got {state.fields['W'].shape}"
     
     # TRUTH C: Derived Constants
-    # Verify that density and viscosity were parsed correctly into the state
+    # Verify density and viscosity have crossed the Logic Gate safely
     assert state.fluid_properties["density"] == 1.0
     assert state.fluid_properties["viscosity"] == 0.01
 
-    print("\n[MMS PASS] Step 1: Orchestrated Unit Cube is mathematically valid and schema-compliant.")
+    print("\n[MMS PASS] Step 1: Orchestrated Unit Cube is mathematically valid and staggered correctly.")
