@@ -45,7 +45,7 @@ def test_duplicate_location_logic(dummy_input):
         {"location": "x_min", "type": "no-slip", "values": {}},
         {"location": "x_min", "type": "outflow", "values": {}}
     ]
-    with pytest.raises(ValueError, match="(?i)Duplicate boundary condition"):
+    with pytest.raises(ValueError, match="(?i)Duplicate BC"):
         parse_boundary_conditions(bc_list, grid)
 
 def test_pressure_validation_against_dummy(dummy_input):
@@ -53,8 +53,8 @@ def test_pressure_validation_against_dummy(dummy_input):
     grid = dummy_input["grid"]
     bc_list = [{"location": "x_max", "type": "pressure", "values": {}}] # Missing 'p'
     
-    # FIXED: Matches your actual error: "requires value 'p'"
-    with pytest.raises(ValueError, match="(?i)requires value 'p'"):
+    # FIXED: Matches your actual error: "requires numeric 'p'"
+    with pytest.raises(ValueError, match="(?i)requires numeric 'p'"):
         parse_boundary_conditions(bc_list, grid)
 
 def test_inflow_component_completeness(dummy_input):

@@ -18,13 +18,13 @@ class TestBoundaryLogicCompliance:
     def test_inflow_action_compliance(self, dummy_grid):
         """Theory Check: Inflow requires numerical u, v, w"""
         incomplete_inflow = [{"location": "x_min", "type": "inflow", "values": {"u": 5.0}}]
-        with pytest.raises(ValueError, match="must provide numerical u, v, and w"):
+        with pytest.raises(ValueError, match="requires numeric velocity"):
             parse_boundary_conditions(incomplete_inflow, dummy_grid)
 
     def test_pressure_action_compliance(self, dummy_grid):
         """Theory Check: Pressure requires numerical p"""
         missing_p = [{"location": "x_max", "type": "pressure", "values": {"u": 0.0}}]
-        with pytest.raises(ValueError, match="must provide numerical p"):
+        with pytest.raises(ValueError, match="requires numeric 'p'"):
             parse_boundary_conditions(missing_p, dummy_grid)
 
     def test_uniqueness_and_location_integrity(self, dummy_grid):
@@ -33,7 +33,7 @@ class TestBoundaryLogicCompliance:
             {"location": "y_min", "type": "no-slip"},
             {"location": "y_min", "type": "free-slip"}
         ]
-        with pytest.raises(ValueError, match="Duplicate boundary condition"):
+        with pytest.raises(ValueError, match="Duplicate BC"):
             parse_boundary_conditions(duplicate_loc, dummy_grid)
 
     def test_pressure_exclusion_rule(self, dummy_grid):
