@@ -53,7 +53,7 @@ def test_line_47_invalid_force_vector_shape():
         "simulation_parameters": {"time_step": 0.1},
         "external_forces": {"force_vector": [0, 0]} # len is 2
     }
-    with pytest.raises(ValueError, match="must be \[x, y, z\]"):
+    with pytest.raises(ValueError, match=r"must be \[x, y, z\]"):
         parse_config(bad_data)
 
 def test_line_52_non_finite_forces():
