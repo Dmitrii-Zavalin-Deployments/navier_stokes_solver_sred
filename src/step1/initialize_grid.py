@@ -4,79 +4,44 @@ from __future__ import annotations
 from typing import Dict, Any
 import math
 
-
 def initialize_grid(grid: Dict[str, Any]) -> Dict[str, Any]:
     """
     Grid initializer with physically meaningful spacing.
-
-    Computes:
-        dx = (x_max - x_min) / nx
-        dy = (y_max - y_min) / ny
-        dz = (z_max - z_min) / nz
-
-    Step 1 validates:
-        • grid dimensions > 0
-        • extents finite
-        • extents ordered
-        • computed spacing finite and positive
+    Calculates Delta values from domain extents.
     """
 
-    # ---------------------------------------------------------
-    # Extract values
-    # ---------------------------------------------------------
-    nx = int(grid["nx"])
-    ny = int(grid["ny"])
-    nz = int(grid["nz"])
+    # 1. Extraction with Type Enforcement
+    nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+    x_min, x_max = float(grid["x_min"]), float(grid["x_max"])
+    y_min, y_max = float(grid["y_min"]), float(grid["y_max"])
+    z_min, z_max = float(grid["z_min"]), float(grid["z_max"])
 
-    x_min = float(grid["x_min"])
-    x_max = float(grid["x_max"])
-    y_min = float(grid["y_min"])
-    y_max = float(grid["y_max"])
-    z_min = float(grid["z_min"])
-    z_max = float(grid["z_max"])
-
-    # ---------------------------------------------------------
-    # Validate grid dimensions
-    # ---------------------------------------------------------
+    # 2. Domain Integrity Validation
     if nx <= 0 or ny <= 0 or nz <= 0:
-        raise ValueError("Grid dimensions nx, ny, nz must be positive.")
+        raise ValueError("Grid dimensions (nx, ny, nz) must be positive integers.")
 
-    # ---------------------------------------------------------
-    # Validate finiteness of extents
-    # ---------------------------------------------------------
-    for value in (x_min, x_max, y_min, y_max, z_min, z_max):
-        if not math.isfinite(value):
-            raise ValueError("Grid extents must be finite.")
+    for label, val in [("x", (x_min, x_max)), ("y", (y_min, y_max)), ("z", (z_min, z_max))]:
+        if not (math.isfinite(val[0]) and math.isfinite(val[1])):
+            raise ValueError(f"{label} extents must be finite numbers.")
+        if val[1] <= val[0]:
+            raise ValueError(f"{label}_max must be strictly greater than {label}_min.")
 
-    # ---------------------------------------------------------
-    # Validate ordering of extents
-    # ---------------------------------------------------------
-    if x_max <= x_min:
-        raise ValueError("x_max must be greater than x_min.")
-    if y_max <= y_min:
-        raise ValueError("y_max must be greater than y_min.")
-    if z_max <= z_min:
-        raise ValueError("z_max must be greater than z_min.")
-
-    # ---------------------------------------------------------
-    # Compute physical spacing
-    # ---------------------------------------------------------
+    # 3. Compute Physical Spacing (The Math Gate)
     dx = (x_max - x_min) / nx
     dy = (y_max - y_min) / ny
     dz = (z_max - z_min) / nz
 
-    # ---------------------------------------------------------
-    # Validate spacing
-    # ---------------------------------------------------------
-    for v in (dx, dy, dz):
-        if not math.isfinite(v) or v <= 0:
-            raise ValueError("Computed grid spacing must be positive and finite.")
+    # 4. Spacing Safety Check
+    for dim, spacing in [("dx", dx), ("dy", dy), ("dz", dz)]:
+        if not math.isfinite(spacing) or spacing <= 0:
+            raise ValueError(f"Computed {dim} is invalid ({spacing}). Check extents vs dimensions.")
 
+    # 5. Return Full Grid Context
+    # Including min/max here ensures traceability in the SolverState.grid attribute
     return {
-        "nx": nx,
-        "ny": ny,
-        "nz": nz,
-        "dx": dx,
-        "dy": dy,
-        "dz": dz,
+        "nx": nx, "ny": ny, "nz": nz,
+        "dx": dx, "dy": dy, "dz": dz,
+        "x_min": x_min, "x_max": x_max,
+        "y_min": y_min, "y_max": y_max,
+        "z_min": z_min, "z_max": z_max
     }

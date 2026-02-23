@@ -2,27 +2,31 @@
 
 from __future__ import annotations
 from typing import Dict, Any
-import math
-
-# REMOVED: from .types import DerivedConstants, GridConfig <-- Fixing the ModuleNotFoundError
 
 def compute_derived_constants(
-    grid_config: Dict[str, Any], # Changed from GridConfig to Dict
-    fluid_properties: Dict[str, float],
-    simulation_parameters: Dict[str, float],
-) -> Dict[str, Any]: # Changed return type to Dict
+    grid_config: Dict[str, Any],
+    fluid_properties: Dict[str, Any],
+    simulation_parameters: Dict[str, Any],
+) -> Dict[str, Any]:
     """
     Compute physical and numerical constants for Step 1.
-    Returns a dictionary matching the frozen dummy structure.
+    
+    This maps Schema names (density, viscosity) to Solver shorthand (rho, mu)
+    and captures spatial/temporal steps (dx, dt) for the physics kernels.
     """
+    # 1. Physical Properties
     rho = float(fluid_properties["density"])
     mu = float(fluid_properties["viscosity"])
+    
+    # 2. Temporal Step
     dt = float(simulation_parameters["time_step"])
     
-    # Grid sizes
-    dx, dy, dz = grid_config["dx"], grid_config["dy"], grid_config["dz"]
+    # 3. Spatial Steps (Inherited from initialize_grid)
+    dx = float(grid_config["dx"])
+    dy = float(grid_config["dy"])
+    dz = float(grid_config["dz"])
 
-    # Return a DICT as expected by the frozen Step 1 Dummy
+    # 4. Return flattened constants dictionary
     return {
         "rho": rho,
         "mu": mu,
