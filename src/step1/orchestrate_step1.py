@@ -22,7 +22,7 @@ DEBUG_STEP1 = True
 
 def debug_state_step1(state_obj: SolverState) -> None:
     """Prints a summary using the SolverState object attributes."""
-    print("\n==================== DEBUG: STEP‑1 STATE SUMMARY ====================")
+    print("\n" + "="*20 + " DEBUG: STEP-1 STATE SUMMARY " + "="*20)
     attrs = ["grid", "fields", "constants", "mask", "boundary_conditions"]
     for attr in attrs:
         value = getattr(state_obj, attr, None)
@@ -31,61 +31,51 @@ def debug_state_step1(state_obj: SolverState) -> None:
             print(f"    ndarray shape={value.shape}, dtype={value.dtype}")
         elif isinstance(value, dict):
             print(f"    dict keys={list(value.keys())}")
-    print("====================================================================\n")
+    print("="*69 + "\n")
 
 def orchestrate_step1(
     json_input: Dict[str, Any],
     **_ignored_kwargs,
 ) -> SolverState:
     """
-    Step 1 — Orchestrator: Strictly aligned with the production schema.
+    Main entry point for Step 1. Transforms raw JSON into a validated SolverState.
+    
+    Constitutional Role: The High Command.
+    Compliance: Vertical Integrity & Zero-Debt Mandate.
     """
-    # 0. Structural Validation
+    # 0. Structural Validation (The Legal Contract)
     schema_path = os.path.join("schema", "solver_input_schema.json")
     try:
         with open(schema_path, "r") as f:
             input_schema = json.load(f)
         jsonschema.validate(instance=json_input, schema=input_schema)
     except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
-        raise RuntimeError(f"Input schema validation FAILED: {exc}") from exc
+        raise RuntimeError(f"Contract Violation: Input schema validation FAILED: {exc}") from exc
 
-    # 1. Parsing & Grid Initialization
+    # 1. Parsing & Grid Initialization (Spatial Governor)
     grid_params = json_input["grid"]
     grid = initialize_grid(grid_params)
-    
-    # Sync grid extents
-    grid.update({
-        "x_min": grid_params["x_min"], "x_max": grid_params["x_max"],
-        "y_min": grid_params["y_min"], "y_max": grid_params["y_max"],
-        "z_min": grid_params["z_min"], "z_max": grid_params["z_max"],
-    })
-
     config = parse_config(json_input)
 
-    # 2. Field Allocation
+    # 2. Field Allocation (Memory Architect)
     fields = allocate_fields(grid)
     
-    # 3. Apply Initial Conditions (Crucial for Data Audit)
+    # 3. Apply Initial Conditions (Field Primer)
     apply_initial_conditions(fields, json_input["initial_conditions"])
 
-    # 4. Mask & Boundary Processing
-    mask = map_geometry_mask(json_input["mask"], grid_params)
+    # 4. Mask & Boundary Processing (Topology Interpreter)
+    # Refined to receive the derived logical masks directly
+    mask, is_fluid, is_boundary_cell = map_geometry_mask(json_input["mask"], grid_params)
     bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
 
-    # 5. Numerical Constants
+    # 5. Numerical Constants (Mathematical Translator)
     constants = compute_derived_constants(
         grid, 
         json_input["fluid_properties"], 
         json_input["simulation_parameters"]
     )
 
-    # 6. Pre-calculate Mask Semantics
-    is_fluid = (mask == 1) | (mask == -1)
-    is_boundary_cell = (mask == -1)
-
-    # 7. Assemble the State Object
-    # FIX: Argument names now match assemble_simulation_state signature exactly.
-    # Positional order: config, grid, fields, mask, constants, boundary_conditions, is_fluid, is_boundary_cell
+    # 6. Assemble the State Object (Synthesis Hub)
     state = assemble_simulation_state(
         config=config,
         grid=grid,
@@ -97,7 +87,7 @@ def orchestrate_step1(
         is_boundary_cell=is_boundary_cell
     )
 
-    # 8. Physical Validation
+    # 7. Physical Validation (Final Logic Gate)
     validate_physical_constraints(state)
 
     if DEBUG_STEP1:
@@ -106,4 +96,5 @@ def orchestrate_step1(
     return state
 
 def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
+    """External API wrapper for Step 1."""
     return orchestrate_step1(json_input)
