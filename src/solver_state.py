@@ -13,7 +13,8 @@ class SolverState:
     It follows the Incremental Constructor pattern:
     - Initialized empty to ensure total traceability.
     - Data is populated step-by-step (Phase B, Article 5).
-    - No aliases; data exists in exactly one department.
+    - No aliases; data exists in exactly one department (fields).
+    - Attribute properties provide a facade for mathematical readability.
     """
 
     # ---------------------------------------------------------
@@ -35,7 +36,7 @@ class SolverState:
     
     # Physics & Environment
     constants: Dict[str, Any] = field(default_factory=dict)       
-    fluid_properties: Dict[str, Any] = field(default_factory=dict) # Added for Step 1 compliance
+    fluid_properties: Dict[str, Any] = field(default_factory=dict) 
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
     
     # Global health tracking
@@ -83,13 +84,35 @@ class SolverState:
     time: float = 0.0
 
     # ---------------------------------------------------------
+    # Attribute Interface (Interface Facade Rule)
+    # ---------------------------------------------------------
+    @property
+    def pressure(self) -> Optional[np.ndarray]:
+        """Accessor for cell-centered pressure."""
+        return self.fields.get("P")
+
+    @property
+    def velocity_u(self) -> Optional[np.ndarray]:
+        """Accessor for staggered x-velocity."""
+        return self.fields.get("U")
+
+    @property
+    def velocity_v(self) -> Optional[np.ndarray]:
+        """Accessor for staggered y-velocity."""
+        return self.fields.get("V")
+
+    @property
+    def velocity_w(self) -> Optional[np.ndarray]:
+        """Accessor for staggered z-velocity."""
+        return self.fields.get("W")
+
+    # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
     # ---------------------------------------------------------
     def to_json_safe(self) -> Dict[str, Any]:
         """
         Convert state to JSON-safe dict. 
-        Enforces Phase C, Article 7 (Anti-Density Rule): 
-        Sparse matrices are serialized as metadata, never densified.
+        Enforces Phase C, Article 7 (Anti-Density Rule).
         """
         try:
             from scipy.sparse import issparse
@@ -97,43 +120,27 @@ class SolverState:
             def issparse(obj): return False
 
         def convert(value):
-            # 1. SciPy Sparse Matrices (Scale Guard: Do not use .todense())
             if issparse(value):
                 return {
                     "type": str(value.format),
                     "shape": list(value.shape),
                     "nnz": int(value.nnz)
                 }
-
-            # 2. Dense NumPy arrays
             if isinstance(value, np.ndarray):
                 return value.tolist()
-
-            # 3. Dictionaries (Recursive)
             if isinstance(value, dict):
                 return {k: convert(v) for k, v in value.items()}
-            
-            # 4. Lists (Recursive)
             if isinstance(value, list):
                 return [convert(v) for v in value]
-
-            # 5. Callables (Discarded for JSON)
             if callable(value):
                 return None
-
-            # 6. NumPy scalars (Fixing serialization types)
             if hasattr(value, "item") and not isinstance(value, (list, dict, np.ndarray)):
                 return value.item()
-            
-            # 7. Explicitly handle None (translates to null in JSON)
             if value is None:
                 return None
-
             return value
 
         result = {}
-        # Using self.__dict__ directly as we are a dataclass
         for key, value in self.__dict__.items():
             result[key] = convert(value)
-
         return result
