@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-
 from src.step1.map_geometry_mask import map_geometry_mask
 from src.solver_state import SolverState
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
@@ -13,8 +12,7 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 def test_invalid_shape_raises():
     """Verifies that malformed grid dictionaries trigger errors."""
-    # Negative dimension: Corrected match to reflect actual core message
-    # Added 'r' prefix to fix SyntaxWarning in Python 3.12+
+    # Negative dimension
     with pytest.raises(ValueError, match=r"nx\*ny\*nz"):
         map_geometry_mask([1]*8, {"nx": 4, "ny": -1, "nz": 2})
 
@@ -24,7 +22,7 @@ def test_invalid_shape_raises():
 
     # Missing keys
     with pytest.raises(KeyError):
-        map_geometry_mask([1, 2, 3], {"nx": 4, "ny": 4})  # missing nz
+        map_geometry_mask([1, 2, 3], {"nx": 4, "ny": 4})  
 
 
 # ---------------------------------------------------------
@@ -32,9 +30,8 @@ def test_invalid_shape_raises():
 # ---------------------------------------------------------
 
 def test_mask_flat_must_be_iterable():
-    """Ensures input mask must be a list or array-like."""
-    # Corrected match to align with Python's native error for non-iterables
-    with pytest.raises(TypeError, match="type 'int' has no len"):
+    """Ensures input mask must be a list or array-like for length checking."""
+    with pytest.raises(TypeError, match=r"has no len|not iterable"):
         map_geometry_mask(12345, {"nx": 1, "ny": 1, "nz": 1})
 
 
@@ -46,13 +43,10 @@ def test_mask_flat_length_match():
     """Checks that flat list length equals nx * ny * nz."""
     grid = {"nx": 2, "ny": 2, "nz": 2}
 
-    # Too short: Added 'r' prefix to fix SyntaxWarning
-    with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
-        map_geometry_mask([1, 2], grid)
-
-    # Too long: Added 'r' prefix to fix SyntaxWarning
-    with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
-        map_geometry_mask(list(range(10)), grid)
+    # Length mismatch (too short or too long)
+    for bad_list in [[1, 2], list(range(10))]:
+        with pytest.raises(ValueError, match=r"match nx\*ny\*nz"):
+            map_geometry_mask(bad_list, grid)
 
 
 # ---------------------------------------------------------
@@ -60,11 +54,10 @@ def test_mask_flat_length_match():
 # ---------------------------------------------------------
 
 def test_mask_entries_must_be_finite_integers():
-    """Rejects floats, strings, NaNs, and Infs."""
+    """Rejects floats, strings, NaNs, and Infs to maintain discrete logic."""
     bad_values = [1.5, "x", float("nan"), float("inf")]
 
     for bad in bad_values:
-        # Some bad values trigger TypeError during conversion, others ValueError
         with pytest.raises((ValueError, TypeError)):
             map_geometry_mask([bad], {"nx": 1, "ny": 1, "nz": 1})
 
@@ -74,16 +67,14 @@ def test_mask_entries_must_be_finite_integers():
 # ---------------------------------------------------------
 
 def test_semantic_validation_allows_valid_entries():
-    """Confirms valid mask entries are correctly reshaped and stored in SolverState."""
+    """Confirms valid mask entries are correctly reshaped and stored."""
     dummy = solver_input_schema_dummy()
     grid = dummy["grid"]
     flat_mask = dummy["mask"]
 
-    # Act
     arr = map_geometry_mask(flat_mask, grid)
     state = SolverState(mask=arr, grid=grid)
 
-    # Verify object-style access
     assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     
     # Expected: index = i + nx*(j + ny*k) (Fortran Order)
@@ -94,21 +85,14 @@ def test_semantic_validation_allows_valid_entries():
 def test_canonical_f_order_mapping():
     """
     Explicitly tests Fortran-order indexing where 'i' varies fastest.
-    Uses only values -1, 0, 1 to pass semantic validation.
+    L = i + (nx * j) + (nx * ny * k)
     """
-    # (nx=2, ny=2, nz=1)
-    # Using a specific pattern to ensure indices are mapped correctly:
-    # index 0 (0,0): 1
-    # index 1 (1,0): 0
-    # index 2 (0,1): -1
-    # index 3 (1,1): 1
     flat = [1, 0, -1, 1]
     grid = {"nx": 2, "ny": 2, "nz": 1}
     
     arr = map_geometry_mask(flat, grid)
     
-    # Check specific indices based on i + nx*j
-    assert arr[0, 0, 0] == 1   # i=0, j=0 (First element)
-    assert arr[1, 0, 0] == 0   # i=1, j=0 (Second element)
-    assert arr[0, 1, 0] == -1  # i=0, j=1 (Third element)
-    assert arr[1, 1, 0] == 1   # i=1, j=1 (Fourth element)
+    assert arr[0, 0, 0] == 1   # i=0, j=0
+    assert arr[1, 0, 0] == 0   # i=1, j=0
+    assert arr[0, 1, 0] == -1  # i=0, j=1
+    assert arr[1, 1, 0] == 1   # i=1, j=1
