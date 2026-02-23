@@ -1,3 +1,5 @@
+# tests/step1/test_step1_data_coverage.py
+
 import pytest
 import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1
@@ -57,6 +59,6 @@ def test_step1_input_coverage_sensitivity():
 
     # Boundary Condition Structure Survival
     assert len(state.boundary_conditions) == 2
-    assert state.boundary_conditions[0]['location'] == "x_min"
+    assert "x_min" in state.boundary_conditions
 
     print("\n[DATA AUDIT PASS] Canonical Dummy data successfully traced to SolverState.")
