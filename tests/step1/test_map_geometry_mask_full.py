@@ -7,7 +7,7 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def dummy_input():
-    """Provides the canonical dummy input."""
+    """Provides the canonical dummy input (Section 5 Compliance)."""
     return solver_input_schema_dummy()
 
 def test_map_geometry_mask_order_integrity(dummy_input):
@@ -20,8 +20,8 @@ def test_map_geometry_mask_order_integrity(dummy_input):
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
     total_cells = nx * ny * nz
 
-    # We test specific 'probes'—indices that represent different
-    # corners and edges of the 3D cube.
+    # Probes: Index 0 (First), 1 (X-Step), nx (Y-Step), 
+    # nx*ny-1 (Top-Right Front), total_cells-1 (Very Last)
     probes = [0, 1, nx, nx * ny - 1, total_cells - 1]
 
     for target_index in probes:
@@ -33,23 +33,26 @@ def test_map_geometry_mask_order_integrity(dummy_input):
         # Act
         mask_3d = map_geometry_mask(flat, grid)
 
-        # Calculate expected 3D coordinates based on the canonical rule:
-        # index = i + nx * (j + ny * k)
+        # Fortran unravelling logic:
+        # k = layer (slowest), j = row, i = column (fastest)
         k_exp = target_index // (nx * ny)
         remainder = target_index % (nx * ny)
         j_exp = remainder // nx
         i_exp = remainder % nx
 
-        # Assert: Did the -1 end up where it belongs in 3D space?
+        # Assert: Exact spatial positioning
         assert mask_3d[i_exp, j_exp, k_exp] == -1, (
-            f"Flat index {target_index} did not map to (i={i_exp}, j={j_exp}, k={k_exp})"
+            f"Spatial audit failed: Flat index {target_index} mapped to "
+            f"({mask_3d.shape}) at wrong coordinates."
         )
 
 def test_map_geometry_mask_invalid_values(dummy_input):
-    """Ensures values outside [-1, 0, 1] are rejected."""
+    """Ensures values outside [-1, 0, 1] are rejected (Domain Validation)."""
     grid = dummy_input["grid"]
     flat = [0] * (grid["nx"] * grid["ny"] * grid["nz"])
-    flat[0] = 5  # Invalid entry
     
-    with pytest.raises(ValueError, match="entries must be -1, 0, or 1"):
+    # Value 5 is outside the physical definition range
+    flat[0] = 5  
+    
+    with pytest.raises(ValueError, match="(?i)entries must be -1, 0, or 1"):
         map_geometry_mask(flat, grid)
