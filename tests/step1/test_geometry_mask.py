@@ -16,7 +16,7 @@ def test_perfect_reshape(dummy_data):
     flat_mask = dummy_data["mask"]
     grid = dummy_data["grid"]
     
-     mask, _, _ = map_geometry_mask(flat_mask, grid)
+    mask, _, _ = map_geometry_mask(flat_mask, grid)
 
     assert mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     assert np.issubdtype(mask.dtype, np.integer)
@@ -53,7 +53,7 @@ def test_flattening_order_round_trip(dummy_data):
         flat = [0] * total_cells
         flat[target_index] = 1
         
-         mask_3d, _, _ = map_geometry_mask(flat, grid)
+        mask_3d, _, _ = map_geometry_mask(flat, grid)
 
         # Fortran unraveling
         k_exp = target_index // (nx * ny)
@@ -68,7 +68,7 @@ def test_mask_in_solver_state(dummy_data):
     grid = dummy_data["grid"]
     flat_mask = dummy_data["mask"]
     
-     mask_array, _, _ = map_geometry_mask(flat_mask, grid)
+    mask_array, _, _ = map_geometry_mask(flat_mask, grid)
     
     state = SolverState(
         mask=mask_array, 

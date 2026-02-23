@@ -31,7 +31,7 @@ def test_map_geometry_mask_order_integrity(dummy_input):
         flat[target_index] = -1
         
         # Act
-         mask_3d, _, _ = map_geometry_mask(flat, grid)
+        mask_3d, _, _ = map_geometry_mask(flat, grid)
 
         # Fortran unravelling logic:
         # k = layer (slowest), j = row, i = column (fastest)
