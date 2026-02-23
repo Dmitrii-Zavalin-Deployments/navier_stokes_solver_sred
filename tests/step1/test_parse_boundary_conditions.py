@@ -1,4 +1,4 @@
-# tests/step1/test_boundary_logic_compliance.py
+# tests/step1/test_parse_boundary_conditions.py
 
 import pytest
 from src.step1.parse_boundary_conditions import parse_boundary_conditions
@@ -7,7 +7,7 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def dummy_grid():
-    """Provides the canonical grid metadata from the dummy."""
+    """Provides the canonical grid metadata from the dummy (Section 5 Compliance)."""
     return solver_input_schema_dummy()["grid"]
 
 # ---------------------------------------------------------
@@ -37,12 +37,10 @@ def test_duplicate_location_rejected(dummy_grid):
 
 def test_inflow_action_requires_numerical_uvw(dummy_grid):
     """Action Item: Validates that an inflow BC provides numerical u, v, and w."""
-    # Case: Missing components
     bc_missing = [{"location": "x_min", "type": "inflow", "values": {"u": 1.0}}]
     with pytest.raises(ValueError, match="(?i)u, v, and w"):
         parse_boundary_conditions(bc_missing, dummy_grid)
         
-    # Case: Non-numerical value
     bc_bad_type = [{"location": "x_min", "type": "inflow", "values": {"u": 1, "v": 0, "w": "fast"}}]
     with pytest.raises(ValueError, match="(?i)numerical"):
         parse_boundary_conditions(bc_bad_type, dummy_grid)
@@ -66,8 +64,9 @@ def test_static_bc_disallows_wrong_values(dummy_grid):
 def test_valid_bc_storage_and_normalization(dummy_grid):
     """
     Verifies that parsed BCs are accessible and values are properly cast to floats.
-    Ensures that default values are applied where 'values' is omitted.
+    Follows Rule: Inherit from Dummy, reassign within test scope.
     """
+    # Inherit context from dummy
     bc_list = [
         {"location": "z_max", "type": "no-slip"},
         {"location": "x_min", "type": "inflow", "values": {"u": 5, "v": 0, "w": 0}}
