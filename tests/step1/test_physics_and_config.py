@@ -91,6 +91,9 @@ def test_validate_constraints_topology_and_fields(valid_state):
     valid_state.mask[0, 0, 0] = 42 
     with pytest.raises(ValueError, match="Forbidden Topology"):
         validate_physical_constraints(valid_state)
+    
+    # RESET MASK: Fix the topology so the next check can run against fields
+    valid_state.mask[0, 0, 0] = 1
 
     # 2. Field Finiteness
     valid_state.fields["V"][0, 0, 0] = np.nan

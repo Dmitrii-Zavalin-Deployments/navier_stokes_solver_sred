@@ -31,27 +31,30 @@ def test_initialize_grid_logic_and_math(dummy_input):
 
 def test_initialize_grid_guardrails(dummy_input):
     """Triggers guardrails for missing keys, inverted domains, and non-finite values."""
-    grid = dummy_input["grid"].copy()
-
+    
     # Case: Missing keys
     bad_grid = {"nx": 4} 
     with pytest.raises(ValueError, match="Grid initialization failed"):
         initialize_grid(bad_grid)
 
     # Case: Inverted domain (max <= min)
-    grid["x_min"], grid["x_max"] = 10.0, 10.0
+    # We use a fresh copy for each block to prevent state pollution
+    grid_inv = dummy_input["grid"].copy()
+    grid_inv["x_min"], grid_inv["x_max"] = 10.0, 10.0
     with pytest.raises(ValueError, match="Inverted domain"):
-        initialize_grid(grid)
+        initialize_grid(grid_inv)
 
     # Case: Non-positive dimensions
-    grid["nx"] = 0
+    grid_pos = dummy_input["grid"].copy()
+    grid_pos["nx"] = 0
     with pytest.raises(ValueError, match="Grid dimensions must be positive"):
-        initialize_grid(grid)
+        initialize_grid(grid_pos)
 
     # Case: Non-finite values
-    grid["x_min"] = float("inf")
+    grid_fin = dummy_input["grid"].copy()
+    grid_fin["x_min"] = float("inf")
     with pytest.raises(ValueError, match="(?i)finite"):
-        initialize_grid(grid)
+        initialize_grid(grid_fin)
 
 # --- ALLOCATE FIELDS TESTS ---
 
@@ -62,6 +65,7 @@ def test_field_shapes_and_staggering(dummy_input):
     
     # P is cell-centered (nx, ny, nz)
     # U, V, W are face-centered (staggered +1)
+    # 
     assert fields["P"].shape == (4, 4, 4)
     assert fields["U"].shape == (5, 4, 4)
     assert fields["V"].shape == (4, 5, 4)
