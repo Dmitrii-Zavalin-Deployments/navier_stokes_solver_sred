@@ -6,18 +6,22 @@ from src.step1.parse_boundary_conditions import parse_boundary_conditions
 from src.step1.map_geometry_mask import map_geometry_mask
 from src.step1.assemble_simulation_state import assemble_simulation_state
 from src.solver_state import SolverState
+from src.step1.orchestrate_step1 import orchestrate_step1, _debug_print_state
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def dummy_grid():
+    """Provides canonical grid metadata."""
     return solver_input_schema_dummy()["grid"]
 
 @pytest.fixture
 def dummy_data():
+    """Provides the full canonical dummy input."""
     return solver_input_schema_dummy()
 
 @pytest.fixture
 def valid_6_face_bc():
+    """Provides a complete, mathematically sound 6-face BC list."""
     return [
         {"location": "x_min", "type": "inflow", "values": {"u": 123.45, "v": 0.0, "w": 0.0}},
         {"location": "x_max", "type": "pressure", "values": {"p": 0.0}},
@@ -28,6 +32,7 @@ def valid_6_face_bc():
     ]
 
 # --- SECTION 1: BOUNDARY CONDITION COMPLIANCE ---
+
 def test_full_bc_normalization_and_storage(dummy_grid, valid_6_face_bc):
     bc_table = parse_boundary_conditions(valid_6_face_bc, dummy_grid)
     assert len(bc_table) == 6
@@ -64,6 +69,7 @@ def test_incomplete_domain_trigger(dummy_grid):
         parse_boundary_conditions(incomplete, dummy_grid)
 
 # --- SECTION 2: GEOMETRY & MASKING ---
+
 def test_mask_reshaping_fortran_order(dummy_data):
     grid = dummy_data["grid"]
     nx, ny, nz = grid["nx"], grid["ny"], grid["nz"]
@@ -72,7 +78,6 @@ def test_mask_reshaping_fortran_order(dummy_data):
         flat = [0] * total_cells
         flat[target_index] = 1
         mask_1d, _, _ = map_geometry_mask(flat, grid)
-        # FIX: Check the flattened list directly
         assert mask_1d[target_index] == 1
 
 def test_forbidden_topology_rule(dummy_data):
@@ -88,11 +93,11 @@ def test_mask_validation_mismatch(dummy_data):
         map_geometry_mask([1, 0, 1], grid)
 
 # --- SECTION 3: INTEGRITY & ASSEMBLY ---
+
 def test_assemble_state_spatial_incoherence():
     grid = {"nx": 4, "ny": 4, "nz": 4}
     constants = {"rho": 1.0, "mu": 0.1, "dt": 0.1, "dx": 0.5, "dy": 0.5, "dz": 0.5}
     fields = {"U": np.zeros((5, 4, 4)), "V": np.zeros((4, 5, 4)), "W": np.zeros((4, 4, 5)), "P": np.zeros((4, 4, 4))}
-    # FIX: Use 1D list for mask to match expected structure
     mask_small = [0] * 8 
     with pytest.raises(ValueError, match="Spatial Incoherence"):
         assemble_simulation_state(config={}, grid=grid, fields=fields, mask=mask_small, 
@@ -103,7 +108,6 @@ def test_mask_encapsulation_in_solver_state(dummy_data):
     grid = dummy_data["grid"]
     mask_list, _, _ = map_geometry_mask(dummy_data["mask"], grid)
     state = SolverState(mask=mask_list, grid=grid)
-    # FIX: Check length for 1D compliance
     assert len(state.mask) == grid["nx"] * grid["ny"] * grid["nz"]
 
 def test_mask_non_integer_error():
@@ -117,10 +121,7 @@ def test_bc_invalid_type_error():
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
         parse_boundary_conditions(bad_bc_list, {"nx": 2, "ny": 2, "nz": 2})
 
-import pytest
-import numpy as np
-from src.step1.orchestrate_step1 import orchestrate_step1
-from src.solver_state import SolverState
+# --- SECTION 4: ORCHESTRATION & COVERAGE ---
 
 def test_orchestrate_debug_printer_direct(dummy_data):
     """
@@ -130,13 +131,8 @@ def test_orchestrate_debug_printer_direct(dummy_data):
     # 1. Generate a valid state first
     state = orchestrate_step1(dummy_data)
     
-    # 2. Inject a NumPy array into one of the attributes audited by the printer
-    # We use a dummy attribute that the loop checks
+    # 2. Inject a NumPy array into the mask attribute to trigger Line 31
     state.mask = np.array([0, 1, 0, 1], dtype=np.int8)
     
-    # 3. Manually trigger the debug print logic
-    # Since it's internal to orchestrate_step1, we can call it if it's exposed 
-    # or just run a mock pass where we don't trigger the schema.
-    from src.step1.orchestrate_step1 import _debug_print_state
+    # 3. Trigger the internal debug printer
     _debug_print_state(state)
-
