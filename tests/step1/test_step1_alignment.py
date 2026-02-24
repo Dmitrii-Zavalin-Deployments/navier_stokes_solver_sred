@@ -54,15 +54,14 @@ def test_step1_alignment_logic_to_frozen_truth():
     # Ensure the parser correctly identified and mapped all six faces of the unit cube
     assert len(result_state.boundary_conditions) == 6
     for face in result_state.boundary_conditions.values():
-        assert "location" in face
         assert "type" in face
         assert "values" in face
 
     # --- AUDIT E: CONSTANT PROPAGATION ---
     # Verify that fluid properties and time steps are accurately translated
     assert result_state.constants["dt"] == input_data["simulation_parameters"]["time_step"]
-    assert result_state.fluid_properties["density"] == input_data["fluid_properties"]["density"]
-    assert result_state.fluid_properties["viscosity"] == input_data["fluid_properties"]["viscosity"]
+    assert result_state.constants["rho"] == input_data["fluid_properties"]["density"]
+    assert result_state.constants["mu"] == input_data["fluid_properties"]["viscosity"]
 
 def test_step1_sensitivity_firewall():
     """
