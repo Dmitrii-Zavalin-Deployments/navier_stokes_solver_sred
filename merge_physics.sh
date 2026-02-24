@@ -1,24 +1,19 @@
 #!/bin/bash
 
-# Define the target file for the Grid and Allocation group
-TARGET="tests/step1/test_grid_and_allocation.py"
+# Define the target file for the Topology and Boundaries group
+TARGET="tests/step1/test_topology_and_boundaries.py"
 
-echo "Consolidating Grid and Allocation tests..."
+echo "Consolidating Topology and Boundaries tests..."
 
-# 1. Start with Grid Allocation (contains necessary imports/fixtures)
-# We use 'cat' for the first file to establish the file and its imports.
-cat tests/step1/test_grid_allocation.py > $TARGET
+# 1. Start with Boundary Conditions (establishes imports and fixtures)
+cat tests/step1/test_boundary_conditions.py > $TARGET
 
-# 2. Append Initialize Grid Full
-echo -e "\n\n# --- SECTION: Initialize Grid Full ---" >> $TARGET
-# Filter out imports to prevent 'import pytest' being repeated 20 times
-grep -vE "^import |^from " tests/step1/test_initialize_grid_full.py >> $TARGET
-
-# 3. Append Verify Shapes
-echo -e "\n\n# --- SECTION: Verify Shapes (Cell-Centered) ---" >> $TARGET
-grep -vE "^import |^from " tests/step1/test_verify_shapes.py >> $TARGET
+# 2. Append State and Masking
+echo -e "\n\n# --- SECTION: State and Masking (Geometry Mapping) ---" >> $TARGET
+# Filter out imports to prevent 'import pytest' etc. being repeated
+grep -vE "^import |^from " tests/step1/test_state_and_masking.py >> $TARGET
 
 echo "Successfully created $TARGET"
 
-# Verify the new file structure
+# Verify the file size and existence
 ls -lh $TARGET
