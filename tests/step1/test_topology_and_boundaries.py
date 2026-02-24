@@ -116,3 +116,19 @@ def test_bc_invalid_type_error():
     bad_bc_list = [{"location": "x_min", "type": "quantum_flux", "values": {}}]
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
         parse_boundary_conditions(bad_bc_list, {"nx": 2, "ny": 2, "nz": 2})
+
+def test_orchestrate_debug_printer_coverage(dummy_data):
+    """
+    Targets orchestrate_step1.py Line 31.
+    Forces the debug printer to encounter a NumPy array to ensure 100% coverage.
+    """
+    from src.step1.orchestrate_step1 import orchestrate_step1
+    import numpy as np
+    
+    # We modify dummy_data to ensure at least one top-level attribute is an ndarray
+    # The debug loop iterates through attrs = ["grid", "fields", "constants", "mask", "boundary_conditions"]
+    # We'll mock the 'mask' as an array just for this coverage check.
+    dummy_data["mask"] = np.zeros(8) 
+    
+    # This will trigger Line 31 during the state_obj summary print
+    orchestrate_step1(dummy_data)
