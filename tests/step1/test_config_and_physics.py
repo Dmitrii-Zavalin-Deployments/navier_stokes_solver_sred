@@ -117,8 +117,8 @@ def test_validate_constraints_internal_helpers(valid_state):
     valid_state.constants["mu"] = 0.01 # Restore
 
     # 5. Trigger Mask Shape Mismatch (Line 75)
-    valid_state.mask = np.zeros((10, 10, 10), dtype=np.int8)
-    with pytest.raises(ValueError, match="Mask Shape Mismatch"):
+    valid_state.mask = [0] * 10
+    with pytest.raises(ValueError, match="Mask Length Mismatch"):
         validate_physical_constraints(valid_state)
 
 def test_validate_constraints_grid_and_time(valid_state):
