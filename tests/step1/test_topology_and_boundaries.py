@@ -174,11 +174,12 @@ def test_mask_non_integer_error():
     """Targets map_geometry_mask.py Line 27: Scalar Type Enforcement."""
     from src.step1.map_geometry_mask import map_geometry_mask
     
-    # Grid is 2x2x2 = 8 cells. We provide a float instead of an int.
+    # Passing arguments positionally to avoid 'nx' keyword error
+    # Signature: map_geometry_mask(mask_flat, nx, ny, nz)
     bad_mask = [1, 0, 1, 0, 1, 0, 1, 0.5] 
     
     with pytest.raises(ValueError, match="Mask entries must be finite integers"):
-        map_geometry_mask(bad_mask, nx=2, ny=2, nz=2)
+        map_geometry_mask(bad_mask, 2, 2, 2)
 
 def test_bc_invalid_type_error():
     """Targets parse_boundary_conditions.py Line 32: Invalid BC Type Gate."""
@@ -188,6 +189,8 @@ def test_bc_invalid_type_error():
     bad_bc = {
         "x_min": {"type": "quantum_flux", "values": {}} 
     }
+    # Providing a dummy grid_config (empty dict) to satisfy the 2nd positional argument
+    dummy_grid_config = {}
     
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
-        parse_boundary_conditions(bad_bc)
+        parse_boundary_conditions(bad_bc, dummy_grid_config)
