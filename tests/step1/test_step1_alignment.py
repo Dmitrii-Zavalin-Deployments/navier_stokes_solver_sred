@@ -55,6 +55,8 @@ def test_step1_alignment_logic_to_frozen_truth():
     assert len(result_state.boundary_conditions) == 6
     for face in result_state.boundary_conditions.values():
         assert "type" in face
+        assert "u" in face
+        assert "p" in face
         assert "values" in face
 
     # --- AUDIT E: CONSTANT PROPAGATION ---

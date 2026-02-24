@@ -81,7 +81,7 @@ def test_laplacian_solid_handling():
     state = make_state(nx, ny, nz)
     
     # Set one cell to solid
-    state.mask[1, 1, 1] = 0
+    state.mask[21] = 0
     create_fluid_mask(state)
     
     build_laplacian_operators(state)
