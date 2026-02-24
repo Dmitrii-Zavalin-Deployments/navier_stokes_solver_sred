@@ -9,7 +9,7 @@ def assemble_simulation_state(
     config: Dict[str, Any],
     grid: Dict[str, Any],
     fields: Dict[str, np.ndarray],
-    mask: np.ndarray,
+    mask: list,
     constants: Dict[str, Any],
     boundary_conditions: Dict[str, Any],
     is_fluid: np.ndarray,
@@ -53,9 +53,10 @@ def assemble_simulation_state(
             raise KeyError(f"Genesis Error: Required field '{f}' missing from allocation.")
         
     # Dimension Audit: Ensure masks and grids are spatially coherent
-    expected_shape = (grid["nx"], grid["ny"], grid["nz"])
-    if state.mask.shape != expected_shape:
-         raise ValueError(f"Spatial Incoherence: Mask shape {state.mask.shape} != {expected_shape}")
+    # CONSTITUTIONAL FIX: Mask is now a 1D list (Phase A.2), so we audit length.
+    expected_length = grid["nx"] * grid["ny"] * grid["nz"]
+    if len(state.mask) != expected_length:
+         raise ValueError(f"Spatial Incoherence: Mask length {len(state.mask)} != {expected_length}")
 
     # 4. Status Flag
     state.ready_for_time_loop = kwargs.get("ready_for_time_loop", False)
