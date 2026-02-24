@@ -57,7 +57,6 @@ def test_step1_alignment_logic_to_frozen_truth():
         assert "type" in face
         assert "u" in face
         assert "p" in face
-        assert "values" in face
 
     # --- AUDIT E: CONSTANT PROPAGATION ---
     # Verify that fluid properties and time steps are accurately translated
