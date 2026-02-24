@@ -53,7 +53,7 @@ def test_step1_alignment_logic_to_frozen_truth():
     # --- AUDIT D: BOUNDARY CONDITIONS (The Six-Face Mandate) ---
     # Ensure the parser correctly identified and mapped all six faces of the unit cube
     assert len(result_state.boundary_conditions) == 6
-    for face in result_state.boundary_conditions:
+    for face in result_state.boundary_conditions.values():
         assert "location" in face
         assert "type" in face
         assert "values" in face
