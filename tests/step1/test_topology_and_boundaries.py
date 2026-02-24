@@ -117,6 +117,11 @@ def test_bc_invalid_type_error():
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
         parse_boundary_conditions(bad_bc_list, {"nx": 2, "ny": 2, "nz": 2})
 
+import pytest
+import numpy as np
+from src.step1.orchestrate_step1 import orchestrate_step1
+from src.solver_state import SolverState
+
 def test_orchestrate_debug_printer_direct(dummy_data):
     """
     Targets orchestrate_step1.py Line 31.
