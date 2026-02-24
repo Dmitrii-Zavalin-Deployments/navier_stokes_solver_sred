@@ -6,7 +6,8 @@ from src.step1.parse_boundary_conditions import parse_boundary_conditions
 from src.step1.map_geometry_mask import map_geometry_mask
 from src.step1.assemble_simulation_state import assemble_simulation_state
 from src.solver_state import SolverState
-from src.step1.orchestrate_step1 import orchestrate_step1, _debug_print_state
+# Updated import to match actual source function name
+from src.step1.orchestrate_step1 import orchestrate_step1, debug_state_step1
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
@@ -123,16 +124,16 @@ def test_bc_invalid_type_error():
 
 # --- SECTION 4: ORCHESTRATION & COVERAGE ---
 
-def test_orchestrate_debug_printer_direct(dummy_data):
+def test_orchestrate_debug_printer_coverage(dummy_data):
     """
     Targets orchestrate_step1.py Line 31.
-    Directly triggers the debug summary with a mock array.
+    Directly triggers the debug summary with a mock array to hit 100% coverage.
     """
     # 1. Generate a valid state first
     state = orchestrate_step1(dummy_data)
     
-    # 2. Inject a NumPy array into the mask attribute to trigger Line 31
+    # 2. Inject a NumPy array into the mask attribute.
     state.mask = np.array([0, 1, 0, 1], dtype=np.int8)
     
-    # 3. Trigger the internal debug printer
-    _debug_print_state(state)
+    # 3. Manually trigger the public debug printer
+    debug_state_step1(state)
