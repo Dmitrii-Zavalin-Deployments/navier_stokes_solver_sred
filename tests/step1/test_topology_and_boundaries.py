@@ -117,18 +117,21 @@ def test_bc_invalid_type_error():
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
         parse_boundary_conditions(bad_bc_list, {"nx": 2, "ny": 2, "nz": 2})
 
-def test_orchestrate_debug_printer_coverage(dummy_data):
+def test_orchestrate_debug_printer_direct(dummy_data):
     """
     Targets orchestrate_step1.py Line 31.
-    Forces the debug printer to encounter a NumPy array to ensure 100% coverage.
+    Directly triggers the debug summary with a mock array.
     """
-    from src.step1.orchestrate_step1 import orchestrate_step1
-    import numpy as np
+    # 1. Generate a valid state first
+    state = orchestrate_step1(dummy_data)
     
-    # We modify dummy_data to ensure at least one top-level attribute is an ndarray
-    # The debug loop iterates through attrs = ["grid", "fields", "constants", "mask", "boundary_conditions"]
-    # We'll mock the 'mask' as an array just for this coverage check.
-    dummy_data["mask"] = np.zeros(8) 
+    # 2. Inject a NumPy array into one of the attributes audited by the printer
+    # We use a dummy attribute that the loop checks
+    state.mask = np.array([0, 1, 0, 1], dtype=np.int8)
     
-    # This will trigger Line 31 during the state_obj summary print
-    orchestrate_step1(dummy_data)
+    # 3. Manually trigger the debug print logic
+    # Since it's internal to orchestrate_step1, we can call it if it's exposed 
+    # or just run a mock pass where we don't trigger the schema.
+    from src.step1.orchestrate_step1 import _debug_print_state
+    _debug_print_state(state)
+
