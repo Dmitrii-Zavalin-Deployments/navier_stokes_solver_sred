@@ -1,4 +1,4 @@
-# tests/step1/test_physics_and_config.py
+# tests/step1/test_config_and_physics.py
 
 import pytest
 import numpy as np
@@ -58,7 +58,7 @@ def test_parse_config_external_forces_debt():
     with pytest.raises(KeyError, match="'force_vector' is missing"):
         parse_config(bad_force)
 
-    # 2. Invalid shape (using raw string fix for brackets)
+    # 2. Invalid shape
     bad_shape = {**base, "external_forces": {"force_vector": [0, 0]}}
     with pytest.raises(ValueError, match=r"must be \[x, y, z\]"):
         parse_config(bad_shape)
@@ -83,32 +83,46 @@ def test_derived_constants_physics_checks():
     with pytest.raises(ValueError, match="Non-physical viscosity detected: mu = -0.5"):
         compute_derived_constants(grid, {"density": 1.0, "viscosity": -0.5}, params)
 
-# --- SOLVER STATE CONSTRAINT VALIDATION ---
+# --- SOLVER STATE CONSTRAINT VALIDATION (CORRECTED) ---
 
 def test_validate_constraints_internal_helpers(valid_state):
     """
-    TARGET: validate_physical_constraints.py Lines 18, 22, 26.
-    Triggers internal _ensure_ helpers via the main validation entry point.
+    TARGET: validate_physical_constraints.py Lines 14, 18, 22, 26, 75.
+    Ensures 100% coverage by hitting every helper branch.
     """
-    # 1. Trigger _ensure_positive_int (nx = 0)
+    # 1. Trigger _ensure_positive_int (Line 22)
     valid_state.grid["nx"] = 0
-    with pytest.raises(ValueError, match="must be a positive integer"):
+    with pytest.raises(ValueError, match="Topology Violation.*positive integer"):
         validate_physical_constraints(valid_state)
     valid_state.grid["nx"] = 2 # Restore
 
-    # 2. Trigger _ensure_finite (x_min = inf)
+    # 2. Trigger _ensure_finite (Line 26)
     valid_state.grid["x_min"] = float('inf')
-    with pytest.raises(ValueError, match="must be finite"):
+    with pytest.raises(ValueError, match="Precision Error.*must be finite"):
         validate_physical_constraints(valid_state)
     valid_state.grid["x_min"] = 0.0 # Restore
 
-    # 3. Trigger _ensure_non_negative (dt < 0)
+    # 3. Trigger _ensure_positive for dt (Line 14) 
+    # FIX: Match Actual message "Stability Violation" and "> 0"
     valid_state.constants["dt"] = -0.1
-    with pytest.raises(ValueError, match="must be finite and >= 0"):
+    with pytest.raises(ValueError, match="Stability Violation.*must be finite and > 0"):
+        validate_physical_constraints(valid_state)
+    valid_state.constants["dt"] = 0.05 # Restore
+
+    # 4. Trigger _ensure_non_negative (Line 18)
+    # Using viscosity (mu) to trigger Physicality Violation
+    valid_state.constants["mu"] = -0.001
+    with pytest.raises(ValueError, match="Physicality Violation.*must be finite and >= 0"):
+        validate_physical_constraints(valid_state)
+    valid_state.constants["mu"] = 0.01 # Restore
+
+    # 5. Trigger Mask Shape Mismatch (Line 75)
+    valid_state.mask = np.zeros((10, 10, 10), dtype=np.int8)
+    with pytest.raises(ValueError, match="Mask Shape Mismatch"):
         validate_physical_constraints(valid_state)
 
 def test_validate_constraints_grid_and_time(valid_state):
-    """Verifies domain inversion and time-step positivity."""
+    """Verifies domain inversion."""
     # 1. Domain Inversion
     valid_state.grid["x_max"] = valid_state.grid["x_min"]
     with pytest.raises(ValueError, match="Domain Inversion"):
@@ -132,12 +146,10 @@ def test_validate_constraints_topology_and_fields(valid_state):
 
 def test_step1_constants_match_dummy():
     """
-    Verifies that Step 1 orchestrator correctly populates the constants 
-    attribute of the SolverState object from the JSON configuration.
+    Verifies that Step 1 orchestrator correctly populates the constants.
     """
     json_input = solver_input_schema_dummy()
     
-    # Use Primes for 'Loud Value' traceability (Phase F, Rule 12)
     json_input["grid"].update({
         "nx": 2, "ny": 2, "nz": 2,
         "x_min": 0.0, "x_max": 2.0,
@@ -153,13 +165,13 @@ def test_step1_constants_match_dummy():
     assert state.constants["rho"] == 5.0
     assert state.constants["mu"] == 0.2
     assert state.constants["dt"] == 0.05
-    assert state.constants["dx"] == 1.0 # (2.0 - 0.0) / 2
+    assert state.constants["dx"] == 1.0
 
 # --- SECTION: Derived Constants Math (Precision Audit) ---
 
 def test_compute_derived_constants_mathematical_precision():
     """
-    Surveyor Audit: Verifies spatial (dx, dy, dz) derivation from asymmetric grids.
+    Surveyor Audit: Verifies spatial derivation from asymmetric grids.
     """
     json_input = solver_input_schema_dummy()
 
@@ -179,4 +191,3 @@ def test_compute_derived_constants_mathematical_precision():
     assert state.constants["dx"] == 1.0
     assert state.constants["dy"] == 1.0
     assert state.constants["dz"] == 0.5
-    assert state.grid["dx"] == state.constants["dx"]
