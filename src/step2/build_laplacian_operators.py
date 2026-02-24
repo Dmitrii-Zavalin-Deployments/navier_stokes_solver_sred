@@ -44,7 +44,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                 curr = get_idx(i, j, k)
                 
                 # 1. Solid cell handling: Keep matrix non-singular
-                if not is_fluid[i, j, k]:
+                if not mask[curr]:
                     rows.append(curr)
                     cols.append(curr)
                     data.append(1.0)
