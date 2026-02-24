@@ -27,6 +27,8 @@ def test_step1_alignment_logic_to_frozen_truth():
     
     # 3. Reference: The 'Frozen Truth' required for Step 2 ingestion
     expected_state = make_step1_output_dummy(nx=2, ny=2, nz=2)
+    # Synchronize expected mask with input to match processed logic
+    expected_state.mask = input_data["geometry"]["mask_flat"]
 
     # --- AUDIT A: GRID & SPATIAL PARAMETERS ---
     assert result_state.grid["nx"] == expected_state.grid["nx"]
