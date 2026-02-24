@@ -1,24 +1,24 @@
 #!/bin/bash
 
-# Define the target file
-TARGET="tests/step1/test_config_and_physics.py"
+# Define the target file for the Grid and Allocation group
+TARGET="tests/step1/test_grid_and_allocation.py"
 
-echo "Consolidating Config and Physics tests..."
+echo "Consolidating Grid and Allocation tests..."
 
-# 1. Start with the main config file (includes necessary imports)
-cat tests/step1/test_physics_and_config.py > $TARGET
+# 1. Start with Grid Allocation (contains necessary imports/fixtures)
+# We use 'cat' for the first file to establish the file and its imports.
+cat tests/step1/test_grid_allocation.py > $TARGET
 
-# 2. Append Derived Constants (Base Logic)
-echo -e "\n\n# --- SECTION: Derived Constants ---" >> $TARGET
-# Filter out the imports to avoid clutter
-grep -vE "^import |^from " tests/step1/test_compute_derived_constants.py >> $TARGET
+# 2. Append Initialize Grid Full
+echo -e "\n\n# --- SECTION: Initialize Grid Full ---" >> $TARGET
+# Filter out imports to prevent 'import pytest' being repeated 20 times
+grep -vE "^import |^from " tests/step1/test_initialize_grid_full.py >> $TARGET
 
-# 3. Append Derived Constants (Math/Edge Cases)
-echo -e "\n\n# --- SECTION: Derived Constants Math ---" >> $TARGET
-# Filter out the imports
-grep -vE "^import |^from " tests/step1/test_compute_derived_constants_math.py >> $TARGET
+# 3. Append Verify Shapes
+echo -e "\n\n# --- SECTION: Verify Shapes (Cell-Centered) ---" >> $TARGET
+grep -vE "^import |^from " tests/step1/test_verify_shapes.py >> $TARGET
 
 echo "Successfully created $TARGET"
 
-# Optional: verify the file exists
-ls -l $TARGET
+# Verify the new file structure
+ls -lh $TARGET
