@@ -169,3 +169,25 @@ def test_mask_encapsulation_in_solver_state(dummy_data):
     state = SolverState(mask=mask_array, grid=grid)
     assert state.mask.shape == (grid["nx"], grid["ny"], grid["nz"])
     assert np.issubdtype(state.mask.dtype, np.integer)
+
+def test_mask_non_integer_error():
+    """Targets map_geometry_mask.py Line 27: Scalar Type Enforcement."""
+    from src.step1.map_geometry_mask import map_geometry_mask
+    
+    # Grid is 2x2x2 = 8 cells. We provide a float instead of an int.
+    bad_mask = [1, 0, 1, 0, 1, 0, 1, 0.5] 
+    
+    with pytest.raises(ValueError, match="Mask entries must be finite integers"):
+        map_geometry_mask(bad_mask, nx=2, ny=2, nz=2)
+
+def test_bc_invalid_type_error():
+    """Targets parse_boundary_conditions.py Line 32: Invalid BC Type Gate."""
+    from src.step1.parse_boundary_conditions import parse_boundary_conditions
+    
+    # Creating a BC dict with a completely unsupported type
+    bad_bc = {
+        "x_min": {"type": "quantum_flux", "values": {}} 
+    }
+    
+    with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
+        parse_boundary_conditions(bad_bc)
