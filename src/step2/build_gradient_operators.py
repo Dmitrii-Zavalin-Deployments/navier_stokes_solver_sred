@@ -29,6 +29,7 @@ def build_gradient_operators(state: SolverState) -> None:
 
     # --- Gx (Pressure -> U faces) ---
     rows_u, cols_u, data_u = [], [], []
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(ny):
             for i in range(1, nx): 
@@ -44,6 +45,7 @@ def build_gradient_operators(state: SolverState) -> None:
 
     # --- Gy (Pressure -> V faces) ---
     rows_v, cols_v, data_v = [], [], []
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(1, ny):
             for i in range(nx):

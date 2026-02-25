@@ -41,6 +41,7 @@ def build_laplacian_operators(state: SolverState) -> None:
         if face == "z_max": return k == nz - 1
         return False
 
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):

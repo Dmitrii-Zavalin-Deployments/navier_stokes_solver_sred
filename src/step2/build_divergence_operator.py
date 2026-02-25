@@ -31,11 +31,12 @@ def build_divergence_operator(state: SolverState) -> None:
 
     # --- Dx (U contribution) ---
     rows_u, cols_u, data_u = [], [], []
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
                 cell = get_c_idx(i, j, k)
-                if not is_fluid[i, j, k]: continue
+                if not is_fluid_3d[i, j, k]: continue
                 
                 # U staggered indices
                 idx_w = i + j * (nx + 1) + k * (nx + 1) * ny
@@ -49,11 +50,12 @@ def build_divergence_operator(state: SolverState) -> None:
 
     # --- Dy (V contribution) ---
     rows_v, cols_v, data_v = [], [], []
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
                 cell = get_c_idx(i, j, k)
-                if not is_fluid[i, j, k]: continue
+                if not is_fluid_3d[i, j, k]: continue
                 
                 # V staggered indices
                 idx_s = i + j * nx + k * nx * (ny + 1)
@@ -67,11 +69,12 @@ def build_divergence_operator(state: SolverState) -> None:
 
     # --- Dz (W contribution) ---
     rows_w, cols_w, data_w = [], [], []
+    is_fluid_3d = is_fluid.reshape((nx, ny, nz), order="F")
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
                 cell = get_c_idx(i, j, k)
-                if not is_fluid[i, j, k]: continue
+                if not is_fluid_3d[i, j, k]: continue
                 
                 # W staggered indices
                 idx_b = i + j * nx + k * nx * ny
