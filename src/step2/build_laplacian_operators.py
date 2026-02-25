@@ -101,3 +101,4 @@ def build_laplacian_operators(state: SolverState) -> None:
         (data, (rows, cols)), 
         shape=(num_cells, num_cells)
     )
+    return {"L": state.operators["laplacian"]}
