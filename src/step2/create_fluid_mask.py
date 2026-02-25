@@ -19,6 +19,8 @@ def create_fluid_mask(state: SolverState) -> tuple[np.ndarray, np.ndarray]:
     # Scale Guard: Reject non-integer masks to prevent numerical ambiguity
     if not np.issubdtype(mask.dtype, np.integer):
         raise ValueError(f"Mask must be an integer array, but got {mask.dtype}")
+    if not np.all(np.isin(mask, [-1, 0, 1])):
+        raise ValueError("Mask values must be restricted to {-1, 0, 1}")
 
     # Logic: Fluid is anything that is NOT solid (values 1 and -1)
     state.is_fluid = (mask != 0)
