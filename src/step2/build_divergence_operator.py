@@ -1,4 +1,5 @@
 # src/step2/build_divergence_operator.py
+
 from __future__ import annotations
 import scipy.sparse as sp
 from src.solver_state import SolverState
@@ -11,6 +12,8 @@ def build_divergence_operator(state: SolverState) -> None:
     It operates on a flattened vector [U.ravel(), V.ravel(), W.ravel()].
     """
     grid = state.grid
+    if state.is_fluid is None or not np.any(state.is_fluid):
+        raise RuntimeError("Topology Error: No fluid cells detected for Divergence operator.")
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     # Scale Guard: Pull from grid dict
     dx, dy, dz = grid['dx'], grid['dy'], grid['dz']

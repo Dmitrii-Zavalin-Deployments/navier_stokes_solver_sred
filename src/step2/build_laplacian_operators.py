@@ -13,6 +13,8 @@ def build_laplacian_operators(state: SolverState) -> None:
     """
     grid = state.grid
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
+    if state.is_fluid is None or not np.any(state.is_fluid):
+        raise RuntimeError("Topology Error: No fluid cells detected in domain.")
     
     dx2 = grid['dx']**2
     dy2 = grid['dy']**2

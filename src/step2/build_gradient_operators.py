@@ -12,6 +12,8 @@ def build_gradient_operators(state: SolverState) -> None:
     staggered faces (size N_u + N_v + N_w).
     """
     grid = state.grid
+    if state.is_fluid is None or not np.any(state.is_fluid):
+        raise RuntimeError("Topology Error: No fluid cells detected for Gradient operators.")
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
     is_fluid = state.is_fluid
