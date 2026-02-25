@@ -57,3 +57,12 @@ def test_topology_protection_gradient(empty_state):
     """Verify Gradient builder fails loudly on empty domains."""
     with pytest.raises(RuntimeError, match="Gradient operators"):
         build_gradient_operators(empty_state)
+
+def test_gate_2f_illegal_integer_logic():
+    """Gate 2.F: Verify firewall rejects integers outside {-1, 0, 1}."""
+    state = SolverState(config={}, grid={'nx': 2, 'ny': 2, 'nz': 2}, boundary_conditions=[])
+    # 99 is an illegal topology identifier
+    state.mask = np.array([1, 0, -1, 99, 0, 1, 1, 1], dtype=np.int32) 
+    
+    with pytest.raises(ValueError, match="restricted to {-1, 0, 1}"):
+        create_fluid_mask(state)
