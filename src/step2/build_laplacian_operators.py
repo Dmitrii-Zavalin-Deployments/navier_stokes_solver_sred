@@ -52,9 +52,9 @@ def build_laplacian_operators(state: SolverState) -> None:
 
                 # 2. Dirichlet (Pressure) Boundary Check
                 is_dirichlet = False
-                for loc, config in bc_table.items():
+                for bc in bc_table:
                     # Only apply Dirichlet if the BC type is explicitly 'pressure'
-                    if config.get("type") == "pressure" and is_on_face(i, j, k, loc):
+                    if bc.get("type") == "pressure" and is_on_face(i, j, k, bc["location"]):
                         is_dirichlet = True
                         break
                 
@@ -69,7 +69,7 @@ def build_laplacian_operators(state: SolverState) -> None:
 
                 # X-Neighbors
                 for ni in [i - 1, i + 1]:
-                    if 0 <= ni < nx and is_fluid[ni, j, k]:
+                    if 0 <= ni < nx and is_fluid[get_idx(ni, j, k)]:
                         rows.append(curr)
                         cols.append(get_idx(ni, j, k))
                         data.append(1.0 / dx2)
