@@ -20,7 +20,7 @@ def prepare_ppe_structure(state: SolverState) -> None:
     # The PPE is singular if there are no pressure (Dirichlet) outlets.
     # We check if "pressure_outlet" exists in the boundary_conditions dict.
     bc = state.boundary_conditions or {}
-    has_outlet = "pressure_outlet" in bc and len(bc["pressure_outlet"]) > 0
+    has_outlet = any(b.get("type") == "pressure" for b in bc)
     is_singular = not has_outlet
 
     # 3. RHS Builder Function
