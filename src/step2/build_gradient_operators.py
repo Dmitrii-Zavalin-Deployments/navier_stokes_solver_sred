@@ -1,6 +1,7 @@
 # src/step2/build_gradient_operators.py
 
 from __future__ import annotations
+import numpy as np
 import scipy.sparse as sp
 from src.solver_state import SolverState
 
