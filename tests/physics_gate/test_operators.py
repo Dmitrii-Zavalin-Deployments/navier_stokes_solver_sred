@@ -9,17 +9,22 @@ from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def laplacian_matrix():
-    """Setup a standard 4x4x4 grid Laplacian for auditing without relying on Step 1 orchestration."""
+    """Setup a standard 4x4x4 grid Laplacian for auditing."""
     raw_data = solver_input_schema_dummy()
     nx, ny, nz = 4, 4, 4
     
-    # Manually assemble SolverState to bypass jsonschema/Step 1 dependencies
+    # Manually assemble SolverState using the confirmed keys from your probe
     state = SolverState(
-        config=raw_data['config'],
+        config={
+            'solver_type': 'projection', 
+            'precision': 'float64',
+            'simulation_parameters': raw_data.get('simulation_parameters', {})
+        },
         grid={'nx': nx, 'ny': ny, 'nz': nz, 'dx': 1.0, 'dy': 1.0, 'dz': 1.0},
-        boundary_conditions=raw_data['boundary_conditions']
+        boundary_conditions=raw_data.get('boundary_conditions', [])
     )
-    # Initialize fluid mask (all fluid for audit)
+    
+    # Initialize fluid mask (all fluid for clean-room audit)
     state.is_fluid = np.ones(nx * ny * nz, dtype=bool)
     state.operators = {}
     
@@ -27,20 +32,26 @@ def laplacian_matrix():
     return state.operators["laplacian"]
 
 def test_gate_2a_calculus_identity(laplacian_matrix):
-    """Check identity dimensions."""
-    N = 64 # 4*4*4
-    assert laplacian_matrix.shape == (N, N)
+    """2.A: Identity Verification: Matrix dimensions for 4x4x4."""
+    N = 64
+    assert laplacian_matrix.shape == (N, N), "Matrix must be square NxN"
 
 def test_gate_2b_symmetry_and_sparsity(laplacian_matrix):
-    """Check Symmetry L=L^T and Sparsity <= 7N."""
+    """2.B: Symmetry (L = L^T) and Sparsity (nnz <= 7N)."""
+    # Check Symmetry
     diff = laplacian_matrix - laplacian_matrix.T
-    assert diff.nnz == 0 or np.all(np.abs(diff.data) < 1e-12)
-    assert laplacian_matrix.nnz <= 7 * laplacian_matrix.shape[0]
+    assert diff.nnz == 0 or np.all(np.abs(diff.data) < 1e-12), "Matrix is not symmetric"
+    
+    # Check Sparsity
+    N = laplacian_matrix.shape[0]
+    assert laplacian_matrix.nnz <= 7 * N, f"Matrix too dense: {laplacian_matrix.nnz} non-zeros"
 
 def test_gate_2c_null_space_audit(laplacian_matrix):
-    """Check that Laplacian of a constant field is zero (or identity for BCs)."""
-    ones = np.ones(laplacian_matrix.shape[0])
+    """2.C: Null-Space Audit: Laplacian of constant field."""
+    N = laplacian_matrix.shape[0]
+    ones = np.ones(N)
     result = laplacian_matrix.dot(ones)
-    for val in result:
-        # Should be 0 for Poisson or 1 for BC-enforced rows
-        assert np.isclose(val, 0.0) or np.isclose(val, 1.0)
+    
+    # Rows must sum to 0.0 (Poisson) or 1.0 (BC Identity)
+    for i, val in enumerate(result):
+        assert np.isclose(val, 0.0) or np.isclose(val, 1.0), f"Null-space violation at row {i}: {val}"
