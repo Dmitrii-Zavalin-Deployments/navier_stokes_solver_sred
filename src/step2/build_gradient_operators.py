@@ -35,7 +35,7 @@ def build_gradient_operators(state: SolverState) -> None:
             for i in range(1, nx): 
                 u_idx = i + j * (nx + 1) + k * (nx + 1) * ny
                 # Pressure gradient exists between two adjacent fluid cells
-                if is_fluid[i-1, j, k] and is_fluid[i, j, k]:
+                if is_fluid_3d[i-1, j, k] and is_fluid_3d[i, j, k]:
                     c_left = get_c_idx(i-1, j, k)
                     c_right = get_c_idx(i, j, k)
                     rows_u.extend([u_idx, u_idx])
@@ -50,7 +50,7 @@ def build_gradient_operators(state: SolverState) -> None:
         for j in range(1, ny):
             for i in range(nx):
                 v_idx = i + j * nx + k * nx * (ny + 1)
-                if is_fluid[i, j-1, k] and is_fluid[i, j, k]:
+                if is_fluid_3d[i, j-1, k] and is_fluid_3d[i, j, k]:
                     c_bot = get_c_idx(i, j-1, k)
                     c_top = get_c_idx(i, j, k)
                     rows_v.extend([v_idx, v_idx])
@@ -64,7 +64,7 @@ def build_gradient_operators(state: SolverState) -> None:
         for j in range(ny):
             for i in range(nx):
                 w_idx = i + j * nx + k * nx * ny
-                if is_fluid[i, j, k-1] and is_fluid[i, j, k]:
+                if is_fluid_3d[i, j, k-1] and is_fluid_3d[i, j, k]:
                     c_back = get_c_idx(i, j, k-1)
                     c_front = get_c_idx(i, j, k)
                     rows_w.extend([w_idx, w_idx])
