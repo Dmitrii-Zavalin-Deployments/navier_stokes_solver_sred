@@ -35,39 +35,39 @@ def valid_6_face_bc():
 # --- SECTION 1: BOUNDARY CONDITION COMPLIANCE ---
 
 def test_full_bc_normalization_and_storage(dummy_grid, valid_6_face_bc):
-    bc_table = parse_boundary_conditions(valid_6_face_bc, dummy_grid)
+    bc_table = parse_boundary_conditions(valid_6_face_bc)
     assert len(bc_table) == 6
     assert bc_table["x_min"]["u"] == 123.45
 
 def test_invalid_location_override(dummy_grid):
     bc_list = [{"location": "center_of_universe", "type": "no-slip", "values": {}}]
     with pytest.raises(ValueError, match="(?i)Invalid or missing boundary location"):
-        parse_boundary_conditions(bc_list, dummy_grid)
+        parse_boundary_conditions(bc_list)
 
 def test_inflow_requires_numeric_uvw(dummy_grid):
     incomplete = [{"location": "x_min", "type": "inflow", "values": {"u": 5.0}}]
     with pytest.raises(ValueError, match="requires numeric velocity"):
-        parse_boundary_conditions(incomplete, dummy_grid)
+        parse_boundary_conditions(incomplete)
 
 def test_pressure_requires_numeric_p(dummy_grid):
     missing_p = [{"location": "x_max", "type": "pressure", "values": {"u": 0.0}}]
     with pytest.raises(ValueError, match="requires numeric 'p'"):
-        parse_boundary_conditions(missing_p, dummy_grid)
+        parse_boundary_conditions(missing_p)
 
 def test_physical_exclusion_collision(dummy_grid):
     bad_outflow = [{"location": "x_max", "type": "outflow", "values": {"p": 10.0}}]
     with pytest.raises(ValueError, match="cannot define pressure"):
-        parse_boundary_conditions(bad_outflow, dummy_grid)
+        parse_boundary_conditions(bad_outflow)
 
 def test_duplicate_location_logic(dummy_grid):
     duplicate_loc = [{"location": "y_min", "type": "no-slip"}, {"location": "y_min", "type": "free-slip"}]
     with pytest.raises(ValueError, match="(?i)Duplicate BC"):
-        parse_boundary_conditions(duplicate_loc, dummy_grid)
+        parse_boundary_conditions(duplicate_loc)
 
 def test_incomplete_domain_trigger(dummy_grid):
     incomplete = [{"location": "x_min", "type": "no-slip"}]
     with pytest.raises(ValueError, match="Incomplete Domain"):
-        parse_boundary_conditions(incomplete, dummy_grid)
+        parse_boundary_conditions(incomplete)
 
 # --- SECTION 2: GEOMETRY & MASKING ---
 
@@ -120,7 +120,7 @@ def test_mask_non_integer_error():
 def test_bc_invalid_type_error():
     bad_bc_list = [{"location": "x_min", "type": "quantum_flux", "values": {}}]
     with pytest.raises(ValueError, match="Invalid boundary type: quantum_flux"):
-        parse_boundary_conditions(bad_bc_list, {"nx": 2, "ny": 2, "nz": 2})
+        parse_boundary_conditions(bad_bc_list)
 
 # --- SECTION 4: ORCHESTRATION & COVERAGE ---
 
