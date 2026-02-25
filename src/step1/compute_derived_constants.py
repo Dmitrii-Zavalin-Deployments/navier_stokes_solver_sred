@@ -24,14 +24,10 @@ def compute_derived_constants(
     # 2. Temporal Step
     dt = float(simulation_parameters["time_step"])
     
-    # 3. Spatial Steps
-    dx = float(grid_config["dx"])
-    dy = float(grid_config["dy"])
-    dz = float(grid_config["dz"])
 
     # 4. Constitutional Integrity Check: Non-Physical Value Prevention
     # Ensures we don't pass '0.0' or negative values into physics kernels.
-    for label, val in zip(["rho", "dt", "dx", "dy", "dz"], [rho, dt, dx, dy, dz]):
+    for label, val in zip(["rho", "dt"], [rho, dt]):
         if val <= 0:
             raise ValueError(f"Non-physical constant detected: {label} = {val}. Must be > 0.")
     
@@ -42,7 +38,4 @@ def compute_derived_constants(
         "rho": rho,
         "mu": mu,
         "dt": dt,
-        "dx": dx,
-        "dy": dy,
-        "dz": dz,
     }
