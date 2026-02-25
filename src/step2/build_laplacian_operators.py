@@ -77,7 +77,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                 
                 # Y-Neighbors
                 for nj in [j - 1, j + 1]:
-                    if 0 <= nj < ny and is_fluid[i, nj, k]:
+                    if 0 <= nj < ny and is_fluid[get_idx(i, nj, k)]:
                         rows.append(curr)
                         cols.append(get_idx(i, nj, k))
                         data.append(1.0 / dy2)
@@ -85,7 +85,7 @@ def build_laplacian_operators(state: SolverState) -> None:
 
                 # Z-Neighbors
                 for nk in [k - 1, k + 1]:
-                    if 0 <= nk < nz and is_fluid[i, j, nk]:
+                    if 0 <= nk < nz and is_fluid[get_idx(i, j, nk)]:
                         rows.append(curr)
                         cols.append(get_idx(i, j, nk))
                         data.append(1.0 / dz2)
