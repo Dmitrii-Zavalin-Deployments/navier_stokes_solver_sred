@@ -48,7 +48,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                 curr = get_idx(i, j, k)
                 
                 # 1. Solid cell handling: Keep matrix non-singular
-                if not is_fluid_3d[curr]:
+                if not is_fluid_3d[i, j, k]:
                     rows.append(curr)
                     cols.append(curr)
                     data.append(1.0)
@@ -73,7 +73,7 @@ def build_laplacian_operators(state: SolverState) -> None:
 
                 # X-Neighbors
                 for ni in [i - 1, i + 1]:
-                    if 0 <= ni < nx and is_fluid_3d[get_idx(ni, j, k)]:
+                    if 0 <= ni < nx and is_fluid_3d[ni, j, k]:
                         rows.append(curr)
                         cols.append(get_idx(ni, j, k))
                         data.append(1.0 / dx2)
@@ -81,7 +81,7 @@ def build_laplacian_operators(state: SolverState) -> None:
                 
                 # Y-Neighbors
                 for nj in [j - 1, j + 1]:
-                    if 0 <= nj < ny and is_fluid_3d[get_idx(i, nj, k)]:
+                    if 0 <= nj < ny and is_fluid_3d[i, nj, k]:
                         rows.append(curr)
                         cols.append(get_idx(i, nj, k))
                         data.append(1.0 / dy2)
@@ -89,7 +89,7 @@ def build_laplacian_operators(state: SolverState) -> None:
 
                 # Z-Neighbors
                 for nk in [k - 1, k + 1]:
-                    if 0 <= nk < nz and is_fluid_3d[get_idx(i, j, nk)]:
+                    if 0 <= nk < nz and is_fluid_3d[i, j, nk]:
                         rows.append(curr)
                         cols.append(get_idx(i, j, nk))
                         data.append(1.0 / dz2)
