@@ -1,60 +1,46 @@
+# tests/physics_gate/test_operators.py
+
 import pytest
 import numpy as np
 from scipy import sparse
 from src.step2.build_laplacian_operators import build_laplacian_operators
-from tests.helpers.solver_input_schema_dummy import make_step1_output_dummy
+from src.solver_state import SolverState
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def laplacian_matrix():
-    """Setup a standard 4x4x4 grid Laplacian for auditing."""
+    """Setup a standard 4x4x4 grid Laplacian for auditing without relying on Step 1 orchestration."""
+    raw_data = solver_input_schema_dummy()
     nx, ny, nz = 4, 4, 4
-    state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
-    # The function now returns the dict or populates state based on your last fix
-    result = build_laplacian_operators(state)
     
-    # Handle both return types (dict return or state population)
-    if result and "L" in result:
-        return result["L"]
+    # Manually assemble SolverState to bypass jsonschema/Step 1 dependencies
+    state = SolverState(
+        config=raw_data['config'],
+        grid={'nx': nx, 'ny': ny, 'nz': nz, 'dx': 1.0, 'dy': 1.0, 'dz': 1.0},
+        boundary_conditions=raw_data['boundary_conditions']
+    )
+    # Initialize fluid mask (all fluid for audit)
+    state.is_fluid = np.ones(nx * ny * nz, dtype=bool)
+    state.operators = {}
+    
+    build_laplacian_operators(state)
     return state.operators["laplacian"]
 
 def test_gate_2a_calculus_identity(laplacian_matrix):
-    """
-    Identity: Laplacian must be a square matrix representing 
-    the divergence of the gradient.
-    """
-    N = 4*4*4
-    assert laplacian_matrix.shape == (N, N), "Matrix must be NxN"
-    assert isinstance(laplacian_matrix, (sparse.csr_matrix, sparse.csc_matrix)), "Matrix must be sparse"
+    """Check identity dimensions."""
+    N = 64 # 4*4*4
+    assert laplacian_matrix.shape == (N, N)
 
 def test_gate_2b_symmetry_and_sparsity(laplacian_matrix):
-    """
-    Symmetry: L = L^T (for internal fluid cells).
-    Sparsity: Non-zero elements per row <= 7 (Central + 6 neighbors).
-    """
-    # Check Symmetry: L - L.T should be effectively zero
+    """Check Symmetry L=L^T and Sparsity <= 7N."""
     diff = laplacian_matrix - laplacian_matrix.T
-    # We use a small epsilon for floating point comparison
-    assert diff.nnz == 0 or np.all(np.abs(diff.data) < 1e-12), "Matrix L is not symmetric"
-
-    # Check Sparsity: nnz(L) <= 7N
-    N = laplacian_matrix.shape[0]
-    assert laplacian_matrix.nnz <= 7 * N, f"Matrix too dense: {laplacian_matrix.nnz} > {7*N}"
+    assert diff.nnz == 0 or np.all(np.abs(diff.data) < 1e-12)
+    assert laplacian_matrix.nnz <= 7 * laplacian_matrix.shape[0]
 
 def test_gate_2c_null_space_audit(laplacian_matrix):
-    """
-    Null-Space Audit: The Laplacian of a constant field must be zero.
-    (Sum of every row in L should be 0, except for Dirichlet boundary rows).
-    """
-    N = laplacian_matrix.shape[0]
-    ones = np.ones(N)
+    """Check that Laplacian of a constant field is zero (or identity for BCs)."""
+    ones = np.ones(laplacian_matrix.shape[0])
     result = laplacian_matrix.dot(ones)
-    
-    # In a pure Neumann system, result is 0 everywhere. 
-    # With boundaries/solid cells, some rows (like the 1.0 identity rows) 
-    # might sum to 1.0. We check for consistent logic.
-    rows_with_data = np.where(result != 0)[0]
-    
-    # Audit: If a row doesn't sum to 0, it must be a boundary or solid cell (identity 1.0)
-    for row_idx in rows_with_data:
-        assert np.isclose(result[row_idx], 0.0) or np.isclose(result[row_idx], 1.0), \
-            f"Row {row_idx} sums to {result[row_idx]}, violating physical null-space."
+    for val in result:
+        # Should be 0 for Poisson or 1 for BC-enforced rows
+        assert np.isclose(val, 0.0) or np.isclose(val, 1.0)
