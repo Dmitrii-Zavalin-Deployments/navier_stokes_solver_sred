@@ -18,7 +18,7 @@ def build_divergence_operator(state: SolverState) -> None:
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     # Scale Guard: Pull from grid dict
     dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
-    is_fluid = state.is_fluid 
+    is_fluid = np.array(state.is_fluid) 
     
     num_cells = nx * ny * nz
     

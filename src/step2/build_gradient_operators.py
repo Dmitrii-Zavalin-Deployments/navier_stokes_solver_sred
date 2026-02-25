@@ -17,7 +17,7 @@ def build_gradient_operators(state: SolverState) -> None:
         raise RuntimeError("Topology Error: No fluid cells detected for Gradient operators.")
     nx, ny, nz = grid['nx'], grid['ny'], grid['nz']
     dx, dy, dz = grid['dx'], grid['dy'], grid['dz']
-    is_fluid = state.is_fluid
+    is_fluid = np.array(state.is_fluid)
     
     num_cells = nx * ny * nz
     num_u = (nx + 1) * ny * nz

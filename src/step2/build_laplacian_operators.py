@@ -20,7 +20,7 @@ def build_laplacian_operators(state: SolverState) -> None:
     dx2 = grid['dx']**2
     dy2 = grid['dy']**2
     dz2 = grid['dz']**2
-    is_fluid = state.is_fluid
+    is_fluid = np.array(state.is_fluid)
     
     # FIX: Default to empty dict if boundary_conditions is None to prevent AttributeError
     bc_table = state.boundary_conditions if state.boundary_conditions is not None else {}
