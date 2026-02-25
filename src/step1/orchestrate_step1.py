@@ -70,7 +70,7 @@ def orchestrate_step1(
 
     # 5. Numerical Constants (Mathematical Translator)
     constants = compute_derived_constants(
-        grid, 
+         
         json_input["fluid_properties"], 
         json_input["simulation_parameters"]
     )
