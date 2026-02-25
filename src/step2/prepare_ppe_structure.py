@@ -11,7 +11,7 @@ def prepare_ppe_structure(state: SolverState) -> None:
     """
     # 1. Physics
     rho = state.constants['rho']
-    dt = state.config['dt']
+    dt = state.constants['dt']
     
     if dt <= 0:
         raise ValueError(f"Invalid time step (dt={dt}). Must be positive.")

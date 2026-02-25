@@ -64,6 +64,12 @@ def test_step1_alignment_logic_to_frozen_truth():
     assert result_state.constants["rho"] == input_data["fluid_properties"]["density"]
     assert result_state.constants["mu"] == input_data["fluid_properties"]["viscosity"]
 
+    # --- AUDIT E: CONSTANT PROPAGATION ---
+    # Verify that fluid properties and time steps are accurately translated
+    assert result_state.constants["dt"] == input_data["simulation_parameters"]["time_step"]
+    assert result_state.constants["rho"] == input_data["fluid_properties"]["density"]
+    assert result_state.constants["mu"] == input_data["fluid_properties"]["viscosity"]
+
 def test_step1_sensitivity_firewall():
     """
     Sensitivity Gate 1.F: Completeness and Constraints.
