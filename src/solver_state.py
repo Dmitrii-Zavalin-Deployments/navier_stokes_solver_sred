@@ -600,6 +600,22 @@ class SolverState:
         """Alias to match the legacy adapter's expected naming."""
         return self.diagnostics
 
+    ### 4. Legacy Compatibility Layer (The Dictionary Return)
+    # For your legacy adapter, Step 4 ensures that even if the code is 
+    # using old-style dictionaries, it receives:
+    # * Updated dict keys: P_ext, U_ext, V_ext, W_ext.
+    # * Metadata: step4_diagnostics and the readiness status.
+    def to_legacy_dict(self) -> Dict[str, Any]:
+        """Returns a flat dictionary for older Step 4 orchestrators."""
+        return {
+            "U_ext": self.U_ext,
+            "V_ext": self.V_ext,
+            "W_ext": self.W_ext,
+            "P_ext": self.P_ext,
+            "step4_diagnostics": self.step4_diagnostics,
+            "ready_for_time_loop": self.ready_for_time_loop
+        }
+
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
     # ---------------------------------------------------------
