@@ -413,6 +413,16 @@ class SimulationHistory(ValidatedContainer):
     ### 4. The Time-Series Record
     This is the "Log Book" that grows every time Step 3 runs. 
     It is a series of lists tracking simulation evolution.
+
+    ## 3. Time-Series Record (`state.history`)
+
+    This is the "Black Box Flight Recorder." Instead of just having the final state, 
+    this structure contains the evolution of the simulation.
+
+    * **state.history.times**: A list[float] of every time-step timestamp.
+    * **state.history.divergence_norms**: A list[float] tracking mass conservation error.
+    * **state.history.max_velocity_history**: A list[float] used to detect "blowing up."
+    * **state.history.energy_history**: A list[float] tracking kinetic energy.
     """
     _times: list = field(default_factory=list)
     _divergence_norms: list = field(default_factory=list)
