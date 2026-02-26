@@ -49,11 +49,32 @@ class ValidatedContainer:
 # =========================================================
 
 @dataclass
-class SolverConfig:
-    """Step 0: Global instructions."""
+class SolverConfig(ValidatedContainer): # Added Guard for safety
+    """Step 0: Global instructions & Numerical Tuning."""
     case_name: str = "default_case"
     method: str = "jacobi"
     precision: str = "float64"
+    
+    # --- Slots for config.json data ---
+    # We initialize as None so the Guard knows they MUST be loaded
+    _ppe_tolerance: float = None
+    _ppe_atol: float = None
+    _ppe_max_iter: int = None
+
+    @property
+    def ppe_tolerance(self) -> float: return self._get_safe("ppe_tolerance")
+    @ppe_tolerance.setter
+    def ppe_tolerance(self, v: float): self._set_safe("ppe_tolerance", v, float)
+
+    @property
+    def ppe_atol(self) -> float: return self._get_safe("ppe_atol")
+    @ppe_atol.setter
+    def ppe_atol(self, v: float): self._set_safe("ppe_atol", v, float)
+
+    @property
+    def ppe_max_iter(self) -> int: return self._get_safe("ppe_max_iter")
+    @ppe_max_iter.setter
+    def ppe_max_iter(self, v: int): self._set_safe("ppe_max_iter", v, int)
 
 @dataclass
 class GridContext(ValidatedContainer):
