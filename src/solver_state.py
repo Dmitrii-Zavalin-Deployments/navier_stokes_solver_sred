@@ -504,7 +504,7 @@ class Diagnostics(ValidatedContainer):
 class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
-    This version is strictly mapped to Step 1 & Step 2 Category 1.
+    This version is strictly mapped to Step 1 through Step 4.
     """
 
     # --- 1. Hardened Safe Objects ---
@@ -521,22 +521,24 @@ class SolverState:
     diagnostics: Diagnostics = field(default_factory=Diagnostics)
 
     # --- 2. Orchestrator-Driven Containers ---
-    # These hold the dictionaries and tables returned by Step 1 logic
     constants: Dict[str, Any] = field(default_factory=dict)
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
 
     # --- 3. Global Simulation State ---
     iteration: int = 0
     time: float = 0.0
-    # Logic Gate for Step 2:
+
+    ### 3. Loop Readiness Flag
+    # This is a critical boolean gate.
+    # ready_for_time_loop: A True/False toggle. It prevents the simulation 
+    # from starting if any previous step (1 through 4) failed to initialize 
+    # its data. It is the "Green Light" for the engine.
     ready_for_time_loop: bool = False
 
     # ---------------------------------------------------------
     # Attribute Interface (Facade)
     # ---------------------------------------------------------
-    # These properties allow the math engine to access data 
-    # without worrying about the underlying container structure.
-
+    
     @property
     def pressure(self) -> np.ndarray:
         return self.fields.P
@@ -555,35 +557,39 @@ class SolverState:
 
     @property
     def is_fluid(self) -> np.ndarray:
-        """Shortcut to the logical fluid mask."""
         return self.masks.is_fluid
+
+    # Shortcuts for Step 4 Extended Fields
+    @property
+    def U_ext(self) -> np.ndarray: return self.fields.U_ext
+    
+    @property
+    def V_ext(self) -> np.ndarray: return self.fields.V_ext
+    
+    @property
+    def W_ext(self) -> np.ndarray: return self.fields.W_ext
+    
+    @property
+    def P_ext(self) -> np.ndarray: return self.fields.P_ext
 
     @property
     def dt(self) -> float:
-        """Safe access to the time-step from the constants dict."""
         val = self.constants.get("dt")
         if val is None:
-            raise RuntimeError(
-                "Access Error: 'dt' not found in constants. "
-                "Check compute_derived_constants."
-            )
+            raise RuntimeError("Access Error: 'dt' not found. Check compute_time_step.")
         return val
 
     # --- Step 2 Numerical Shortcuts ---
-    
     @property
     def inv_dx(self) -> float:
-        """Returns pre-calculated 1/dx or calculates on the fly."""
         return self.constants.get("inv_dx", 1.0 / self.grid.dx)
 
     @property
     def inv_dy(self) -> float:
-        """Returns pre-calculated 1/dy or calculates on the fly."""
         return self.constants.get("inv_dy", 1.0 / self.grid.dy)
 
     @property
     def inv_dz(self) -> float:
-        """Returns pre-calculated 1/dz or calculates on the fly."""
         return self.constants.get("inv_dz", 1.0 / self.grid.dz)
 
     # ---------------------------------------------------------
