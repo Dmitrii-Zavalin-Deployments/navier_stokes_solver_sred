@@ -207,6 +207,38 @@ class FluidProperties(ValidatedContainer):
     @mu.setter
     def mu(self, val: float): self._set_safe("mu", val, float)
 
+@dataclass
+class OperatorStorage(ValidatedContainer):
+    """Step 2c: The Sparse Matrix Engine (Calculus Operators)."""
+    _divergence: Any = None
+    _grad_x: Any = None; _grad_y: Any = None; _grad_z: Any = None
+    _laplacian: Any = None
+
+    @property
+    def divergence(self) -> Any: return self._get_safe("divergence")
+    @divergence.setter
+    def divergence(self, v: Any): setattr(self, "_divergence", v)
+
+    @property
+    def grad_x(self) -> Any: return self._get_safe("grad_x")
+    @grad_x.setter
+    def grad_x(self, v: Any): setattr(self, "_grad_x", v)
+
+    @property
+    def grad_y(self) -> Any: return self._get_safe("grad_y")
+    @grad_y.setter
+    def grad_y(self, v: Any): setattr(self, "_grad_y", v)
+
+    @property
+    def grad_z(self) -> Any: return self._get_safe("grad_z")
+    @grad_z.setter
+    def grad_z(self, v: Any): setattr(self, "_grad_z", v)
+
+    @property
+    def laplacian(self) -> Any: return self._get_safe("laplacian")
+    @laplacian.setter
+    def laplacian(self, v: Any): setattr(self, "_laplacian", v)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -224,6 +256,7 @@ class SolverState:
     fields: FieldData = field(default_factory=FieldData)
     masks: MaskData = field(default_factory=MaskData)
     fluid: FluidProperties = field(default_factory=FluidProperties)
+    operators: OperatorStorage = field(default_factory=OperatorStorage)
 
     # --- 2. Orchestrator-Driven Containers ---
     # These hold the dictionaries and tables returned by Step 1 logic
