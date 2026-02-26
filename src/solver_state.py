@@ -143,29 +143,52 @@ class GridContext(ValidatedContainer):
 
 @dataclass
 class FieldData(ValidatedContainer):
-    """Step 1b: The Memory Map. Staggered arrays."""
+    """
+    Step 1b & 3: The Memory Map. 
+    Contains the primary outputs of the Navier-Stokes calculation.
+    """
     _P: np.ndarray = None; _U: np.ndarray = None
     _V: np.ndarray = None; _W: np.ndarray = None
 
     @property
-    def P(self) -> np.ndarray: return self._get_safe("P")
+    def P(self) -> np.ndarray: 
+        """The new pressure field required to keep the fluid incompressible."""
+        return self._get_safe("P")
     @P.setter
     def P(self, val: np.ndarray): self._set_safe("P", val, np.ndarray)
 
     @property
-    def U(self) -> np.ndarray: return self._get_safe("U")
+    def U(self) -> np.ndarray: 
+        """Corrected X-velocity at the new time level (n+1)."""
+        return self._get_safe("U")
     @U.setter
     def U(self, val: np.ndarray): self._set_safe("U", val, np.ndarray)
 
     @property
-    def V(self) -> np.ndarray: return self._get_safe("V")
+    def V(self) -> np.ndarray: 
+        """Corrected Y-velocity at the new time level (n+1)."""
+        return self._get_safe("V")
     @V.setter
     def V(self, val: np.ndarray): self._set_safe("V", val, np.ndarray)
 
     @property
-    def W(self) -> np.ndarray: return self._get_safe("W")
+    def W(self) -> np.ndarray: 
+        """Corrected Z-velocity at the new time level (n+1)."""
+        return self._get_safe("W")
     @W.setter
     def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
+
+    def __setitem__(self, key: str, value: np.ndarray):
+        """
+        Step 3 Support: Allows dictionary-style assignment used in orchestrate_step3.
+        Example: state.fields["U"] = fields_post["U"]
+        """
+        key_map = {"U": "U", "V": "V", "W": "W", "P": "P"}
+        target = key_map.get(key.upper())
+        if target:
+            setattr(self, target, value) # This triggers the @property setter validation
+        else:
+            raise KeyError(f"Field '{key}' is not a valid physical field (U, V, W, P).")
 
 @dataclass
 class MaskData(ValidatedContainer):
@@ -257,17 +280,30 @@ class AdvectionStructure(ValidatedContainer):
 
 @dataclass
 class PPEContext(ValidatedContainer):
-    """Step 2d: Pressure Poisson Equation System."""
+    """
+    Step 2d & 3: Pressure Poisson Equation System.
+    These remain 'Hot' in memory to avoid costly re-assembly during Step 3.
+    """
     _A: Any = None
     _preconditioner: Any = None
 
     @property
-    def A(self) -> Any: return self._get_safe("A")
+    def A(self) -> Any: 
+        """
+        The system matrix (LHS). Usually a large, sparse Laplacian-based 
+        matrix representing the linear equations for pressure.
+        """
+        return self._get_safe("A")
     @A.setter
     def A(self, v: Any): self._set_safe("A", v, object)
 
     @property
-    def preconditioner(self) -> Any: return self._get_safe("preconditioner")
+    def preconditioner(self) -> Any: 
+        """
+        The mathematical 'shortcut' (e.g., Jacobi, ILU) used to 
+        accelerate the convergence of the Pressure solver.
+        """
+        return self._get_safe("preconditioner")
     @preconditioner.setter
     def preconditioner(self, v: Any): self._set_safe("preconditioner", v, object)
 
