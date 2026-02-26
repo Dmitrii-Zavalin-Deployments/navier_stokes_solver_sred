@@ -239,6 +239,38 @@ class OperatorStorage(ValidatedContainer):
     @laplacian.setter
     def laplacian(self, v: Any): setattr(self, "_laplacian", v)
 
+@dataclass
+class AdvectionStructure(ValidatedContainer):
+    """Step 2b: Momentum Transport Stencils."""
+    _weights: Any = None
+    _indices: Any = None
+
+    @property
+    def weights(self) -> Any: return self._get_safe("weights")
+    @weights.setter
+    def weights(self, v: Any): self._set_safe("weights", v, (np.ndarray, object))
+
+    @property
+    def indices(self) -> Any: return self._get_safe("indices")
+    @indices.setter
+    def indices(self, v: Any): self._set_safe("indices", v, (np.ndarray, object))
+
+@dataclass
+class PPEContext(ValidatedContainer):
+    """Step 2d: Pressure Poisson Equation System."""
+    _A: Any = None
+    _preconditioner: Any = None
+
+    @property
+    def A(self) -> Any: return self._get_safe("A")
+    @A.setter
+    def A(self, v: Any): self._set_safe("A", v, object)
+
+    @property
+    def preconditioner(self) -> Any: return self._get_safe("preconditioner")
+    @preconditioner.setter
+    def preconditioner(self, v: Any): self._set_safe("preconditioner", v, object)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -257,6 +289,8 @@ class SolverState:
     masks: MaskData = field(default_factory=MaskData)
     fluid: FluidProperties = field(default_factory=FluidProperties)
     operators: OperatorStorage = field(default_factory=OperatorStorage)
+    advection: AdvectionStructure = field(default_factory=AdvectionStructure)
+    ppe: PPEContext = field(default_factory=PPEContext)
 
     # --- 2. Orchestrator-Driven Containers ---
     # These hold the dictionaries and tables returned by Step 1 logic
