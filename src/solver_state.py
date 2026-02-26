@@ -9,6 +9,9 @@ class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
     Updated Feb 2026: Implements Canonical Facades for Zero-Shadowing.
+    
+    This object acts as the 'Single Source of Truth' for the simulation.
+    Properties provide a mathematical facade over departmentalized data.
     """
 
     # ---------------------------------------------------------
@@ -24,16 +27,18 @@ class SolverState:
     grid: Dict[str, Any] = field(default_factory=dict)            
     fields: Dict[str, np.ndarray] = field(default_factory=dict)   
     
+    # Spatial Masks (Initialized as None to avoid type-mismatch in initial JSON)
     mask: Optional[np.ndarray] = None                             
     is_fluid: Optional[np.ndarray] = None
     is_boundary_cell: Optional[np.ndarray] = None
     is_solid: Optional[np.ndarray] = None
     
-    # Physics & Environment
+    # Physics & Environment (Primary homes for data)
     constants: Dict[str, Any] = field(default_factory=dict)       
     fluid_properties: Dict[str, Any] = field(default_factory=dict) 
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
     
+    # Global health tracking
     health: Dict[str, Any] = field(default_factory=dict)          
 
     # ---------------------------------------------------------
@@ -41,6 +46,7 @@ class SolverState:
     # ---------------------------------------------------------
     operators: Dict[str, Any] = field(default_factory=dict)       
     ppe: Dict[str, Any] = field(default_factory=dict)             
+
     intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
     step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
 
@@ -68,19 +74,31 @@ class SolverState:
     # Zero-Debt Property Facades (The Single Source of Truth)
     # ---------------------------------------------------------
     @property
-    def dt(self) -> float:
+    def dt(self) -> Optional[float]:
         """Fetch dt from simulation_parameters (Article 5)."""
         return self.simulation_parameters.get("time_step")
 
     @property
-    def rho(self) -> float:
+    def rho(self) -> Optional[float]:
         """Fetch density from fluid_properties."""
         return self.fluid_properties.get("density")
 
     @property
-    def mu(self) -> float:
+    def mu(self) -> Optional[float]:
         """Fetch viscosity from fluid_properties."""
         return self.fluid_properties.get("viscosity")
+
+    @property
+    def nu(self) -> float:
+        """
+        Calculated kinematic viscosity (mu / rho).
+        Enforces physical consistency without data duplication.
+        """
+        rho = self.rho
+        mu = self.mu
+        if rho and mu and rho != 0:
+            return mu / rho
+        return 0.0
 
     @property
     def g(self) -> float:
@@ -88,7 +106,7 @@ class SolverState:
         return self.constants.get("g", 9.81)
 
     # ---------------------------------------------------------
-    # Field Accessors
+    # Field Accessors (Readability shortcuts for math)
     # ---------------------------------------------------------
     @property
     def pressure(self) -> Optional[np.ndarray]:
@@ -110,7 +128,10 @@ class SolverState:
     # Serialization (Scale Guard Compliant)
     # ---------------------------------------------------------
     def to_json_safe(self) -> Dict[str, Any]:
-        """Enforces Phase C, Article 7 (Anti-Density Rule)."""
+        """
+        Convert state to JSON-safe dict. 
+        Enforces Phase C, Article 7 (Anti-Density Rule).
+        """
         try:
             from scipy.sparse import issparse
         except ImportError:
@@ -118,7 +139,11 @@ class SolverState:
 
         def convert(value):
             if issparse(value):
-                return {"type": str(value.format), "shape": list(value.shape), "nnz": int(value.nnz)}
+                return {
+                    "type": str(value.format),
+                    "shape": list(value.shape),
+                    "nnz": int(value.nnz)
+                }
             if isinstance(value, np.ndarray):
                 return value.tolist()
             if isinstance(value, dict):
@@ -129,6 +154,8 @@ class SolverState:
                 return None
             if hasattr(value, "item") and not isinstance(value, (list, dict, np.ndarray)):
                 return value.item()
+            if value is None:
+                return None
             return value
 
         return {key: convert(value) for key, value in self.__dict__.items()}
