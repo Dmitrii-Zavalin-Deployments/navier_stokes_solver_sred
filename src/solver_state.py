@@ -450,6 +450,52 @@ class SimulationHistory(ValidatedContainer):
             return mapping[key]
         raise KeyError(f"History key '{key}' not found.")
 
+@dataclass
+class Diagnostics(ValidatedContainer):
+    """
+    ### 2. Step 4 Diagnostics
+    Final "Health Check" summary before the time-loop begins.
+    
+    Implementation Note: We populate these using Arithmetic rather than System Calls 
+    to ensure compatibility with restricted environments like GitHub Actions.
+    """
+    _memory_footprint_gb: float = None
+    _bc_verification_passed: bool = None
+    _initial_cfl_dt: float = None
+
+    @property
+    def memory_footprint_gb(self) -> float: 
+        """
+        Total RAM usage of the extended arrays in GB.
+        Calculated as: (Total Voxels * 8 bytes per float64 * Num Fields) / 1e9.
+        """
+        return self._get_safe("memory_footprint_gb")
+    @memory_footprint_gb.setter
+    def memory_footprint_gb(self, v: float): self._set_safe("memory_footprint_gb", v, float)
+
+    @property
+    def bc_verification_passed(self) -> bool: 
+        """Confirms ghost cells were correctly populated by Step 4."""
+        return self._get_safe("bc_verification_passed")
+    @bc_verification_passed.setter
+    def bc_verification_passed(self, v: bool): self._set_safe("bc_verification_passed", v, bool)
+
+    @property
+    def initial_cfl_dt(self) -> float: 
+        """Maximum allowable time-step based on initial conditions."""
+        return self._get_safe("initial_cfl_dt")
+    @initial_cfl_dt.setter
+    def initial_cfl_dt(self, v: float): self._set_safe("initial_cfl_dt", v, float)
+
+    def __getitem__(self, key: str) -> Any:
+        """Step 4 Support: Allows dict-style access for the legacy adapter."""
+        mapping = {
+            "memory_footprint": self.memory_footprint_gb,
+            "bc_verification": self.bc_verification_passed,
+            "cfl_limit": self.initial_cfl_dt
+        }
+        return mapping.get(key)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -472,6 +518,7 @@ class SolverState:
     ppe: PPEContext = field(default_factory=PPEContext)
     health: SimulationHealth = field(default_factory=SimulationHealth)
     history: SimulationHistory = field(default_factory=SimulationHistory)
+    diagnostics: Diagnostics = field(default_factory=Diagnostics)
 
     # --- 2. Orchestrator-Driven Containers ---
     # These hold the dictionaries and tables returned by Step 1 logic
@@ -538,6 +585,14 @@ class SolverState:
     def inv_dz(self) -> float:
         """Returns pre-calculated 1/dz or calculates on the fly."""
         return self.constants.get("inv_dz", 1.0 / self.grid.dz)
+
+    # ---------------------------------------------------------
+    # Legacy Facade for Step 4
+    # ---------------------------------------------------------
+    @property
+    def step4_diagnostics(self) -> Diagnostics:
+        """Alias to match the legacy adapter's expected naming."""
+        return self.diagnostics
 
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
