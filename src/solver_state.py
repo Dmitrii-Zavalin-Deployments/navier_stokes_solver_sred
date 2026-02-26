@@ -144,51 +144,84 @@ class GridContext(ValidatedContainer):
 @dataclass
 class FieldData(ValidatedContainer):
     """
-    Step 1b & 3: The Memory Map. 
-    Contains the primary outputs of the Navier-Stokes calculation.
+    Step 1, 3 & 4: The Memory Map. 
+    Contains both the core physical fields and the extended boundary workhorses.
     """
+    # --- Core Fields (Step 1 & 3) ---
     _P: np.ndarray = None; _U: np.ndarray = None
     _V: np.ndarray = None; _W: np.ndarray = None
 
+    # --- Extended Fields (Step 4) ---
+    _P_ext: np.ndarray = None; _U_ext: np.ndarray = None
+    _V_ext: np.ndarray = None; _W_ext: np.ndarray = None
+
+    # --- Core Properties ---
     @property
-    def P(self) -> np.ndarray: 
-        """The new pressure field required to keep the fluid incompressible."""
-        return self._get_safe("P")
+    def P(self) -> np.ndarray: return self._get_safe("P")
     @P.setter
     def P(self, val: np.ndarray): self._set_safe("P", val, np.ndarray)
 
     @property
-    def U(self) -> np.ndarray: 
-        """Corrected X-velocity at the new time level (n+1)."""
-        return self._get_safe("U")
+    def U(self) -> np.ndarray: return self._get_safe("U")
     @U.setter
     def U(self, val: np.ndarray): self._set_safe("U", val, np.ndarray)
 
     @property
-    def V(self) -> np.ndarray: 
-        """Corrected Y-velocity at the new time level (n+1)."""
-        return self._get_safe("V")
+    def V(self) -> np.ndarray: return self._get_safe("V")
     @V.setter
     def V(self, val: np.ndarray): self._set_safe("V", val, np.ndarray)
 
     @property
-    def W(self) -> np.ndarray: 
-        """Corrected Z-velocity at the new time level (n+1)."""
-        return self._get_safe("W")
+    def W(self) -> np.ndarray: return self._get_safe("W")
     @W.setter
     def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
 
+    # --- Extended Properties (The Step 4 "Workhorses") ---
+    @property
+    def P_ext(self) -> np.ndarray: 
+        """Pressure with ghost cells for Neumann BC enforcement."""
+        return self._get_safe("P_ext")
+    @P_ext.setter
+    def P_ext(self, val: np.ndarray): self._set_safe("P_ext", val, np.ndarray)
+
+    @property
+    def U_ext(self) -> np.ndarray: 
+        """U-velocity with ghost cells for stencil safety."""
+        return self._get_safe("U_ext")
+    @U_ext.setter
+    def U_ext(self, val: np.ndarray): self._set_safe("U_ext", val, np.ndarray)
+
+    @property
+    def V_ext(self) -> np.ndarray: 
+        """V-velocity with ghost cells for stencil safety."""
+        return self._get_safe("V_ext")
+    @V_ext.setter
+    def V_ext(self, val: np.ndarray): self._set_safe("V_ext", val, np.ndarray)
+
+    @property
+    def W_ext(self) -> np.ndarray: 
+        """W-velocity with ghost cells for stencil safety."""
+        return self._get_safe("W_ext")
+    @W_ext.setter
+    def W_ext(self, val: np.ndarray): self._set_safe("W_ext", val, np.ndarray)
+
     def __setitem__(self, key: str, value: np.ndarray):
         """
-        Step 3 Support: Allows dictionary-style assignment used in orchestrate_step3.
-        Example: state.fields["U"] = fields_post["U"]
+        Step 3 & 4 Support: Handles both core and extended assignments.
+        Example: state.fields["U_ext"] = padded_array
         """
-        key_map = {"U": "U", "V": "V", "W": "W", "P": "P"}
-        target = key_map.get(key.upper())
+        key_upper = key.upper()
+        # Direct mapping for both standard and extended fields
+        mapping = {
+            "U": "U", "V": "V", "W": "W", "P": "P",
+            "U_EXT": "U_ext", "V_EXT": "V_ext", "W_EXT": "W_ext", "P_EXT": "P_ext"
+        }
+        
+        target = mapping.get(key_upper)
         if target:
-            setattr(self, target, value) # This triggers the @property setter validation
+            setattr(self, target, value)
         else:
-            raise KeyError(f"Field '{key}' is not a valid physical field (U, V, W, P).")
+            raise KeyError(f"Field '{key}' is not a recognized core or extended field.")
 
 @dataclass
 class MaskData(ValidatedContainer):
