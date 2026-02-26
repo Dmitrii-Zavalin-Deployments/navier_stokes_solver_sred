@@ -66,7 +66,7 @@ def orchestrate_step1(
     # 4. Mask & Boundary Processing (Topology Interpreter)
     # Refined to receive the derived logical masks directly
     mask, is_fluid, is_boundary_cell = map_geometry_mask(json_input["mask"], grid_params)
-    bc_table = parse_boundary_conditions(json_input["boundary_conditions"])
+    bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
 
     # 5. Numerical Constants (Mathematical Translator)
     constants = compute_derived_constants(

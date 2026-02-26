@@ -9,7 +9,7 @@ _VALID_TYPES = {"no-slip", "free-slip", "inflow", "outflow", "pressure"}
 
 def parse_boundary_conditions(
     bc_list: List[Dict[str, Any]],
-    
+    grid_config: Dict[str, Any],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Translates JSON boundary definitions into a structured internal lookup table.

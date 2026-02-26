@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Dict, Any
 
 def compute_derived_constants(
-    
+    grid_config: Dict[str, Any],
     fluid_properties: Dict[str, Any],
     simulation_parameters: Dict[str, Any],
 ) -> Dict[str, Any]:
