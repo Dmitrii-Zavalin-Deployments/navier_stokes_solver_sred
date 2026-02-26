@@ -178,6 +178,7 @@ class SolverState:
     # ---------------------------------------------------------
     grid: GridContext = field(default_factory=GridContext)
     fields: FieldData = field(default_factory=FieldData)
+    fluid: FluidProperties = field(default_factory=FluidProperties)
     
     # ---------------------------------------------------------
     # Remaining Architecture (Commented out until solidification)
