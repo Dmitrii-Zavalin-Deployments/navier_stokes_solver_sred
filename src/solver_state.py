@@ -1,7 +1,7 @@
 # src/solver_state.py
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List
 import numpy as np
 
 # =========================================================
