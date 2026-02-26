@@ -1,32 +1,84 @@
 # src/solver_state.py
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List, Union
 import numpy as np
+
+# =========================================================
+# THE DEPARTMENT SAFES (Support Classes)
+# =========================================================
+
+@dataclass
+class SolverConfig:
+    """Step 0: Global instructions that change between runs."""
+    case_name: str = "default_case"
+    method: str = "jacobi"  # jacobi, cg, or direct
+    precision: str = "float64" # float64 for science, float32 for speed
+
+@dataclass
+class GridContext:
+    """
+    Step 1: The Spatial World. 
+    Mandatory parameters mapped directly from the 3D model.
+    Defaults set to None to force a 'Loud Error' if not populated.
+    """
+    nx: int = None
+    ny: int = None
+    nz: int = None
+    
+    x_min: float = None
+    x_max: float = None
+    y_min: float = None
+    y_max: float = None
+    z_min: float = None
+    z_max: float = None
+
+    @property
+    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
+    @property
+    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
+    @property
+    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
+    
+    @property
+    def total_cells(self) -> int: return self.nx * self.ny * self.nz
+
+@dataclass
+class FieldData:
+    """
+    Step 1: The Memory Map.
+    Initialized as None to force explicit allocation.
+    Removed Optional to stay consistent with the 'Empty Safe' design.
+    """
+    P: np.ndarray = None
+    U: np.ndarray = None
+    V: np.ndarray = None
+    W: np.ndarray = None
+
+    def is_allocated(self) -> bool:
+        """Check if all primary fields have been created."""
+        return all(f is not None for f in [self.P, self.U, self.V, self.W])
+
+# =========================================================
+# THE UNIVERSAL CONTAINER (The Constitution)
+# =========================================================
 
 @dataclass
 class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
-    
-    This object is the 'Living Container' for the Navier-Stokes simulation.
-    It follows the Incremental Constructor pattern:
-    - Initialized empty to ensure total traceability.
-    - Data is populated step-by-step (Phase B, Article 5).
-    - No aliases; data exists in exactly one department (fields).
-    - Attribute properties provide a facade for mathematical readability.
     """
 
     # ---------------------------------------------------------
     # Step 0: Input / configuration
     # ---------------------------------------------------------
-    config: Dict[str, Any] = field(default_factory=dict)
+    config: SolverConfig = field(default_factory=SolverConfig)
 
     # ---------------------------------------------------------
-    # Step 1: Grid, fields, mask, constants, BCs, Fluid Physics
+    # Step 1: Grid & Fields (Solidified Safes)
     # ---------------------------------------------------------
-    grid: Dict[str, Any] = field(default_factory=dict)            
-    fields: Dict[str, np.ndarray] = field(default_factory=dict)   
+    grid: GridContext = field(default_factory=GridContext)
+    fields: FieldData = field(default_factory=FieldData)
     
     # Spatial Masks (Initialized as None to avoid Boolean type-mismatch in JSON)
     mask: Optional[np.ndarray] = None                             
