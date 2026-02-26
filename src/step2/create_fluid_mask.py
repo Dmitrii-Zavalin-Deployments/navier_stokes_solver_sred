@@ -14,7 +14,7 @@ def create_fluid_mask(state: SolverState) -> tuple[np.ndarray, np.ndarray]:
     if state.mask is None:
         raise ValueError("Cannot create fluid mask: state.mask is None.")
 
-    mask = np.array(state.mask)
+    mask = state.mask
 
     # Scale Guard: Reject non-integer masks to prevent numerical ambiguity
     if not np.issubdtype(mask.dtype, np.integer):

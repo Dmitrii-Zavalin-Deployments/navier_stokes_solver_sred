@@ -45,5 +45,5 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     # 5. Initialization Health Check
     compute_initial_health(state)
     
-    state.ready_for_time_loop = True
+    state.ready_for_time_loop = False
     return state
