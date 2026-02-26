@@ -271,6 +271,28 @@ class PPEContext(ValidatedContainer):
     @preconditioner.setter
     def preconditioner(self, v: Any): self._set_safe("preconditioner", v, object)
 
+@dataclass
+class SimulationHealth(ValidatedContainer):
+    """Step 2e: Initial Stability Vitals."""
+    _max_u: float = None
+    _divergence_norm: float = None
+    _is_stable: bool = None
+
+    @property
+    def max_u(self) -> float: return self._get_safe("max_u")
+    @max_u.setter
+    def max_u(self, v: float): self._set_safe("max_u", v, float)
+
+    @property
+    def divergence_norm(self) -> float: return self._get_safe("divergence_norm")
+    @divergence_norm.setter
+    def divergence_norm(self, v: float): self._set_safe("divergence_norm", v, float)
+
+    @property
+    def is_stable(self) -> bool: return self._get_safe("is_stable")
+    @is_stable.setter
+    def is_stable(self, v: bool): self._set_safe("is_stable", v, bool)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -291,6 +313,7 @@ class SolverState:
     operators: OperatorStorage = field(default_factory=OperatorStorage)
     advection: AdvectionStructure = field(default_factory=AdvectionStructure)
     ppe: PPEContext = field(default_factory=PPEContext)
+    health: SimulationHealth = field(default_factory=SimulationHealth)
 
     # --- 2. Orchestrator-Driven Containers ---
     # These hold the dictionaries and tables returned by Step 1 logic
