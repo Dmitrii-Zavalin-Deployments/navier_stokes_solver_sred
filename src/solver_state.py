@@ -1,11 +1,43 @@
 # src/solver_state.py
 
+# src/solver_state.py
+
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import numpy as np
 
 # =========================================================
-# THE DEPARTMENT SAFES (Support Classes)
+# THE PARENT GUARD
+# =========================================================
+
+class ValidatedContainer:
+    """
+    The 'Security Guard' Parent Class.
+    Handles checking for None and Type validation for all sub-classes.
+    """
+    
+    def _get_safe(self, name: str) -> Any:
+        """Checks if the internal value is None. If not, returns it."""
+        val = getattr(self, f"_{name}", None)
+        
+        if val is None:
+            raise RuntimeError(
+                f"Access Error: '{name}' has not been initialized yet. "
+                f"Please ensure Step 1 (Allocation/Loading) has completed."
+            )
+        return val
+
+    def _set_safe(self, name: str, value: Any, expected_type: type):
+        """Ensures the value is the correct type before saving it."""
+        if value is not None and not isinstance(value, expected_type):
+            raise TypeError(
+                f"Validation Error: '{name}' must be {expected_type}, "
+                f"but got {type(value)}."
+            )
+        setattr(self, f"_{name}", value)
+
+# =========================================================
+# STEP 1: THE DEPARTMENT SAFES
 # =========================================================
 
 @dataclass
@@ -16,66 +48,122 @@ class SolverConfig:
     precision: str = "float64" # float64 for science, float32 for speed
 
 @dataclass
-class GridContext:
+class GridContext(ValidatedContainer):
     """
     Step 1: The Spatial World. 
     Mandatory parameters mapped directly from the 3D model.
-    Validation gates prevent math on None values.
     """
-    nx: int = None
-    ny: int = None
-    nz: int = None
+    _nx: int = None
+    _ny: int = None
+    _nz: int = None
     
-    x_min: float = None
-    x_max: float = None
-    y_min: float = None
-    y_max: float = None
-    z_min: float = None
-    z_max: float = None
+    _x_min: float = None
+    _x_max: float = None
+    _y_min: float = None
+    _y_max: float = None
+    _z_min: float = None
+    _z_max: float = None
 
-    def _check_ready(self):
-        """Internal gate: Ensures no mandatory fields are None."""
-        fields = ["nx", "ny", "nz", "x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
-        missing = [f for f in fields if getattr(self, f) is None]
-        if missing:
-            raise ValueError(f"GridContext Error: The following fields are not initialized: {missing}. "
-                             "Check Step 1 model loading.")
+    # --- Resolution Setters/Getters ---
+    @property
+    def nx(self) -> int: return self._get_safe("nx")
+    @nx.setter
+    def nx(self, val: int): self._set_safe("nx", val, int)
 
+    @property
+    def ny(self) -> int: return self._get_safe("ny")
+    @ny.setter
+    def ny(self, val: int): self._set_safe("ny", val, int)
+
+    @property
+    def nz(self) -> int: return self._get_safe("nz")
+    @nz.setter
+    def nz(self, val: int): self._set_safe("nz", val, int)
+
+    # --- Bounds Setters/Getters ---
+    @property
+    def x_min(self) -> float: return self._get_safe("x_min")
+    @x_min.setter
+    def x_min(self, val: float): self._set_safe("x_min", val, float)
+
+    @property
+    def x_max(self) -> float: return self._get_safe("x_max")
+    @x_max.setter
+    def x_max(self, val: float): self._set_safe("x_max", val, float)
+
+    @property
+    def y_min(self) -> float: return self._get_safe("y_min")
+    @y_min.setter
+    def y_min(self, val: float): self._set_safe("y_min", val, float)
+
+    @property
+    def y_max(self) -> float: return self._get_safe("y_max")
+    @y_max.setter
+    def y_max(self, val: float): self._set_safe("y_max", val, float)
+
+    @property
+    def z_min(self) -> float: return self._get_safe("z_min")
+    @z_min.setter
+    def z_min(self, val: float): self._set_safe("z_min", val, float)
+
+    @property
+    def z_max(self) -> float: return self._get_safe("z_max")
+    @z_max.setter
+    def z_max(self, val: float): self._set_safe("z_max", val, float)
+
+    # --- Derived Spatial Properties ---
     @property
     def dx(self) -> float: 
-        self._check_ready()
         return (self.x_max - self.x_min) / self.nx
-        
     @property
     def dy(self) -> float: 
-        self._check_ready()
         return (self.y_max - self.y_min) / self.ny
-        
     @property
     def dz(self) -> float: 
-        self._check_ready()
         return (self.z_max - self.z_min) / self.nz
-    
+        
     @property
     def total_cells(self) -> int: 
-        self._check_ready()
         return self.nx * self.ny * self.nz
 
 @dataclass
-class FieldData:
+class FieldData(ValidatedContainer):
     """
     Step 1: The Memory Map.
-    Initialized as None to force explicit allocation.
-    Removed Optional to stay consistent with the 'Empty Safe' design.
+    Stores the actual physical arrays for the simulation.
     """
-    P: np.ndarray = None
-    U: np.ndarray = None
-    V: np.ndarray = None
-    W: np.ndarray = None
+    _P: np.ndarray = None
+    _U: np.ndarray = None
+    _V: np.ndarray = None
+    _W: np.ndarray = None
+
+    # --- Pressure (P) ---
+    @property
+    def P(self) -> np.ndarray: return self._get_safe("P")
+    @P.setter
+    def P(self, val: np.ndarray): self._set_safe("P", val, np.ndarray)
+
+    # --- Velocity X (U) ---
+    @property
+    def U(self) -> np.ndarray: return self._get_safe("U")
+    @U.setter
+    def U(self, val: np.ndarray): self._set_safe("U", val, np.ndarray)
+
+    # --- Velocity Y (V) ---
+    @property
+    def V(self) -> np.ndarray: return self._get_safe("V")
+    @V.setter
+    def V(self, val: np.ndarray): self._set_safe("V", val, np.ndarray)
+
+    # --- Velocity Z (W) ---
+    @property
+    def W(self) -> np.ndarray: return self._get_safe("W")
+    @W.setter
+    def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
 
     def is_allocated(self) -> bool:
         """Check if all primary fields have been created."""
-        return all(f is not None for f in [self.P, self.U, self.V, self.W])
+        return all(f is not None for f in [self._P, self._U, self._V, self._W])
 
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
@@ -98,92 +186,70 @@ class SolverState:
     grid: GridContext = field(default_factory=GridContext)
     fields: FieldData = field(default_factory=FieldData)
     
-    # Spatial Masks (Initialized as None to avoid Boolean type-mismatch in JSON)
-    mask: Optional[np.ndarray] = None                             
-    is_fluid: Optional[np.ndarray] = None
-    is_boundary_cell: Optional[np.ndarray] = None
-    is_solid: Optional[np.ndarray] = None
+    # ---------------------------------------------------------
+    # Remaining Architecture (Commented out until solidification)
+    # ---------------------------------------------------------
+    # mask: Optional[np.ndarray] = None                             
+    # is_fluid: Optional[np.ndarray] = None
+    # is_boundary_cell: Optional[np.ndarray] = None
+    # is_solid: Optional[np.ndarray] = None
     
-    # Physics & Environment
-    constants: Dict[str, Any] = field(default_factory=dict)       
-    fluid_properties: Dict[str, Any] = field(default_factory=dict) 
-    boundary_conditions: Dict[str, Any] = field(default_factory=dict)
+    # constants: Dict[str, Any] = field(default_factory=dict)       
+    # fluid_properties: Dict[str, Any] = field(default_factory=dict) 
+    # boundary_conditions: Dict[str, Any] = field(default_factory=dict)
     
-    # Global health tracking
-    health: Dict[str, Any] = field(default_factory=dict)          
+    # health: Dict[str, Any] = field(default_factory=dict)          
+
+    # operators: Dict[str, Any] = field(default_factory=dict)       
+    # ppe: Dict[str, Any] = field(default_factory=dict)             
+
+    # intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
+    # step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
+
+    # history: Dict[str, List[float]] = field(default_factory=lambda: {
+    #     "times": [],
+    #     "divergence_norms": [],
+    #     "max_velocity_history": [],
+    #     "ppe_iterations_history": [],
+    #     "energy_history": [],
+    # })
+
+    # P_ext: Optional[np.ndarray] = None
+    # U_ext: Optional[np.ndarray] = None
+    # V_ext: Optional[np.ndarray] = None
+    # W_ext: Optional[np.ndarray] = None
+    # step4_diagnostics: Dict[str, Any] = field(default_factory=dict)
+
+    # step5_outputs: Dict[str, Any] = field(default_factory=dict)
+
+    # ready_for_time_loop: bool = False
+    # iteration: int = 0
+    # time: float = 0.0
 
     # ---------------------------------------------------------
-    # Step 2: Operators & PPE structure
-    # ---------------------------------------------------------
-    operators: Dict[str, Any] = field(default_factory=dict)       
-    ppe: Dict[str, Any] = field(default_factory=dict)             
-
-    # ---------------------------------------------------------
-    # Step 3: Projection & Intermediate Logic
-    # ---------------------------------------------------------
-    intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
-    step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
-
-    history: Dict[str, List[float]] = field(default_factory=lambda: {
-        "times": [],
-        "divergence_norms": [],
-        "max_velocity_history": [],
-        "ppe_iterations_history": [],
-        "energy_history": [],
-    })
-
-    # ---------------------------------------------------------
-    # Step 4: Extended fields + Boundary Logic
-    # ---------------------------------------------------------
-    P_ext: Optional[np.ndarray] = None
-    U_ext: Optional[np.ndarray] = None
-    V_ext: Optional[np.ndarray] = None
-    W_ext: Optional[np.ndarray] = None
-    step4_diagnostics: Dict[str, Any] = field(default_factory=dict)
-
-    # ---------------------------------------------------------
-    # Step 5: Finalization & Outputs
-    # ---------------------------------------------------------
-    step5_outputs: Dict[str, Any] = field(default_factory=dict)
-
-    # ---------------------------------------------------------
-    # Flags & Time tracking
-    # ---------------------------------------------------------
-    ready_for_time_loop: bool = False
-    iteration: int = 0
-    time: float = 0.0
-
-    # ---------------------------------------------------------
-    # Attribute Interface (Interface Facade Rule)
+    # Attribute Interface (Facade)
     # ---------------------------------------------------------
     @property
-    def pressure(self) -> Optional[np.ndarray]:
-        """Accessor for cell-centered pressure."""
-        return self.fields.get("P")
+    def pressure(self) -> np.ndarray:
+        return self.fields.P
 
     @property
-    def velocity_u(self) -> Optional[np.ndarray]:
-        """Accessor for staggered x-velocity."""
-        return self.fields.get("U")
+    def velocity_u(self) -> np.ndarray:
+        return self.fields.U
 
     @property
-    def velocity_v(self) -> Optional[np.ndarray]:
-        """Accessor for staggered y-velocity."""
-        return self.fields.get("V")
+    def velocity_v(self) -> np.ndarray:
+        return self.fields.V
 
     @property
-    def velocity_w(self) -> Optional[np.ndarray]:
-        """Accessor for staggered z-velocity."""
-        return self.fields.get("W")
+    def velocity_w(self) -> np.ndarray:
+        return self.fields.W
 
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
     # ---------------------------------------------------------
     def to_json_safe(self) -> Dict[str, Any]:
-        """
-        Convert state to JSON-safe dict. 
-        Enforces Phase C, Article 7 (Anti-Density Rule).
-        """
+        """Convert state to JSON-safe dict."""
         try:
             from scipy.sparse import issparse
         except ImportError:
