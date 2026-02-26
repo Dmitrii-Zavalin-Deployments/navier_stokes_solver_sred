@@ -365,6 +365,58 @@ class SimulationHealth(ValidatedContainer):
             val = getattr(self, attr, None)
             return val if val is not None else default
         return default
+
+@dataclass
+class SimulationHistory(ValidatedContainer):
+    """
+    ### 4. The Time-Series Record
+    This is the "Log Book" that grows every time Step 3 runs. 
+    It is a series of lists tracking simulation evolution.
+    """
+    _times: list = field(default_factory=list)
+    _divergence_norms: list = field(default_factory=list)
+    _max_velocity_history: list = field(default_factory=list)
+    _ppe_status_history: list = field(default_factory=list)
+    _energy_history: list = field(default_factory=list)
+
+    @property
+    def times(self) -> list: 
+        """A list of every time-stamp simulated so far."""
+        return self._get_safe("times")
+
+    @property
+    def divergence_norms(self) -> list: 
+        """A record of how the mass conservation error changed over time."""
+        return self._get_safe("divergence_norms")
+
+    @property
+    def max_velocity_history(self) -> list: 
+        """A graph-ready list of peak speeds (Stability tracking)."""
+        return self._get_safe("max_velocity_history")
+
+    @property
+    def ppe_status_history(self) -> list: 
+        """A list of solver outcomes (e.g., 'Converged', 'Failed')."""
+        return self._get_safe("ppe_status_history")
+
+    @property
+    def energy_history(self) -> list: 
+        """The total kinetic energy in the system (Physical decay/growth check)."""
+        return self._get_safe("energy_history")
+
+    def __getitem__(self, key: str) -> list:
+        """Allows dictionary-style access: history['times']."""
+        mapping = {
+            "times": self.times,
+            "divergence_norms": self.divergence_norms,
+            "max_velocity_history": self.max_velocity_history,
+            "ppe_status_history": self.ppe_status_history,
+            "energy_history": self.energy_history
+        }
+        if key in mapping:
+            return mapping[key]
+        raise KeyError(f"History key '{key}' not found.")
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -386,6 +438,7 @@ class SolverState:
     advection: AdvectionStructure = field(default_factory=AdvectionStructure)
     ppe: PPEContext = field(default_factory=PPEContext)
     health: SimulationHealth = field(default_factory=SimulationHealth)
+    history: SimulationHistory = field(default_factory=SimulationHistory)
 
     # --- 2. Orchestrator-Driven Containers ---
     # These hold the dictionaries and tables returned by Step 1 logic
