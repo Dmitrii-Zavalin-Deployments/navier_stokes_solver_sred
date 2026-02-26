@@ -16,12 +16,22 @@ class ValidatedContainer:
     
     def _get_safe(self, name: str) -> Any:
         """Checks if the internal value is None. If not, returns it."""
-        val = getattr(self, f"_{name}", None)
+        # We look for the 'private' version of the variable
+        attr_name = f"_{name}"
+        
+        # Check if the attribute even exists on the object at all
+        if not hasattr(self, attr_name):
+            raise AttributeError(
+                f"Coding Error: '{attr_name}' is not defined in {self.__class__.__name__}. "
+                f"Check your class definition."
+            )
+            
+        val = getattr(self, attr_name)
         
         if val is None:
             raise RuntimeError(
-                f"Access Error: '{name}' has not been initialized yet. "
-                f"Please ensure Step 1 (Allocation/Loading) has completed."
+                f"Access Error: '{name}' in {self.__class__.__name__} has not been initialized. "
+                f"Did you skip a function in orchestrate_step1?"
             )
         return val
 
@@ -35,7 +45,7 @@ class ValidatedContainer:
         setattr(self, f"_{name}", value)
 
 # =========================================================
-# STEP 1: THE DEPARTMENT SAFES (Solidified)
+# STEP 1: THE DEPARTMENT SAFES
 # =========================================================
 
 @dataclass
@@ -57,10 +67,12 @@ class GridContext(ValidatedContainer):
     def nx(self) -> int: return self._get_safe("nx")
     @nx.setter
     def nx(self, val: int): self._set_safe("nx", val, int)
+
     @property
     def ny(self) -> int: return self._get_safe("ny")
     @ny.setter
     def ny(self, val: int): self._set_safe("ny", val, int)
+
     @property
     def nz(self) -> int: return self._get_safe("nz")
     @nz.setter
@@ -70,39 +82,47 @@ class GridContext(ValidatedContainer):
     def x_min(self) -> float: return self._get_safe("x_min")
     @x_min.setter
     def x_min(self, val: float): self._set_safe("x_min", val, float)
+
     @property
     def x_max(self) -> float: return self._get_safe("x_max")
     @x_max.setter
     def x_max(self, val: float): self._set_safe("x_max", val, float)
+
     @property
     def y_min(self) -> float: return self._get_safe("y_min")
     @y_min.setter
     def y_min(self, val: float): self._set_safe("y_min", val, float)
+
     @property
     def y_max(self) -> float: return self._get_safe("y_max")
     @y_max.setter
     def y_max(self, val: float): self._set_safe("y_max", val, float)
+
     @property
     def z_min(self) -> float: return self._get_safe("z_min")
     @z_min.setter
     def z_min(self, val: float): self._set_safe("z_min", val, float)
+
     @property
     def z_max(self) -> float: return self._get_safe("z_max")
     @z_max.setter
     def z_max(self, val: float): self._set_safe("z_max", val, float)
 
     @property
-    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
+    def dx(self) -> float: 
+        return (self.x_max - self.x_min) / self.nx
+
     @property
-    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
+    def dy(self) -> float: 
+        return (self.y_max - self.y_min) / self.ny
+
     @property
-    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
-    @property
-    def total_cells(self) -> int: return self.nx * self.ny * self.nz
+    def dz(self) -> float: 
+        return (self.z_max - self.z_min) / self.nz
 
 @dataclass
 class FieldData(ValidatedContainer):
-    """Step 1b: The Memory Map. No fluff, just guarded arrays."""
+    """Step 1b: The Memory Map. Staggered arrays."""
     _P: np.ndarray = None; _U: np.ndarray = None
     _V: np.ndarray = None; _W: np.ndarray = None
 
@@ -127,36 +147,44 @@ class FieldData(ValidatedContainer):
     def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
 
 @dataclass
+class MaskData(ValidatedContainer):
+    """
+    Step 1d: The Geometry Blueprint.
+    Refined specifically from map_geometry_mask outputs.
+    """
+    _mask: np.ndarray = None            
+    _is_fluid: np.ndarray = None        
+    _is_boundary: np.ndarray = None     
+
+    @property
+    def mask(self) -> np.ndarray: return self._get_safe("mask")
+    @mask.setter
+    def mask(self, v: np.ndarray): self._set_safe("mask", v, np.ndarray)
+
+    @property
+    def is_fluid(self) -> np.ndarray: return self._get_safe("is_fluid")
+    @is_fluid.setter
+    def is_fluid(self, v: np.ndarray): self._set_safe("is_fluid", v, np.ndarray)
+
+    @property
+    def is_boundary(self) -> np.ndarray: return self._get_safe("is_boundary")
+    @is_boundary.setter
+    def is_boundary(self, v: np.ndarray): self._set_safe("is_boundary", v, np.ndarray)
+
+@dataclass
 class FluidProperties(ValidatedContainer):
-    """Step 1c: The Physics Safe (Density/Viscosity)."""
+    """Step 1c: The Physics Safe."""
     _rho: float = None; _mu: float = None
 
     @property
     def rho(self) -> float: return self._get_safe("rho")
     @rho.setter
     def rho(self, val: float): self._set_safe("rho", val, float)
+
     @property
     def mu(self) -> float: return self._get_safe("mu")
     @mu.setter
     def mu(self, val: float): self._set_safe("mu", val, float)
-
-@dataclass
-class PhysicsConstants(ValidatedContainer):
-    """Step 1d: Global Environment (Gravity)."""
-    _gx: float = 0.0; _gy: float = 0.0; _gz: float = -9.81
-
-    @property
-    def gx(self) -> float: return self._get_safe("gx")
-    @gx.setter
-    def gx(self, val: float): self._set_safe("gx", val, float)
-    @property
-    def gy(self) -> float: return self._get_safe("gy")
-    @gy.setter
-    def gy(self, val: float): self._set_safe("gy", val, float)
-    @property
-    def gz(self) -> float: return self._get_safe("gz")
-    @gz.setter
-    def gz(self, val: float): self._set_safe("gz", val, float)
 
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
