@@ -1,7 +1,5 @@
 # src/solver_state.py
 
-# src/solver_state.py
-
 from dataclasses import dataclass, field
 from typing import Dict, Any
 import numpy as np
@@ -37,133 +35,128 @@ class ValidatedContainer:
         setattr(self, f"_{name}", value)
 
 # =========================================================
-# STEP 1: THE DEPARTMENT SAFES
+# STEP 1: THE DEPARTMENT SAFES (Solidified)
 # =========================================================
 
 @dataclass
 class SolverConfig:
-    """Step 0: Global instructions that change between runs."""
+    """Step 0: Global instructions."""
     case_name: str = "default_case"
-    method: str = "jacobi"  # jacobi, cg, or direct
-    precision: str = "float64" # float64 for science, float32 for speed
+    method: str = "jacobi"
+    precision: str = "float64"
 
 @dataclass
 class GridContext(ValidatedContainer):
-    """
-    Step 1: The Spatial World. 
-    Mandatory parameters mapped directly from the 3D model.
-    """
-    _nx: int = None
-    _ny: int = None
-    _nz: int = None
-    
-    _x_min: float = None
-    _x_max: float = None
-    _y_min: float = None
-    _y_max: float = None
-    _z_min: float = None
-    _z_max: float = None
+    """Step 1a: The Spatial World."""
+    _nx: int = None; _ny: int = None; _nz: int = None
+    _x_min: float = None; _x_max: float = None
+    _y_min: float = None; _y_max: float = None
+    _z_min: float = None; _z_max: float = None
 
-    # --- Resolution Setters/Getters ---
     @property
     def nx(self) -> int: return self._get_safe("nx")
     @nx.setter
     def nx(self, val: int): self._set_safe("nx", val, int)
-
     @property
     def ny(self) -> int: return self._get_safe("ny")
     @ny.setter
     def ny(self, val: int): self._set_safe("ny", val, int)
-
     @property
     def nz(self) -> int: return self._get_safe("nz")
     @nz.setter
     def nz(self, val: int): self._set_safe("nz", val, int)
 
-    # --- Bounds Setters/Getters ---
     @property
     def x_min(self) -> float: return self._get_safe("x_min")
     @x_min.setter
     def x_min(self, val: float): self._set_safe("x_min", val, float)
-
     @property
     def x_max(self) -> float: return self._get_safe("x_max")
     @x_max.setter
     def x_max(self, val: float): self._set_safe("x_max", val, float)
-
     @property
     def y_min(self) -> float: return self._get_safe("y_min")
     @y_min.setter
     def y_min(self, val: float): self._set_safe("y_min", val, float)
-
     @property
     def y_max(self) -> float: return self._get_safe("y_max")
     @y_max.setter
     def y_max(self, val: float): self._set_safe("y_max", val, float)
-
     @property
     def z_min(self) -> float: return self._get_safe("z_min")
     @z_min.setter
     def z_min(self, val: float): self._set_safe("z_min", val, float)
-
     @property
     def z_max(self) -> float: return self._get_safe("z_max")
     @z_max.setter
     def z_max(self, val: float): self._set_safe("z_max", val, float)
 
-    # --- Derived Spatial Properties ---
     @property
-    def dx(self) -> float: 
-        return (self.x_max - self.x_min) / self.nx
+    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
     @property
-    def dy(self) -> float: 
-        return (self.y_max - self.y_min) / self.ny
+    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
     @property
-    def dz(self) -> float: 
-        return (self.z_max - self.z_min) / self.nz
-        
+    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
     @property
-    def total_cells(self) -> int: 
-        return self.nx * self.ny * self.nz
+    def total_cells(self) -> int: return self.nx * self.ny * self.nz
 
 @dataclass
 class FieldData(ValidatedContainer):
-    """
-    Step 1: The Memory Map.
-    Stores the actual physical arrays for the simulation.
-    """
-    _P: np.ndarray = None
-    _U: np.ndarray = None
-    _V: np.ndarray = None
-    _W: np.ndarray = None
+    """Step 1b: The Memory Map. No fluff, just guarded arrays."""
+    _P: np.ndarray = None; _U: np.ndarray = None
+    _V: np.ndarray = None; _W: np.ndarray = None
 
-    # --- Pressure (P) ---
     @property
     def P(self) -> np.ndarray: return self._get_safe("P")
     @P.setter
     def P(self, val: np.ndarray): self._set_safe("P", val, np.ndarray)
 
-    # --- Velocity X (U) ---
     @property
     def U(self) -> np.ndarray: return self._get_safe("U")
     @U.setter
     def U(self, val: np.ndarray): self._set_safe("U", val, np.ndarray)
 
-    # --- Velocity Y (V) ---
     @property
     def V(self) -> np.ndarray: return self._get_safe("V")
     @V.setter
     def V(self, val: np.ndarray): self._set_safe("V", val, np.ndarray)
 
-    # --- Velocity Z (W) ---
     @property
     def W(self) -> np.ndarray: return self._get_safe("W")
     @W.setter
     def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
 
-    def is_allocated(self) -> bool:
-        """Check if all primary fields have been created."""
-        return all(f is not None for f in [self._P, self._U, self._V, self._W])
+@dataclass
+class FluidProperties(ValidatedContainer):
+    """Step 1c: The Physics Safe (Density/Viscosity)."""
+    _rho: float = None; _mu: float = None
+
+    @property
+    def rho(self) -> float: return self._get_safe("rho")
+    @rho.setter
+    def rho(self, val: float): self._set_safe("rho", val, float)
+    @property
+    def mu(self) -> float: return self._get_safe("mu")
+    @mu.setter
+    def mu(self, val: float): self._set_safe("mu", val, float)
+
+@dataclass
+class PhysicsConstants(ValidatedContainer):
+    """Step 1d: Global Environment (Gravity)."""
+    _gx: float = 0.0; _gy: float = 0.0; _gz: float = -9.81
+
+    @property
+    def gx(self) -> float: return self._get_safe("gx")
+    @gx.setter
+    def gx(self, val: float): self._set_safe("gx", val, float)
+    @property
+    def gy(self) -> float: return self._get_safe("gy")
+    @gy.setter
+    def gy(self, val: float): self._set_safe("gy", val, float)
+    @property
+    def gz(self) -> float: return self._get_safe("gz")
+    @gz.setter
+    def gz(self, val: float): self._set_safe("gz", val, float)
 
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
