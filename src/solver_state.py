@@ -523,6 +523,45 @@ class Diagnostics(ValidatedContainer):
         }
         return mapping.get(key)
 
+@dataclass
+class OutputManifest(ValidatedContainer):
+    """
+    ## 5. Output Artifacts (Manifest)
+    
+    This tracks the physical location of files generated during Step 5.
+    Essential for GitHub Actions to locate and upload results.
+    """
+    _output_directory: str = "output"
+    _saved_snapshots: list[str] = field(default_factory=list)
+    _final_checkpoint: str = None
+    _log_file: str = None
+
+    @property
+    def output_directory(self) -> str:
+        """The base folder where all results are stored."""
+        return self._get_safe("output_directory")
+    @output_directory.setter
+    def output_directory(self, v: str): self._set_safe("output_directory", v, str)
+
+    @property
+    def saved_snapshots(self) -> list[str]:
+        """A list of full paths to every VTK/HDF5 file created."""
+        return self._get_safe("saved_snapshots")
+
+    @property
+    def final_checkpoint(self) -> str:
+        """The path to the last .npy or .h5 state for restarting."""
+        return self._get_safe("final_checkpoint")
+    @final_checkpoint.setter
+    def final_checkpoint(self, v: str): self._set_safe("final_checkpoint", v, str)
+
+    @property
+    def log_file(self) -> str:
+        """Path to the .txt or .log file containing solver convergence stats."""
+        return self._get_safe("log_file")
+    @log_file.setter
+    def log_file(self, v: str): self._set_safe("log_file", v, str)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -546,6 +585,7 @@ class SolverState:
     health: SimulationHealth = field(default_factory=SimulationHealth)
     history: SimulationHistory = field(default_factory=SimulationHistory)
     diagnostics: Diagnostics = field(default_factory=Diagnostics)
+    manifest: OutputManifest = field(default_factory=OutputManifest)
 
     # --- 2. Orchestrator-Driven Containers ---
     constants: Dict[str, Any] = field(default_factory=dict)
