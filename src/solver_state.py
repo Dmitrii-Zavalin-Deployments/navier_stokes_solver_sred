@@ -146,6 +146,14 @@ class FieldData(ValidatedContainer):
     """
     Step 1, 3 & 4: The Memory Map. 
     Contains both the core physical fields and the extended boundary workhorses.
+
+    ## 2. Updated Physical Fields (`state.fields`)
+    These are updated **every single iteration** inside the loop by `orchestrate_step3_state`. 
+    When Step 5 returns, these contain the "Final Snapshot" of the fluid.
+
+    * **state.fields.U, V, W**: The corrected, divergence-free velocity vectors at t_final.
+    * **state.fields.P**: The final pressure field required to maintain incompressibility.
+    * **state.fields.U_ext, V_ext, W_ext, P_ext**: Extended arrays (with ghost cells).
     """
     # --- Core Fields (Step 1 & 3) ---
     _P: np.ndarray = None; _U: np.ndarray = None
