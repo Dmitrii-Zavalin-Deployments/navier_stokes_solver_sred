@@ -72,15 +72,16 @@ def test_parse_config_external_forces_debt():
 
 def test_derived_constants_physics_checks():
     """Triggers non-physical rho and mu checks in compute_derived_constants."""
+    grid = {"dx": 0.1, "dy": 0.1, "dz": 0.1}
     params = {"time_step": 0.01}
 
     # Density <= 0
     with pytest.raises(ValueError, match="Non-physical constant detected: rho = 0.0"):
-        compute_derived_constants({"density": 0.0, "viscosity": 0.01}, params)
+        compute_derived_constants(grid, {"density": 0.0, "viscosity": 0.01}, params)
 
     # Viscosity < 0
     with pytest.raises(ValueError, match="Non-physical viscosity detected: mu = -0.5"):
-        compute_derived_constants({"density": 1.0, "viscosity": -0.5}, params)
+        compute_derived_constants(grid, {"density": 1.0, "viscosity": -0.5}, params)
 
 # --- SOLVER STATE CONSTRAINT VALIDATION (CORRECTED) ---
 
@@ -164,7 +165,7 @@ def test_step1_constants_match_dummy():
     assert state.constants["rho"] == 5.0
     assert state.constants["mu"] == 0.2
     assert state.constants["dt"] == 0.05
-    assert state.grid["dx"] == 1.0
+    assert state.constants["dx"] == 1.0
 
 # --- SECTION: Derived Constants Math (Precision Audit) ---
 
@@ -187,6 +188,6 @@ def test_compute_derived_constants_mathematical_precision():
 
     state = orchestrate_step1_state(json_input)
 
-    assert state.grid["dx"] == 1.0
-    assert state.grid["dy"] == 1.0
-    assert state.grid["dz"] == 0.5
+    assert state.constants["dx"] == 1.0
+    assert state.constants["dy"] == 1.0
+    assert state.constants["dz"] == 0.5
