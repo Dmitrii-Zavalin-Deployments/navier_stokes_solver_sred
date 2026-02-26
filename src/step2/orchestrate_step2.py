@@ -21,14 +21,6 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     
     # 0. Load Numerical Tuning (from config.json)
     load_numerical_config(state)
-    # 0.5 Physical Parameter Guard (Phase C: Data Integrity)
-    if "physics" not in state.config or "rho" not in state.config["physics"]:
-        raise KeyError("Data Integrity Error: Physics configuration (rho) missing.")
-    state.constants["rho"] = state.config["physics"]["rho"]
-
-    if "temporal" not in state.config or "dt" not in state.config["temporal"]:
-        raise KeyError("Data Integrity Error: Temporal configuration (dt) missing.")
-    state.config["dt"] = state.config["temporal"]["dt"]
     
     # 1. Derived Constants (Required by test_orchestrate_step2)
     # We pre-calculate inverse spacings to speed up operator applications later.
