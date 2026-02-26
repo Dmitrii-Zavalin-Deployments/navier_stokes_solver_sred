@@ -194,63 +194,31 @@ class FluidProperties(ValidatedContainer):
 class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
+    This version is strictly mapped to Step 1 Orchestrator outputs.
     """
 
-    # ---------------------------------------------------------
-    # Step 0: Input / configuration
-    # ---------------------------------------------------------
+    # --- 1. Hardened Safe Objects ---
     config: SolverConfig = field(default_factory=SolverConfig)
-
-    # ---------------------------------------------------------
-    # Step 1: Grid & Fields (Solidified Safes)
-    # ---------------------------------------------------------
     grid: GridContext = field(default_factory=GridContext)
     fields: FieldData = field(default_factory=FieldData)
+    masks: MaskData = field(default_factory=MaskData)
     fluid: FluidProperties = field(default_factory=FluidProperties)
-    
-    # ---------------------------------------------------------
-    # Remaining Architecture (Commented out until solidification)
-    # ---------------------------------------------------------
-    # mask: Optional[np.ndarray] = None                             
-    # is_fluid: Optional[np.ndarray] = None
-    # is_boundary_cell: Optional[np.ndarray] = None
-    # is_solid: Optional[np.ndarray] = None
-    
-    # constants: Dict[str, Any] = field(default_factory=dict)       
-    # fluid_properties: Dict[str, Any] = field(default_factory=dict) 
-    # boundary_conditions: Dict[str, Any] = field(default_factory=dict)
-    
-    # health: Dict[str, Any] = field(default_factory=dict)          
 
-    # operators: Dict[str, Any] = field(default_factory=dict)       
-    # ppe: Dict[str, Any] = field(default_factory=dict)             
+    # --- 2. Orchestrator-Driven Containers ---
+    # These hold the dictionaries and tables returned by Step 1 logic
+    constants: Dict[str, Any] = field(default_factory=dict)
+    boundary_conditions: Dict[str, Any] = field(default_factory=dict)
 
-    # intermediate_fields: Dict[str, np.ndarray] = field(default_factory=dict) 
-    # step3_diagnostics: Dict[str, Any] = field(default_factory=dict)
-
-    # history: Dict[str, List[float]] = field(default_factory=lambda: {
-    #     "times": [],
-    #     "divergence_norms": [],
-    #     "max_velocity_history": [],
-    #     "ppe_iterations_history": [],
-    #     "energy_history": [],
-    # })
-
-    # P_ext: Optional[np.ndarray] = None
-    # U_ext: Optional[np.ndarray] = None
-    # V_ext: Optional[np.ndarray] = None
-    # W_ext: Optional[np.ndarray] = None
-    # step4_diagnostics: Dict[str, Any] = field(default_factory=dict)
-
-    # step5_outputs: Dict[str, Any] = field(default_factory=dict)
-
-    # ready_for_time_loop: bool = False
-    # iteration: int = 0
-    # time: float = 0.0
+    # --- 3. Global Simulation State ---
+    iteration: int = 0
+    time: float = 0.0
 
     # ---------------------------------------------------------
     # Attribute Interface (Facade)
     # ---------------------------------------------------------
+    # These properties allow the math engine to access data 
+    # without worrying about the underlying container structure.
+
     @property
     def pressure(self) -> np.ndarray:
         return self.fields.P
@@ -266,6 +234,19 @@ class SolverState:
     @property
     def velocity_w(self) -> np.ndarray:
         return self.fields.W
+
+    @property
+    def is_fluid(self) -> np.ndarray:
+        """Shortcut to the logical fluid mask."""
+        return self.masks.is_fluid
+
+    @property
+    def dt(self) -> float:
+        """Safe access to the time-step from the constants dict."""
+        val = self.constants.get("dt")
+        if val is None:
+            raise RuntimeError("Access Error: 'dt' not found in constants. Check compute_derived_constants.")
+        return val
 
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
