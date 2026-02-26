@@ -76,7 +76,6 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     # 7. Department Initialization & PPE Intent
     state.ppe = {"dimension": nx * ny * nz}
     
-    state.constants = {"rho": 1.0, "mu": 0.1, "dt": 0.1, "dx": 1.0, "dy": 1.0, "dz": 1.0}
     state.config = {
         "solver_type": "projection", 
         "precision": "float64",

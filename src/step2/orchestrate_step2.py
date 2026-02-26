@@ -21,11 +21,6 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     
     # 0. Load Numerical Tuning (from config.json)
     load_numerical_config(state)
-    # Phase C: Step 1 -> Step 2 Handover Validation
-    if "rho" not in state.constants:
-        raise KeyError("Data Integrity Error: rho missing from state.constants")
-    if "dt" not in state.constants:
-        raise KeyError("Data Integrity Error: dt missing from state.constants")
     # 0.5 Physical Parameter Guard (Phase C: Data Integrity)
     if "physics" not in state.config or "rho" not in state.config["physics"]:
         raise KeyError("Data Integrity Error: Physics configuration (rho) missing.")
