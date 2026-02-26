@@ -194,7 +194,7 @@ class FluidProperties(ValidatedContainer):
 class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
-    This version is strictly mapped to Step 1 Orchestrator outputs.
+    This version is strictly mapped to Step 1 & Step 2 Category 1.
     """
 
     # --- 1. Hardened Safe Objects ---
@@ -212,6 +212,8 @@ class SolverState:
     # --- 3. Global Simulation State ---
     iteration: int = 0
     time: float = 0.0
+    # Logic Gate for Step 2:
+    ready_for_time_loop: bool = False
 
     # ---------------------------------------------------------
     # Attribute Interface (Facade)
@@ -245,8 +247,28 @@ class SolverState:
         """Safe access to the time-step from the constants dict."""
         val = self.constants.get("dt")
         if val is None:
-            raise RuntimeError("Access Error: 'dt' not found in constants. Check compute_derived_constants.")
+            raise RuntimeError(
+                "Access Error: 'dt' not found in constants. "
+                "Check compute_derived_constants."
+            )
         return val
+
+    # --- Step 2 Numerical Shortcuts ---
+    
+    @property
+    def inv_dx(self) -> float:
+        """Returns pre-calculated 1/dx or calculates on the fly."""
+        return self.constants.get("inv_dx", 1.0 / self.grid.dx)
+
+    @property
+    def inv_dy(self) -> float:
+        """Returns pre-calculated 1/dy or calculates on the fly."""
+        return self.constants.get("inv_dy", 1.0 / self.grid.dy)
+
+    @property
+    def inv_dz(self) -> float:
+        """Returns pre-calculated 1/dz or calculates on the fly."""
+        return self.constants.get("inv_dz", 1.0 / self.grid.dz)
 
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
