@@ -309,26 +309,62 @@ class PPEContext(ValidatedContainer):
 
 @dataclass
 class SimulationHealth(ValidatedContainer):
-    """Step 2e: Initial Stability Vitals."""
+    """
+    Step 2e & 3: Current "Vitals".
+    Describes the state of the simulation at this exact moment.
+    """
     _max_u: float = None
     _divergence_norm: float = None
     _is_stable: bool = None
+    _post_correction_divergence_norm: float = None
 
     @property
-    def max_u(self) -> float: return self._get_safe("max_u")
+    def max_u(self) -> float: 
+        """The speed of the fastest point in the simulation (exploding check)."""
+        return self._get_safe("max_u")
     @max_u.setter
     def max_u(self, v: float): self._set_safe("max_u", v, float)
 
     @property
-    def divergence_norm(self) -> float: return self._get_safe("divergence_norm")
+    def divergence_norm(self) -> float: 
+        """Measures how 'un-physical' the initial or current flow field is."""
+        return self._get_safe("divergence_norm")
     @divergence_norm.setter
     def divergence_norm(self, v: float): self._set_safe("divergence_norm", v, float)
 
     @property
-    def is_stable(self) -> bool: return self._get_safe("is_stable")
+    def is_stable(self) -> bool: 
+        """Boolean flag: flips to False if NaNs or Infs are detected."""
+        return self._get_safe("is_stable")
     @is_stable.setter
     def is_stable(self, v: bool): self._set_safe("is_stable", v, bool)
 
+    @property
+    def post_correction_divergence_norm(self) -> float:
+        """Proves the pressure correction worked and mass is conserved (Target ~0)."""
+        return self._get_safe("post_correction_divergence_norm")
+    @post_correction_divergence_norm.setter
+    def post_correction_divergence_norm(self, v: float): 
+        self._set_safe("post_correction_divergence_norm", v, float)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Step 3 Support: Compatibility shim for dictionary-style access.
+        Allows: state.health.get("max_velocity_magnitude")
+        """
+        mapping = {
+            "post_correction_divergence_norm": "_post_correction_divergence_norm",
+            "max_velocity_magnitude": "_max_u",
+            "divergence_norm": "_divergence_norm",
+            "is_stable": "_is_stable"
+        }
+        attr = mapping.get(key)
+        if attr:
+            # We use getattr directly to avoid the 'None' check of _get_safe 
+            # if the user provided a default.
+            val = getattr(self, attr, None)
+            return val if val is not None else default
+        return default
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
