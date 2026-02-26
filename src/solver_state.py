@@ -20,7 +20,7 @@ class GridContext:
     """
     Step 1: The Spatial World. 
     Mandatory parameters mapped directly from the 3D model.
-    Defaults set to None to force a 'Loud Error' if not populated.
+    Validation gates prevent math on None values.
     """
     nx: int = None
     ny: int = None
@@ -33,15 +33,33 @@ class GridContext:
     z_min: float = None
     z_max: float = None
 
+    def _check_ready(self):
+        """Internal gate: Ensures no mandatory fields are None."""
+        fields = ["nx", "ny", "nz", "x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
+        missing = [f for f in fields if getattr(self, f) is None]
+        if missing:
+            raise ValueError(f"GridContext Error: The following fields are not initialized: {missing}. "
+                             "Check Step 1 model loading.")
+
     @property
-    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
+    def dx(self) -> float: 
+        self._check_ready()
+        return (self.x_max - self.x_min) / self.nx
+        
     @property
-    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
+    def dy(self) -> float: 
+        self._check_ready()
+        return (self.y_max - self.y_min) / self.ny
+        
     @property
-    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
+    def dz(self) -> float: 
+        self._check_ready()
+        return (self.z_max - self.z_min) / self.nz
     
     @property
-    def total_cells(self) -> int: return self.nx * self.ny * self.nz
+    def total_cells(self) -> int: 
+        self._check_ready()
+        return self.nx * self.ny * self.nz
 
 @dataclass
 class FieldData:
