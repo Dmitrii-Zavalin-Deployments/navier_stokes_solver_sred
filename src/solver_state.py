@@ -525,6 +525,16 @@ class SolverState:
     boundary_conditions: Dict[str, Any] = field(default_factory=dict)
 
     # --- 3. Global Simulation State ---
+    
+    ## 1. Primary Simulation Counters
+    # These are the "Odometers" of your simulation. They tell the user 
+    # exactly how far the physics progressed before the loop terminated.
+    # 
+    # | Attribute | Type | Description |
+    # | --- | --- | --- |
+    # | state.time | float | The final physical time reached (e.g., 2.5s). |
+    # | state.iteration | int | The final step count. |
+    
     iteration: int = 0
     time: float = 0.0
 
