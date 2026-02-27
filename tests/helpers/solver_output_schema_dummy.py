@@ -1,44 +1,56 @@
 # tests/helpers/solver_output_schema_dummy.py
 
-# Import the base Step 4 dummy to satisfy the composition
+import numpy as np
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
 def make_output_schema_dummy(nx=4, ny=4, nz=4):
     """
-    The 'Gold Standard' State. 
-    This represents a SolverState that has passed through all 5 steps.
+    The 'Gold Standard' State: Post-Step 5 Completion.
     
-    Updates:
-    - Chronos Guard: time synced to total_time (1.0) to satisfy termination tests.
-    - Status: ready_for_time_loop set to False to signal completion.
-    - Archivist Logic: Step 5 diagnostics included for receipt verification.
+    Constitutional Role:
+    - Chronos Guard: Synchronizes state.time to total_time.
+    - Archivist: Populates the OutputManifest with file paths and logs.
+    - Termination: Flips ready_for_time_loop to False (Finished).
     """
-    # 1. Start from Step 4 (The most complete physical state)
+    # 1. Start from Step 4 (The Physical Foundation)
     state = make_step4_output_dummy(nx=nx, ny=ny, nz=nz)
 
-    # 2. Terminal Temporal State (Fix for The Judge)
-    # We ensure time matches the simulation goal to represent a finished run.
-    state.simulation_parameters["total_time"] = 1.0
-    state.time = 1.0 
+    # ------------------------------------------------------------------
+    # 2. Terminal Temporal State (From orchestrate_step5_state)
+    # ------------------------------------------------------------------
+    # We simulate a completed run reaching total_time
+    target_total_time = 1.0
+    state.time = target_total_time
     state.iteration = 1000 
-    state.ready_for_time_loop = False  # Critical: signals solver exit
+    
+    # In Step 5, we call it 'step_index' based on your source code
+    state.step_index = state.iteration 
 
-    # 3. Simulate a "Trigger" iteration logic
-    interval = state.simulation_parameters.get("output_interval", 10)
+    # ------------------------------------------------------------------
+    # 3. Populate Manifest Safe (The Archivist)
+    # ------------------------------------------------------------------
+    # This reflects the results of write_output_snapshot and finalize_health
+    state.manifest.output_directory = "output/simulation_results"
+    state.manifest.saved_snapshots = [
+        "output/snapshot_0000.vtk",
+        "output/snapshot_0500.vtk",
+        f"output/snapshot_{state.iteration:04d}.vtk"
+    ]
+    state.manifest.final_checkpoint = f"output/checkpoint_final_{state.iteration}.npy"
+    state.manifest.log_file = "output/solver_convergence.log"
 
-    # 4. Add Step 5 Archivist Receipt (Required for Property Integrity tests)
-    state.step5_diagnostics = {
-        "snapshot_generated": (state.iteration % interval == 0),
-        "write_success": True,
-        "archive_path": f"outputs/snapshot_{state.iteration:03d}.json"
-    }
+    # ------------------------------------------------------------------
+    # 4. Final Health Summary (from finalize_simulation_health)
+    # ------------------------------------------------------------------
+    state.health.is_stable = True
+    state.health.post_correction_divergence_norm = 1e-15
+    # Verification that the final speed is within physical bounds
+    state.health.max_u = 1.2 
 
-    # 5. Add 'Step 5' Voice (Export Metadata)
-    state.step5_outputs = {
-        "last_file_saved": f"output_{state.iteration:04d}.vtk",
-        "export_format": "VTK",
-        "simulation_status": "COMPLETE",
-        "total_runtime_seconds": 1.25
-    }
+    # ------------------------------------------------------------------
+    # 5. Progression Gate
+    # ------------------------------------------------------------------
+    # The loop is finished; we are no longer "ready" to enter it again.
+    state.ready_for_time_loop = False
 
     return state

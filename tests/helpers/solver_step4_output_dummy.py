@@ -5,52 +5,51 @@ from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 
 def make_step4_output_dummy(nx=4, ny=4, nz=4):
     """
-    Canonical dummy representing the post-Step 4 SolverState.
-    Updated for Departmental Integrity and Article 3 (Universal State Container).
+    Step 4 Dummy: Mimics the state after Boundary Enforcement and Ghost Cell padding.
     
-    Step 4 adds:
-      - Extended fields (P_ext, U_ext, V_ext, W_ext) with Ghost Cell padding.
-      - Final boundary-enforced diagnostics.
-      - Grid volume calculations derived from the 'grid' department.
+    Constitutional Role: 
+    - Initializes Extended Fields (P_ext, U_ext, V_ext, W_ext).
+    - Populates the Diagnostics department with pre-flight audit data.
+    - Finalizes readiness for visualization or iterative cycling.
     """
-
-    # 1. Start from the Projection Snapshot (Step 3)
-    # Inherits: grid["dx"], constants["dt"], iteration history, and projected fields.
+    # 1. Inherit the Projection Foundation (Step 3)
+    # Inherits: grid, operators, projected fields, and history.
     state = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # ------------------------------------------------------------------
-    # 2. Add Extended "Ghost" Fields (For Visualization/BCs)
+    # 2. Add Extended "Ghost" Fields (FieldData Safe)
     # ------------------------------------------------------------------
-    # Logic: 
-    # Pressure (Centers): N + 2 ghosts (Left/Right)
-    # Velocity (Faces): (N+1) faces + 2 ghosts = N + 3
-    state.P_ext = np.zeros((nx + 2, ny + 2, nz + 2))
-    state.U_ext = np.zeros((nx + 3, ny + 2, nz + 2))
-    state.V_ext = np.zeros((nx + 2, ny + 3, nz + 2))
-    state.W_ext = np.zeros((nx + 2, ny + 2, nz + 3))
+    # Staggered Grid Halo Logic:
+    # Pressure (Centers): nx + 2 ghosts
+    # Velocity (Faces): (nx+1) faces + 2 ghosts = nx + 3
+    
+    state.fields.P_ext = np.zeros((nx + 2, ny + 2, nz + 2))
+    state.fields.U_ext = np.zeros((nx + 3, ny + 2, nz + 2))
+    state.fields.V_ext = np.zeros((nx + 2, ny + 3, nz + 2))
+    state.fields.W_ext = np.zeros((nx + 2, ny + 2, nz + 3))
 
     # ------------------------------------------------------------------
-    # 3. Add Step 4 Specific Diagnostics (Pure Path Compliant)
+    # 3. Populate Diagnostics (Diagnostics Safe)
     # ------------------------------------------------------------------
-    # CRITICAL: We retrieve spacing from state.grid, NOT state.constants.
-    dx = state.grid["dx"]
-    dy = state.grid["dy"]
-    dz = state.grid["dz"]
+    # Note: We use the property setters to satisfy the ValidatedContainer.
+    
+    # Calculate approximate memory footprint (float64 = 8 bytes)
+    total_voxels = (nx+2)*(ny+2)*(nz+2) 
+    state.diagnostics.memory_footprint_gb = (total_voxels * 8 * 4) / 1e9
+    
+    state.diagnostics.bc_verification_passed = True
+    
+    # CFL Limit based on current max velocity (from Step 3 health)
+    max_u = state.health.max_u
+    if max_u > 0:
+        state.diagnostics.initial_cfl_dt = 0.5 * state.grid.dx / max_u
+    else:
+        state.diagnostics.initial_cfl_dt = state.config.ppe_tolerance # Placeholder
 
-    state.step4_diagnostics = {
-        "total_fluid_cells": nx * ny * nz,
-        "grid_volume_per_cell": (dx * dy * dz),
-        "initialized": True,
-        "post_bc_max_velocity": 0.0,
-        "post_bc_divergence_norm": 1e-12,
-        "bc_violation_count": 0,
-    }
-
     # ------------------------------------------------------------------
-    # 4. Finalize State for Output/Loop
+    # 4. Finalize State
     # ------------------------------------------------------------------
-    # Step 4 prepares the snapshot for either visualization (Step 5)
-    # or cycling back to the next time step.
+    # Step 4 marks the state as fully audited and ready for the next phase.
     state.ready_for_time_loop = True
 
     return state

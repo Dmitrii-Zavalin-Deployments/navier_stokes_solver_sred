@@ -6,69 +6,64 @@ from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
 def make_step2_output_dummy(nx=4, ny=4, nz=4):
     """
-    Canonical dummy representing the EXACT structure of a real post‑Step‑2 SolverState.
-    Updated to comply with Phase C, Rule 7 (Scale Guard) and Departmental Integrity.
-
-    Step 2 adds:
-      - Refined mask semantics (Inherited from Step 1, cast to JSON-safe lists)
-      - Operators as SciPy Sparse Matrices (Laplacian, Divergence, Gradient)
-      - PPE (Pressure Poisson Equation) system matrix and metadata
-      - Initialized health diagnostics for Step 2 logic
+    Step 2 Dummy: Mimics the exact output of orchestrate_step2.
+    
+    Constitutional Role: 
+    Inherits Step 1 data and populates the 'Mathematical' safes:
+    - Operators (Sparse Matrices)
+    - PPE System (A and Preconditioner)
+    - Initial Health (Vitals)
+    - Advection Stencils
     """
-
-    # 1. Start from the refined Step 1 dummy (The Geometry/Physics foundation)
+    # 1. Start from the validated Step 1 foundation
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
 
-    # 2. Calculate Degrees of Freedom (DOF) for matrix dimensions
+    # 2. Degrees of Freedom (For matrix sizing)
     dof_p = nx * ny * nz
+    # Velocity components on a staggered grid
     dof_u = (nx + 1) * ny * nz
     dof_v = nx * (ny + 1) * nz
     dof_w = nx * ny * (nz + 1)
     total_vel_dof = dof_u + dof_v + dof_w
 
     # ------------------------------------------------------------------
-    # 3. Mask Semantics (Fixing the Boolean Leak)
+    # 3. Numerical Config (from load_numerical_config)
     # ------------------------------------------------------------------
-    # Convert inherited mask back to numpy for element-wise comparison
-    mask_arr = np.array(state.mask)
+    state.config.ppe_atol = 1e-12
+    state.config.ppe_max_iter = 1000
+
+    # ------------------------------------------------------------------
+    # 4. Sparse Operators (from build_operators)
+    # ------------------------------------------------------------------
+    # Note: We use the property setters in state.operators
+    state.operators.divergence = csr_matrix((dof_p, total_vel_dof))
+    state.operators.grad_x = csr_matrix((dof_u, dof_p))
+    state.operators.grad_y = csr_matrix((dof_v, dof_p))
+    state.operators.grad_z = csr_matrix((dof_w, dof_p))
+    state.operators.laplacian = csr_matrix((dof_p, dof_p))
+
+    # ------------------------------------------------------------------
+    # 5. Advection & PPE Structures (from prepare_ppe_structure)
+    # ------------------------------------------------------------------
+    state.advection.weights = np.zeros((total_vel_dof, 8))
+    state.advection.indices = np.zeros((total_vel_dof, 8), dtype=int)
     
-    # Cast boolean results to int then to list to satisfy JSON 'array' contract
-    state.is_fluid = (mask_arr == 1).astype(int).tolist()
-    state.is_solid = (mask_arr == 0).astype(int).tolist()
-    state.is_boundary_cell = np.zeros((nx, ny, nz), dtype=int).tolist() 
+    # The PPE system matrix is typically the Laplacian operator
+    state.ppe.A = state.operators.laplacian
+    state.ppe.preconditioner = None  # Initialized as None or identity
 
     # ------------------------------------------------------------------
-    # 4. Operators (Sparsity Guard Compliant)
+    # 6. Initialization Health (from compute_initial_health)
     # ------------------------------------------------------------------
-    state.operators = {
-        "laplacian": csr_matrix((dof_p, dof_p)),
-        "divergence": csr_matrix((dof_p, total_vel_dof)),
-        "gradient": csr_matrix((total_vel_dof, dof_p)),
-    }
+    state.health.max_u = 0.0
+    state.health.divergence_norm = 0.0
+    state.health.is_stable = True
+    state.health.post_correction_divergence_norm = 0.0
 
     # ------------------------------------------------------------------
-    # 5. PPE (Pressure Poisson Equation) structure
+    # 7. Progression State
     # ------------------------------------------------------------------
-    state.ppe = {
-        "dimension": dof_p,
-        "solver_type": "sparse_cg",  
-        "A": state.operators["laplacian"],
-        "tolerance": 1e-6,
-        "max_iterations": 1000,
-        "ppe_is_singular": True,     
-        "rhs_norm": 0.0,
-    }
-
-    # ------------------------------------------------------------------
-    # 6. Step‑2 Health Diagnostics
-    # ------------------------------------------------------------------
-    state.health.update({
-        "divergence_norm": 0.0,
-        "max_velocity": 0.0,
-        "cfl": 0.0,
-    })
-
-    # 7. Progression Flag
+    # Step 2 is mathematical readiness, but Step 4 (BCs) usually flips this bit.
     state.ready_for_time_loop = False 
 
     return state

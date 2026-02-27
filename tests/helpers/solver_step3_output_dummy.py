@@ -5,97 +5,57 @@ from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 def make_step3_output_dummy(nx=4, ny=4, nz=4):
     """
-    Canonical dummy representing the post-Step 3 SolverState.
-    Updated for Departmental Integrity, Staggered Grid, and Density Activation.
+    Step 3 Dummy: Mimics the state after one full time-step iteration.
     
-    Step 3 adds:
-      - Density activation in fluid_properties (Required for projection scaling)
-      - Intermediate fields (U_star, V_star, W_star) representing the 'Star' state
-      - Step 3 Diagnostics: Confirms external force application (The Momentum receipt)
-      - Pressure Poisson Solve results (PPE metadata updates)
-      - Velocity Correction (Field updates to U, V, W)
-      - Health diagnostics post-projection
+    Constitutional Role: 
+    - Records the transition from initial state to t + dt.
+    - Updates history lists (Times, Divergence, Energy).
+    - Reflects the results of the Pressure Poisson solve.
     """
-
-    # 1. Start from the Operator Foundation (Step 2)
-    # Inherits: grid, external_forces, ppe["dimension"], and JSON-safe masks
+    # 1. Inherit the Mathematical Machine (Step 2)
     state = make_step2_output_dummy(nx=nx, ny=ny, nz=nz)
 
     # ------------------------------------------------------------------
-    # 2. Activate Fluid Physics (Required for Step 3 Projection Scaling)
+    # 2. Update Fields (The Results of the Projection)
     # ------------------------------------------------------------------
-    state.fluid_properties.update({
-        "density": 1000.0,
-        "viscosity": 1e-3,
-    })
+    # After Step 3, the velocities are divergence-free (corrected)
+    state.fields.U = np.zeros((nx + 1, ny, nz))
+    state.fields.V = np.zeros((nx, ny + 1, nz))
+    state.fields.W = np.zeros((nx, ny, nz + 1))
+    state.fields.P = np.zeros((nx, ny, nz))
 
     # ------------------------------------------------------------------
-    # 3. Update Fields (The Corrected/Projected Fields)
+    # 3. Update Health (Post-Correction Vitals)
     # ------------------------------------------------------------------
-    state.fields.update({
-        "U": np.zeros((nx + 1, ny, nz)),
-        "V": np.zeros((nx, ny + 1, nz)),
-        "W": np.zeros((nx, ny, nz + 1)),
-        "P": np.zeros((nx, ny, nz)),
-    })
+    state.health.is_stable = True
+    state.health.max_u = 0.5  # Non-zero speed after movement
+    state.health.divergence_norm = 1e-14 # Mass conservation proof
+    state.health.post_correction_divergence_norm = 1e-14
 
     # ------------------------------------------------------------------
-    # 4. Add Intermediate Fields (The Predictor/Star step)
+    # 4. Append to History (The Black Box Recorder)
     # ------------------------------------------------------------------
-    # Using '_star' naming convention to differentiate from final corrected fields
-    state.intermediate_fields = {
-        "U_star": np.zeros((nx + 1, ny, nz)),
-        "V_star": np.zeros((nx, ny + 1, nz)),
-        "W_star": np.zeros((nx, ny, nz + 1)),
-    }
+    # Note: History lists are initialized in SolverState.
+    # We append the first 'snapshot' of data.
+    state.history.times.append(state.time)
+    state.history.divergence_norms.append(1e-14)
+    state.history.max_velocity_history.append(0.5)
+    state.history.energy_history.append(0.0125)
+    # ppe_status_history tracks solve outcomes (e.g., 'converged')
+    state.history.ppe_status_history.append("converged")
 
     # ------------------------------------------------------------------
-    # 5. NEW: Step 3 Diagnostics (The "Execution Proof")
-    # ------------------------------------------------------------------
-    # This specifically fixes the test_external_forces_integrity.py failure
-    state.step3_diagnostics = {
-        "source_term_applied": True,           
-        "force_magnitude_applied": state.constants.get("g", 9.81),
-        "convection_scheme": "upwind",
-        "diffusion_scheme": "central_difference"
-    }
-
-    # ------------------------------------------------------------------
-    # 6. Update PPE Metadata (Reflecting Linear Algebra Solve)
-    # ------------------------------------------------------------------
-    state.ppe.update({
-        "iterations": 12,           
-        "converged": True,          
-        "rhs_norm": 1e-10,          
-    })
-
-    # ------------------------------------------------------------------
-    # 7. Update Health Diagnostics (Post-Correction metrics)
-    # ------------------------------------------------------------------
-    state.health.update({
-        "post_correction_divergence_norm": 1e-12,
-        "max_velocity_magnitude": 0.0,
-        "cfl_advection_estimate": 0.0,
-    })
-
-    # ------------------------------------------------------------------
-    # 8. Append to History (Time-series tracking)
-    # ------------------------------------------------------------------
-    state.history["times"].append(state.time)
-    state.history["divergence_norms"].append(1e-12)
-    state.history["max_velocity_history"].append(0.0)
-    state.history["ppe_iterations_history"].append(12)
-    state.history["energy_history"].append(0.0)
-
-    # ------------------------------------------------------------------
-    # 9. Progression Flags & Metadata
+    # 5. Progression Flags
     # ------------------------------------------------------------------
     state.iteration = 1
-    
-    # Calculate next time step safely
-    dt = state.constants.get("dt", 0.01)
-    state.time += dt
-    
+    # dt is usually set in config/grid properties; we increment physical time
+    try:
+        state.time += state.config.dt
+    except (RuntimeError, AttributeError):
+        # Fallback if dt isn't initialized in the dummy chain yet
+        state.time += 0.001
+        
+    # After Step 3, we have successfully run a loop, so this is definitely True
     state.ready_for_time_loop = True 
 
     return state
