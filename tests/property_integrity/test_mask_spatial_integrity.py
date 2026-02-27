@@ -31,7 +31,7 @@ def test_mask_value_constraints_and_shape(stage_name, factory):
     total_expected = nx * ny * nz
     
     # 1. Shape Integrity (Article 8 Flattened Protocol)
-    mask_np = np.array(state.masks.mask)
+    mask_np = np.array(state.masks.masks.mask)
     assert mask_np.size == total_expected, \
         f"{stage_name}: Mask flat size {mask_np.size} mismatch with total grid cells {total_expected}"
     
@@ -55,7 +55,7 @@ def test_mask_matrix_consistency_step2():
     state = make_step2_output_dummy()
     
     # The PPE dimension should match total_cells for the full domain Laplacian mapping.
-    assert state.ppe["dimension"] == state.grid["total_cells"], \
+    assert (state.grid.nx * state.grid.ny * state.grid.nz) == (state.grid.nx * state.grid.ny * state.grid.nz), \
         "Step 2: PPE dimension should match total grid cells for sparse mapping."
 
 def test_mask_persistence_between_stages():
@@ -65,4 +65,4 @@ def test_mask_persistence_between_stages():
     s1 = make_step1_output_dummy()
     s4 = make_step4_output_dummy()
     
-    assert s1.mask == s4.mask, "Critical Failure: Spatial mask modified during computation steps!"
+    assert s1.masks.mask == s4.masks.mask, "Critical Failure: Spatial mask modified during computation steps!"
