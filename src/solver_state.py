@@ -150,17 +150,19 @@ class GridContext(ValidatedContainer):
     @z_max.setter
     def z_max(self, val: float): self._set_safe("z_max", val, float)
 
+    # Derived spacing properties
+    # These will trigger a RuntimeError if any required component is None
     @property
     def dx(self) -> float: 
-        return (self.x_max - self.x_min) / self.nx
+        return float((self.x_max - self.x_min) / self.nx)
 
     @property
     def dy(self) -> float: 
-        return (self.y_max - self.y_min) / self.ny
+        return float((self.y_max - self.y_min) / self.ny)
 
     @property
     def dz(self) -> float: 
-        return (self.z_max - self.z_min) / self.nz
+        return float((self.z_max - self.z_min) / self.nz)
 
 @dataclass
 class FieldData(ValidatedContainer):

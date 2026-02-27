@@ -60,7 +60,8 @@ jobs:
       - name: 🧪 Run Unit Tests (Pytest + Coverage)
         run: |
           echo "🔍 Running unit tests..."
-          pytest tests/ --verbose --cov=src --cov-report=term-missing
+          # Added -vv for deep inspection of contract failures
+          pytest tests/ -vv --verbose --cov=src --cov-report=term-missing
           echo "✅ Unit tests completed."
 
       # ---------------------------------------------------------
