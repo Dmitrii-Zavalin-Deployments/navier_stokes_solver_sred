@@ -551,6 +551,7 @@ class Diagnostics(ValidatedContainer):
     _memory_footprint_gb: float = None
     _bc_verification_passed: bool = None
     _initial_cfl_dt: float = None
+    _source_term_applied: bool = True
 
     @property
     def memory_footprint_gb(self) -> float: 
@@ -581,7 +582,8 @@ class Diagnostics(ValidatedContainer):
         mapping = {
             "memory_footprint": "memory_footprint_gb",
             "bc_verification": "bc_verification_passed",
-            "cfl_limit": "initial_cfl_dt"
+            "cfl_limit": "initial_cfl_dt",
+            "source_term_applied": "_source_term_applied"
         }
         # If the key is a legacy alias, use the new name; else use the key as-is.
         target = mapping.get(key, key)
