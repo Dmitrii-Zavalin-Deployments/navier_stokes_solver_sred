@@ -44,6 +44,26 @@ class ValidatedContainer:
             )
         setattr(self, f"_{name}", value)
 
+    def to_dict(self) -> dict:
+        """Recursively converts the department to a JSON-serializable dictionary."""
+        out = {}
+        # Get all attributes that don't start with underscore
+        for key in dir(self):
+            if not key.startswith('_'):
+                val = getattr(self, key)
+                if callable(val): continue
+                
+                # Handle nested containers
+                if isinstance(val, ValidatedContainer):
+                    out[key] = val.to_dict()
+                # Handle NumPy arrays
+                elif isinstance(val, np.ndarray):
+                    out[key] = val.tolist()
+                # Handle basic types
+                else:
+                    out[key] = val
+        return out
+
 # =========================================================
 # STEP 1: THE DEPARTMENT SAFES
 # =========================================================
