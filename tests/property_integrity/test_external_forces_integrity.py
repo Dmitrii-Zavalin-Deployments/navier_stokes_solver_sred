@@ -24,8 +24,8 @@ def test_external_force_vector_presence_and_dimension():
     assert "g" in state.config.simulation_parameters, "Step 3: Gravity constant 'g' missing"
     
     # 2. Vector Structure (Intent)
-    assert hasattr(state, "external_forces"), "Step 3: external_forces department missing"
-    force = state.external_forces["force_vector"]
+    assert hasattr(state.config, "external_forces"), "Step 3: external_forces department missing"
+    force = state.config.external_forces["force_vector"]
     assert len(force) == 3, "External force must be a 3D vector [x, y, z]"
 
 @pytest.mark.parametrize("stage_name, factory", FORCE_ACTIVE_STAGES)

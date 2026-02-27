@@ -10,6 +10,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.config.case_name = "dummy_verification"
     state.config.method = "jacobi"
     
+    state.config.external_forces = {"force_vector": [0.0, 0.0, -9.81]}
     state.config.boundary_conditions = [
         {"location": "x_min", "type": "no-slip", "values": {}},
         {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},

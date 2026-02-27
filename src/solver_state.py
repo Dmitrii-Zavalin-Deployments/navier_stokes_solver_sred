@@ -87,6 +87,7 @@ class SolverConfig(ValidatedContainer):
     # --- Cloned Blocks from Input Schema ---
     _simulation_parameters: dict = None  # Clones the 'simulation_parameters' block
     _boundary_conditions: list = None    # Renamed to match schema/dummies
+    _external_forces: dict = None
 
     # --- PPE Property Group ---
     @property
@@ -136,6 +137,16 @@ class SolverConfig(ValidatedContainer):
     @boundary_conditions.setter
     def boundary_conditions(self, v: list):
         self._set_safe("boundary_conditions", v, list)
+
+    # --- External Forces Group ---
+    @property
+    def external_forces(self) -> dict:
+        """Physical source terms like gravity: {'force_vector': [x, y, z]}"""
+        return self._get_safe("external_forces")
+
+    @external_forces.setter
+    def external_forces(self, v: dict):
+        self._set_safe("external_forces", v, dict)
 
 @dataclass
 class GridContext(ValidatedContainer):
