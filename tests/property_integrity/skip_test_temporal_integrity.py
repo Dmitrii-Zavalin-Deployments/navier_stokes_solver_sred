@@ -33,8 +33,8 @@ def test_time_step_persistence_and_sync(stage_name, factory):
     
     # 3. Internal Sync Check: constants.dt must match simulation_parameters.time_step
     # This ensures the solver math is using the actual user-defined increment.
-    assert "dt" in state.constants, f"{stage_name}: Internal 'dt' missing from constants"
-    dt_internal = state.constants["dt"]
+    assert "dt" in state.config.simulation_parameters, f"{stage_name}: Internal 'dt' missing from constants"
+    dt_internal = state.config.simulation_parameters["dt"]
     
     assert dt_input == dt_internal, f"{stage_name}: Desync! Internal dt ({dt_internal}) != Input time_step ({dt_input})"
     

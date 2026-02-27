@@ -21,7 +21,7 @@ def test_external_force_vector_presence_and_dimension():
     state = make_step3_output_dummy()
     
     # 1. Existence in Constants
-    assert "g" in state.constants, "Step 3: Gravity constant 'g' missing"
+    assert "g" in state.config.simulation_parameters, "Step 3: Gravity constant 'g' missing"
     
     # 2. Vector Structure (Intent)
     assert hasattr(state, "external_forces"), "Step 3: external_forces department missing"
@@ -50,8 +50,8 @@ def test_force_coupling_with_dt():
     u_star = u_n + dt * (convection + diffusion + G)
     """
     state = make_step3_output_dummy()
-    dt = state.constants["dt"]
-    g = state.constants.get("g", 9.81)
+    dt = state.config.simulation_parameters["dt"]
+    g = state.config.simulation_parameters.get("g", 9.81)
     
     assert dt > 0, "Temporal step dt must be positive for force integration"
     assert g != 0, "Gravity magnitude should be non-zero for integrity testing"

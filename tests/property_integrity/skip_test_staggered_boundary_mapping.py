@@ -29,7 +29,7 @@ def test_staggered_value_lifecycle_persistence(stage_name, factory):
     assert hasattr(state, "boundary_conditions"), f"{stage_name} missing boundary_conditions"
     
     # 2. Locate the specific BC entry for x_min
-    bc_entry = next((bc for bc in state.boundary_conditions if bc["location"] == target_location), None)
+    bc_entry = next((bc for bc in state.config.boundary_conditions if bc["location"] == target_location), None)
     assert bc_entry is not None, f"{stage_name} lost the BC entry for {target_location}"
     
     # 3. Verify Value Presence
@@ -45,7 +45,7 @@ def test_staggered_component_validity():
     state = make_step1_output_dummy()
     allowed_keys = {"u", "v", "w", "p"} # Corrected syntax
     
-    for bc in state.boundary_conditions:
+    for bc in state.config.boundary_conditions:
         if "values" in bc:
             provided_keys = set(bc["values"].keys())
             assert provided_keys.issubset(allowed_keys), \

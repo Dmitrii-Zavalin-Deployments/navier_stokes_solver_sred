@@ -56,7 +56,7 @@ def test_velocity_correction_scaling_consistency():
     """
     state = make_step3_output_dummy()
     
-    dt = state.constants.get("dt", 0.001)
+    dt = state.config.simulation_parameters.get("dt", 0.001)
     rho = state.fluid_properties["density"]
     
     correction_factor = dt / rho
@@ -70,7 +70,7 @@ def test_diffusion_stability_coefficient():
     state = make_step3_output_dummy()
     
     nu = state.fluid_properties["viscosity"]
-    dt = state.constants.get("dt", 0.001)
+    dt = state.config.simulation_parameters.get("dt", 0.001)
     dx = state.grid.get("dx", 0.1)
     
     # Stability factor must be a finite number
