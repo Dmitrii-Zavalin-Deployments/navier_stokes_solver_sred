@@ -50,7 +50,7 @@ def test_force_coupling_with_dt():
     u_star = u_n + dt * (convection + diffusion + G)
     """
     state = make_step3_output_dummy()
-    dt = state.config.simulation_parameters["dt"]
+    dt = state.config.simulation_parameters["time_step"]
     g = state.config.simulation_parameters.get("g", 9.81)
     
     assert dt > 0, "Temporal step dt must be positive for force integration"
