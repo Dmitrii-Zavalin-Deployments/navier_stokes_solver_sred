@@ -16,18 +16,13 @@ class ValidatedContainer:
     
     def _get_safe(self, name: str) -> Any:
         """Checks if the internal value is None. If not, returns it."""
-        # We look for the 'private' version of the variable
         attr_name = f"_{name}"
-        
-        # Check if the attribute even exists on the object at all
         if not hasattr(self, attr_name):
             raise AttributeError(
-                f"Coding Error: '{attr_name}' is not defined in {self.__class__.__name__}. "
-                f"Check your class definition."
+                f"Coding Error: '{attr_name}' is not defined in {self.__class__.__name__}."
             )
             
         val = getattr(self, attr_name)
-        
         if val is None:
             raise RuntimeError(
                 f"Access Error: '{name}' in {self.__class__.__name__} has not been initialized. "
@@ -39,33 +34,35 @@ class ValidatedContainer:
         """Ensures the value is the correct type before saving it."""
         if value is not None and not isinstance(value, expected_type):
             raise TypeError(
-                f"Validation Error: '{name}' must be {expected_type}, "
-                f"but got {type(value)}."
+                f"Validation Error: '{name}' must be {expected_type}, but got {type(value)}."
             )
         setattr(self, f"_{name}", value)
 
     def to_dict(self) -> dict:
         """
         Recursively converts the container to a JSON-serializable dictionary.
-        Handles nested containers and NumPy arrays.
+        Strips leading underscores and converts NumPy arrays to lists.
         """
         out = {}
-        # We look at public properties (no leading underscore)
-        for attr in dir(self):
-            if not attr.startswith('_') and not attr.startswith('to_'):
-                val = getattr(self, attr)
-                if callable(val):
-                    continue
-                
-                # Recursive conversion for nested safes
-                if isinstance(val, ValidatedContainer):
-                    out[attr] = val.to_dict()
-                # Conversion for NumPy arrays
-                elif isinstance(val, np.ndarray):
-                    out[attr] = val.tolist()
-                # Basic types (int, float, str, list)
-                else:
-                    out[attr] = val
+        # We iterate over instance variables to capture the state
+        for attr, val in self.__dict__.items():
+            # Clean the key name (strip leading underscore)
+            clean_key = attr.lstrip('_')
+            
+            # 1. Handle nested containers
+            if isinstance(val, ValidatedContainer):
+                out[clean_key] = val.to_dict()
+            # 2. Handle NumPy arrays (Crucial for JSON)
+            elif isinstance(val, np.ndarray):
+                out[clean_key] = val.tolist()
+            # 3. Handle nested dictionaries (like boundary_conditions)
+            elif isinstance(val, dict):
+                # Ensure no numpy types inside dicts
+                out[clean_key] = {k: (v.tolist() if isinstance(v, np.ndarray) else v) 
+                                 for k, v in val.items()}
+            # 4. Basic types
+            else:
+                out[clean_key] = val
         return out
 
 # =========================================================
@@ -704,31 +701,49 @@ class SolverState:
         }
 
     # ---------------------------------------------------------
-    # Serialization (Scale Guard Compliant)
+    # Serialization (Contract Bridge)
     # ---------------------------------------------------------
     def to_json_safe(self) -> dict:
         """
-        Bridges the Departmental State to the Legacy Flat Schema.
-        Flattens internal safes into a single root-level dictionary.
+        Bridges the Departmental State to the Legacy Schema.
+        Returns a hybrid structure: nested departments + mirrored root properties.
         """
-        # 1. Get dictionary representations of all departments
+        # 1. Convert all departments to dictionaries
         config_dict = self.config.to_dict()
-        grid_dict = self.grid.to_dict()
+        grid_dict   = self.grid.to_dict()
         fields_dict = self.fields.to_dict()
         health_dict = self.health.to_dict()
-        
-        # 2. Build the flat dictionary expected by 'solver_output_schema.json'
-        # We use dictionary unpacking (**) to bring nested values to the root.
-        flat_data = {
+        masks_dict  = self.masks.to_dict()
+        ppe_dict    = self.ppe.to_dict()
+
+        # 2. Build the Hybrid Dictionary
+        # This structure satisfies both modern internal code and legacy external schemas.
+        data = {
+            # Metadata & Odometers
             "time": self.time,
             "iteration": self.iteration,
             "ready_for_time_loop": self.ready_for_time_loop,
-            **config_dict,
-            **grid_dict,
-            **fields_dict,
-            **health_dict,
+            
+            # Departments (Schema requires these as objects)
+            "config": config_dict,
+            "grid": grid_dict,
+            "fields": fields_dict,
+            "health": health_dict,
+            "ppe": ppe_dict,
             "history": self.history.to_dict(),
-            "manifest": self.manifest.to_dict()
+            "manifest": self.manifest.to_dict(),
+
+            # Legacy Root-Level Properties (Mirroring/Lifting)
+            # These are explicitly listed in the schema's "required" block
+            "mask": masks_dict.get("mask"),
+            "constants": config_dict.get("constants"),
+            "boundary_conditions": config_dict.get("boundary_conditions"),
+            
+            # Extended Fields (Ghost Cell Regions)
+            "P_ext": fields_dict.get("P_ext"),
+            "U_ext": fields_dict.get("U_ext"),
+            "V_ext": fields_dict.get("V_ext"),
+            "W_ext": fields_dict.get("W_ext")
         }
         
-        return flat_data
+        return data
