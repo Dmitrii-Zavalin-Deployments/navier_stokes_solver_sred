@@ -570,10 +570,14 @@ class OutputManifest(ValidatedContainer):
 class SolverState:
     """
     The Project Constitution: Article 3 (The Universal State Container).
-    This version is strictly mapped to Step 1 through Step 4.
+    
+    This central container synchronizes all data across the five-step pipeline:
+    1. Domain Setup -> 2. Operator Assembly -> 3. Iterative Loop -> 
+    4. Boundary Enforcement -> 5. Artifact Export.
     """
 
     # --- 1. Hardened Safe Objects ---
+    # These containers house all validated numerical and physical data.
     config: SolverConfig = field(default_factory=SolverConfig)
     grid: GridContext = field(default_factory=GridContext)
     fields: FieldData = field(default_factory=FieldData)
@@ -587,34 +591,24 @@ class SolverState:
     diagnostics: Diagnostics = field(default_factory=Diagnostics)
     manifest: OutputManifest = field(default_factory=OutputManifest)
 
-    # --- 2. Orchestrator-Driven Containers ---
-    constants: Dict[str, Any] = field(default_factory=dict)
-    boundary_conditions: Dict[str, Any] = field(default_factory=dict)
-
-    # --- 3. Global Simulation State ---
-    
-    ## 1. Primary Simulation Counters
-    # These are the "Odometers" of your simulation. They tell the user 
-    # exactly how far the physics progressed before the loop terminated.
-    # 
-    # | Attribute | Type | Description |
-    # | --- | --- | --- |
-    # | state.time | float | The final physical time reached (e.g., 2.5s). |
-    # | state.iteration | int | The final step count. |
-    
+    # --- 2. Global Simulation Odometer ---
+    # Tracks the physical and temporal progression of the solver.
+    # | Attribute          | Type  | Description                                   |
+    # |--------------------|-------|-----------------------------------------------|
+    # | state.time         | float | Total simulated physical time (seconds).      |
+    # | state.iteration    | int   | Current time-step count.                      |
     iteration: int = 0
     time: float = 0.0
 
-    ### 3. Loop Readiness Flag
-    # This is a critical boolean gate.
-    # ready_for_time_loop: A True/False toggle. It prevents the simulation 
-    # from starting if any previous step (1 through 4) failed to initialize 
-    # its data. It is the "Green Light" for the engine.
+    # --- 3. Execution Gate ---
+    # ready_for_time_loop: A safety toggle. It must be flipped to True 
+    # only after Steps 1-4 successfully initialize all required data.
     ready_for_time_loop: bool = False
 
     # ---------------------------------------------------------
     # Attribute Interface (Facade)
     # ---------------------------------------------------------
+    # These properties provide clean aliases to deeply nested data.
     
     @property
     def pressure(self) -> np.ndarray:
@@ -636,54 +630,48 @@ class SolverState:
     def is_fluid(self) -> np.ndarray:
         return self.masks.is_fluid
 
-    # Shortcuts for Step 4 Extended Fields
+    # --- Step 4 Extended Field Shortcuts ---
     @property
     def U_ext(self) -> np.ndarray: return self.fields.U_ext
-    
     @property
     def V_ext(self) -> np.ndarray: return self.fields.V_ext
-    
     @property
     def W_ext(self) -> np.ndarray: return self.fields.W_ext
-    
     @property
     def P_ext(self) -> np.ndarray: return self.fields.P_ext
 
+    # --- Numerical Shortcuts (Validated by Config & Grid) ---
     @property
     def dt(self) -> float:
-        val = self.constants.get("dt")
-        if val is None:
-            raise RuntimeError("Access Error: 'dt' not found. Check compute_time_step.")
-        return val
+        """Accesses the validated time-step from the configuration safe."""
+        return self.config.dt
 
-    # --- Step 2 Numerical Shortcuts ---
     @property
     def inv_dx(self) -> float:
-        return self.constants.get("inv_dx", 1.0 / self.grid.dx)
+        """Pre-calculated inverse grid spacing for performance."""
+        return self.grid.inv_dx
 
     @property
     def inv_dy(self) -> float:
-        return self.constants.get("inv_dy", 1.0 / self.grid.dy)
+        return self.grid.inv_dy
 
     @property
     def inv_dz(self) -> float:
-        return self.constants.get("inv_dz", 1.0 / self.grid.dz)
+        return self.grid.inv_dz
 
     # ---------------------------------------------------------
-    # Legacy Facade for Step 4
+    # Legacy & Pipeline Support
     # ---------------------------------------------------------
     @property
     def step4_diagnostics(self) -> Diagnostics:
-        """Alias to match the legacy adapter's expected naming."""
+        """Alias for the legacy Step 4 adapter."""
         return self.diagnostics
 
-    ### 4. Legacy Compatibility Layer (The Dictionary Return)
-    # For your legacy adapter, Step 4 ensures that even if the code is 
-    # using old-style dictionaries, it receives:
-    # * Updated dict keys: P_ext, U_ext, V_ext, W_ext.
-    # * Metadata: step4_diagnostics and the readiness status.
     def to_legacy_dict(self) -> Dict[str, Any]:
-        """Returns a flat dictionary for older Step 4 orchestrators."""
+        """
+        Extracts a flat dictionary for legacy Step 4 orchestrators 
+        that do not yet support the full State object.
+        """
         return {
             "U_ext": self.U_ext,
             "V_ext": self.V_ext,
