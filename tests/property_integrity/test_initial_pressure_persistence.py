@@ -25,7 +25,7 @@ def test_initial_pressure_persistence_lifecycle(stage_name, factory):
     if isinstance(state, dict):
         ic = state.get("initial_conditions", {})
     else:
-        ic = getattr(state, "initial_conditions", {})
+        ic = getattr(state.config, "initial_conditions", {})
 
     # The Persistence Check
     assert "pressure" in ic, f"Lifecycle Failure: Initial pressure lost at {stage_name}"
