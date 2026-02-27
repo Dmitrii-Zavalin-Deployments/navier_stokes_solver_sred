@@ -516,7 +516,7 @@ class OutputManifest(ValidatedContainer):
     ## 5. Output Artifacts (Manifest)
     
     This tracks the physical location of files generated during Step 5.
-    Essential for GitHub Actions to locate and upload results.
+    Essential for archiving logic and post-processing verification.
     """
     _output_directory: str = "output"
     _saved_snapshots: list[str] = field(default_factory=list)
@@ -527,27 +527,38 @@ class OutputManifest(ValidatedContainer):
     def output_directory(self) -> str:
         """The base folder where all results are stored."""
         return self._get_safe("output_directory")
+    
     @output_directory.setter
-    def output_directory(self, v: str): self._set_safe("output_directory", v, str)
+    def output_directory(self, v: str): 
+        self._set_safe("output_directory", v, str)
 
     @property
     def saved_snapshots(self) -> list[str]:
         """A list of full paths to every VTK/HDF5 file created."""
         return self._get_safe("saved_snapshots")
 
+    @saved_snapshots.setter
+    def saved_snapshots(self, v: list):
+        """Allows bulk update of the snapshot registry (required by Step 5 assembly)."""
+        self._set_safe("saved_snapshots", v, list)
+
     @property
     def final_checkpoint(self) -> str:
         """The path to the last .npy or .h5 state for restarting."""
         return self._get_safe("final_checkpoint")
+    
     @final_checkpoint.setter
-    def final_checkpoint(self, v: str): self._set_safe("final_checkpoint", v, str)
+    def final_checkpoint(self, v: str): 
+        self._set_safe("final_checkpoint", v, str)
 
     @property
     def log_file(self) -> str:
         """Path to the .txt or .log file containing solver convergence stats."""
         return self._get_safe("log_file")
+    
     @log_file.setter
-    def log_file(self, v: str): self._set_safe("log_file", v, str)
+    def log_file(self, v: str): 
+        self._set_safe("log_file", v, str)
 
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
