@@ -45,23 +45,27 @@ class ValidatedContainer:
         setattr(self, f"_{name}", value)
 
     def to_dict(self) -> dict:
-        """Recursively converts the department to a JSON-serializable dictionary."""
+        """
+        Recursively converts the container to a JSON-serializable dictionary.
+        Handles nested containers and NumPy arrays.
+        """
         out = {}
-        # Get all attributes that don't start with underscore
-        for key in dir(self):
-            if not key.startswith('_'):
-                val = getattr(self, key)
-                if callable(val): continue
+        # We look at public properties (no leading underscore)
+        for attr in dir(self):
+            if not attr.startswith('_') and not attr.startswith('to_'):
+                val = getattr(self, attr)
+                if callable(val):
+                    continue
                 
-                # Handle nested containers
+                # Recursive conversion for nested safes
                 if isinstance(val, ValidatedContainer):
-                    out[key] = val.to_dict()
-                # Handle NumPy arrays
+                    out[attr] = val.to_dict()
+                # Conversion for NumPy arrays
                 elif isinstance(val, np.ndarray):
-                    out[key] = val.tolist()
-                # Handle basic types
+                    out[attr] = val.tolist()
+                # Basic types (int, float, str, list)
                 else:
-                    out[key] = val
+                    out[attr] = val
         return out
 
 # =========================================================
@@ -702,35 +706,29 @@ class SolverState:
     # ---------------------------------------------------------
     # Serialization (Scale Guard Compliant)
     # ---------------------------------------------------------
-    def to_json_safe(self) -> Dict[str, Any]:
-        """Convert state to JSON-safe dict."""
-        try:
-            from scipy.sparse import issparse
-        except ImportError:
-            def issparse(obj): return False
-
-        def convert(value):
-            if issparse(value):
-                return {
-                    "type": str(value.format),
-                    "shape": list(value.shape),
-                    "nnz": int(value.nnz)
-                }
-            if isinstance(value, np.ndarray):
-                return value.tolist()
-            if isinstance(value, dict):
-                return {k: convert(v) for k, v in value.items()}
-            if isinstance(value, list):
-                return [convert(v) for v in value]
-            if callable(value):
-                return None
-            if hasattr(value, "item") and not isinstance(value, (list, dict, np.ndarray)):
-                return value.item()
-            if value is None:
-                return None
-            return value
-
-        result = {}
-        for key, value in self.__dict__.items():
-            result[key] = convert(value)
-        return result
+    def to_json_safe(self) -> dict:
+        """
+        Bridges the Departmental State to the Legacy Flat Schema.
+        Flattens internal safes into a single root-level dictionary.
+        """
+        # 1. Get dictionary representations of all departments
+        config_dict = self.config.to_dict()
+        grid_dict = self.grid.to_dict()
+        fields_dict = self.fields.to_dict()
+        health_dict = self.health.to_dict()
+        
+        # 2. Build the flat dictionary expected by 'solver_output_schema.json'
+        # We use dictionary unpacking (**) to bring nested values to the root.
+        flat_data = {
+            "time": self.time,
+            "iteration": self.iteration,
+            "ready_for_time_loop": self.ready_for_time_loop,
+            **config_dict,
+            **grid_dict,
+            **fields_dict,
+            **health_dict,
+            "history": self.history.to_dict(),
+            "manifest": self.manifest.to_dict()
+        }
+        
+        return flat_data
