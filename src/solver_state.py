@@ -89,6 +89,7 @@ class SolverConfig(ValidatedContainer):
     _boundary_conditions: list = None    # Renamed to match schema/dummies
     _external_forces: dict = None
     _initial_conditions: dict = None
+    _fluid_properties: dict = None
 
     # --- PPE Property Group ---
     @property
@@ -158,6 +159,27 @@ class SolverConfig(ValidatedContainer):
     @initial_conditions.setter
     def initial_conditions(self, v: dict):
         self._set_safe("initial_conditions", v, dict)
+
+    # --- Fluid Properties Group ---
+    @property
+    def fluid_properties(self) -> dict:
+        """The raw dictionary: {'density': 1000, 'viscosity': 0.001}"""
+        return self._get_safe("fluid_properties")
+    
+    @fluid_properties.setter
+    def fluid_properties(self, v: dict):
+        self._set_safe("fluid_properties", v, dict)
+
+    # --- Tactical Shortcuts (Physical Facade) ---
+    @property
+    def density(self) -> float:
+        """Direct access to fluid density (rho)."""
+        return float(self.fluid_properties["density"])
+
+    @property
+    def viscosity(self) -> float:
+        """Direct access to dynamic viscosity (mu)."""
+        return float(self.fluid_properties["viscosity"])
 
 @dataclass
 class GridContext(ValidatedContainer):
