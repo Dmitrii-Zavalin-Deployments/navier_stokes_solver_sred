@@ -57,7 +57,7 @@ def test_theory_mapping_formula_integrity():
     # Formula: 1 + 4 * (2 + 4 * 3) = 57
     expected_index = i + nx * (j + ny * k)
     
-    assert len(state.masks.mask) == nx * ny * nz
+    assert len(state.masks.masks.mask) == nx * ny * nz
     assert expected_index == 57, "Mapping formula mismatch with Article 8 specification."
 
 def test_theory_extended_geometry_consistency():

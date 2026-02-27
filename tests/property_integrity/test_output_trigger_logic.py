@@ -19,9 +19,9 @@ def test_output_interval_persistence(stage_name, factory):
     if isinstance(state, dict):
         params = state.get("simulation_parameters", {})
     else:
-        params = getattr(state, "simulation_parameters", {})
+        params = getattr(state, "config", {})
     
-    assert "output_interval" in params, f"{stage_name}: Property 'output_interval' lost"
+    assert hasattr(params, "output_interval"), f"{stage_name}: Property 'output_interval' lost"
     assert isinstance(params["output_interval"], (int, float)), "Interval must be numeric"
 
 def test_step5_write_trigger_logic():
@@ -38,8 +38,8 @@ def test_step5_write_trigger_logic():
         diagnostics = state.get("step5_diagnostics", {})
     else:
         iteration = getattr(state, "iteration", 0)
-        params = getattr(state, "simulation_parameters", {})
-        diagnostics = getattr(state, "step5_diagnostics", {})
+        params = getattr(state, "config", {})
+        diagnostics = getattr(state, "health", {})
     
     interval = params.get("output_interval")
     

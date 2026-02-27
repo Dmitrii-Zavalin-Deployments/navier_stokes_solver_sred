@@ -25,7 +25,7 @@ def test_total_time_persistence_lifecycle(stage_name, factory):
     if isinstance(state, dict):
         params = state.get("simulation_parameters", {})
     else:
-        params = getattr(state, "simulation_parameters", {})
+        params = getattr(state, "config", {})
 
     # 1. Existence Check
     assert "total_time" in params, f"Lifecycle Failure: 'total_time' lost at {stage_name}"

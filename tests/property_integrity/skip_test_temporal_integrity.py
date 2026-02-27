@@ -27,7 +27,7 @@ def test_time_step_persistence_and_sync(stage_name, factory):
     
     # 2. Key Existence: Time Step
     params = state.simulation_parameters
-    assert "time_step" in params, f"{stage_name}: 'time_step' missing from simulation_parameters"
+    assert hasattr(params, "time_step"), f"{stage_name}: 'time_step' missing from simulation_parameters"
     
     dt_input = params["time_step"]
     

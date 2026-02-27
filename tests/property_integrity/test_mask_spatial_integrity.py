@@ -31,7 +31,7 @@ def test_mask_value_constraints_and_shape(stage_name, factory):
     total_expected = nx * ny * nz
     
     # 1. Shape Integrity (Article 8 Flattened Protocol)
-    mask_np = np.array(state.masks.mask)
+    mask_np = np.array(state.masks.masks.mask)
     assert mask_np.size == total_expected, \
         f"{stage_name}: Mask flat size {mask_np.size} mismatch with total grid cells {total_expected}"
     
