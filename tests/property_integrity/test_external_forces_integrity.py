@@ -40,8 +40,8 @@ def test_force_term_persistence(stage_name, factory):
     
     # Check Step 3 Diagnostics
     # This confirms the force application record persists across the pipeline.
-    assert "step3_diagnostics" in data, f"{stage_name}: Diagnostics missing"
-    assert data["step3_diagnostics"].get("source_term_applied") is True, \
+    assert "diagnostics" in data, f"{stage_name}: Diagnostics missing"
+    assert data["diagnostics"].get("source_term_applied") is True, \
         f"{stage_name}: No record of external force application in pipeline diagnostics"
 
 def test_force_coupling_with_dt():
