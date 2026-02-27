@@ -88,6 +88,7 @@ class SolverConfig(ValidatedContainer):
     _simulation_parameters: dict = None  # Clones the 'simulation_parameters' block
     _boundary_conditions: list = None    # Renamed to match schema/dummies
     _external_forces: dict = None
+    _initial_conditions: dict = None
 
     # --- PPE Property Group ---
     @property
@@ -147,6 +148,16 @@ class SolverConfig(ValidatedContainer):
     @external_forces.setter
     def external_forces(self, v: dict):
         self._set_safe("external_forces", v, dict)
+
+    # --- Initial Conditions Group ---
+    @property
+    def initial_conditions(self) -> dict:
+        """The initial velocity/pressure setup: {'u': ..., 'v': ..., 'p': ...}"""
+        return self._get_safe("initial_conditions")
+
+    @initial_conditions.setter
+    def initial_conditions(self, v: dict):
+        self._set_safe("initial_conditions", v, dict)
 
 @dataclass
 class GridContext(ValidatedContainer):
