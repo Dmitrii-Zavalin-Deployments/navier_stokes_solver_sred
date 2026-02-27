@@ -45,5 +45,5 @@ def test_external_forces_immutability_logic():
     s5 = make_output_schema_dummy()
     
     # Verification that Step 5 matches Step 1 intent
-    assert s1.external_forces["force_vector"] == s5.external_forces["force_vector"], \
+    assert s1.config.external_forces["force_vector"] == s5.config.external_forces["force_vector"], \
         "External forces diverged between initialization and final output."
