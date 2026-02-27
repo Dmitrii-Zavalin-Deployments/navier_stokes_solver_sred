@@ -26,10 +26,10 @@ def test_initial_velocity_persistence(stage_name, factory):
     state = factory()
     
     # 1. Department Existence
-    assert hasattr(state, "initial_conditions"), f"{stage_name}: initial_conditions department missing"
+    assert hasattr(state.config, "initial_conditions"), f"{stage_name}: config.initial_conditions missing"
     
     # 2. Key Existence
-    ic = state.initial_conditions
+    ic = state.config.initial_conditions
     assert "velocity" in ic, f"{stage_name}: 'velocity' missing from initial_conditions"
     
     # 3. Structural Integrity (Must be a 3D vector for U, V, W)
@@ -50,5 +50,5 @@ def test_initial_conditions_are_not_overwritten_by_fields():
     # In our dummy, initial velocity is [0.0, 0.0, 0.0]
     # Even if fields.U is populated with results, the IC must remain [0.0, 0.0, 0.0]
     expected_initial = [0.0, 0.0, 0.0]
-    assert state.initial_conditions["velocity"] == expected_initial, \
+    assert state.config.initial_conditions["velocity"] == expected_initial, \
         "Step 3: Initial conditions were corrupted by field updates!"
