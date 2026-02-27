@@ -70,18 +70,25 @@ class ValidatedContainer:
 # =========================================================
 
 @dataclass
-class SolverConfig(ValidatedContainer): # Added Guard for safety
-    """Step 0: Global instructions & Numerical Tuning."""
+class SolverConfig(ValidatedContainer):
+    """
+    Step 0: Global Instructions, Numerical Tuning, & Boundary Definitions.
+    Acts as the 'Immutable Instruction Manual' for the simulation run.
+    """
     case_name: str = "default_case"
     method: str = "jacobi"
     precision: str = "float64"
     
-    # --- Slots for config.json data ---
-    # We initialize as None so the Guard knows they MUST be loaded
+    # --- Slots for config.json / Dummy Schema data ---
     _ppe_tolerance: float = None
     _ppe_atol: float = None
     _ppe_max_iter: int = None
+    
+    # --- Cloned Blocks from Input Schema ---
+    _simulation_parameters: dict = None  # Clones the 'simulation_parameters' block
+    _boundary_definitions: list = None   # Clones the 'boundary_conditions' list
 
+    # --- PPE Property Group ---
     @property
     def ppe_tolerance(self) -> float: return self._get_safe("ppe_tolerance")
     @ppe_tolerance.setter
@@ -96,6 +103,39 @@ class SolverConfig(ValidatedContainer): # Added Guard for safety
     def ppe_max_iter(self) -> int: return self._get_safe("ppe_max_iter")
     @ppe_max_iter.setter
     def ppe_max_iter(self, v: int): self._set_safe("ppe_max_iter", v, int)
+
+    # --- Simulation Parameters Group ---
+    @property
+    def simulation_parameters(self) -> dict:
+        """The raw dictionary: {time_step, total_time, output_interval}"""
+        return self._get_safe("simulation_parameters")
+    
+    @simulation_parameters.setter
+    def simulation_parameters(self, v: dict):
+        self._set_safe("simulation_parameters", v, dict)
+
+    # --- Tactical Shortcuts (Facade) ---
+    @property
+    def dt(self) -> float: 
+        return float(self.simulation_parameters["time_step"])
+
+    @property
+    def total_time(self) -> float:
+        return float(self.simulation_parameters["total_time"])
+
+    @property
+    def output_interval(self) -> int:
+        return int(self.simulation_parameters["output_interval"])
+
+    # --- Boundary Property Group ---
+    @property
+    def boundary_definitions(self) -> list:
+        """The 'Frozen' list of BC dictionaries from the input schema."""
+        return self._get_safe("boundary_definitions")
+    
+    @boundary_definitions.setter
+    def boundary_definitions(self, v: list):
+        self._set_safe("boundary_definitions", v, list)
 
 @dataclass
 class GridContext(ValidatedContainer):
