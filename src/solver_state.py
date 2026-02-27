@@ -577,13 +577,24 @@ class Diagnostics(ValidatedContainer):
     def initial_cfl_dt(self, v: float): self._set_safe("initial_cfl_dt", v, float)
 
     def __getitem__(self, key: str) -> Any:
-        """Step 4 Support: Allows dict-style access for the legacy adapter."""
+        """Translates legacy names and uses the 'Security Guard' to fetch them."""
         mapping = {
-            "memory_footprint": self.memory_footprint_gb,
-            "bc_verification": self.bc_verification_passed,
-            "cfl_limit": self.initial_cfl_dt
+            "memory_footprint": "memory_footprint_gb",
+            "bc_verification": "bc_verification_passed",
+            "cfl_limit": "initial_cfl_dt"
         }
-        return mapping.get(key)
+        # If the key is a legacy alias, use the new name; else use the key as-is.
+        target = mapping.get(key, key)
+        
+        # Route through the actual Security Guard logic
+        return self._get_safe(target)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """A safe wrapper around __getitem__ that respects the default value."""
+        try:
+            return self[key]
+        except (AttributeError, RuntimeError, KeyError):
+            return default
 
 @dataclass
 class OutputManifest(ValidatedContainer):
