@@ -419,19 +419,9 @@ class SimulationHealth(ValidatedContainer):
 @dataclass
 class SimulationHistory(ValidatedContainer):
     """
-    ### 4. The Time-Series Record
-    This is the "Log Book" that grows every time Step 3 runs. 
-    It is a series of lists tracking simulation evolution.
-
-    ## 3. Time-Series Record (`state.history`)
-
-    This is the "Black Box Flight Recorder." Instead of just having the final state, 
-    this structure contains the evolution of the simulation.
-
-    * **state.history.times**: A list[float] of every time-step timestamp.
-    * **state.history.divergence_norms**: A list[float] tracking mass conservation error.
-    * **state.history.max_velocity_history**: A list[float] used to detect "blowing up."
-    * **state.history.energy_history**: A list[float] tracking kinetic energy.
+    Step 3 & 5: The Black Box Flight Recorder.
+    Tracks the evolution of the simulation over time for plotting and 
+    post-processing.
     """
     _times: list = field(default_factory=list)
     _divergence_norms: list = field(default_factory=list)
@@ -480,11 +470,8 @@ class SimulationHistory(ValidatedContainer):
 @dataclass
 class Diagnostics(ValidatedContainer):
     """
-    ### 2. Step 4 Diagnostics
-    Final "Health Check" summary before the time-loop begins.
-    
-    Implementation Note: We populate these using Arithmetic rather than System Calls 
-    to ensure compatibility with restricted environments like GitHub Actions.
+    Step 4: Pre-Flight Readiness Audit.
+    Summarizes memory usage and BC integrity before the heavy lifting begins.
     """
     _memory_footprint_gb: float = None
     _bc_verification_passed: bool = None
