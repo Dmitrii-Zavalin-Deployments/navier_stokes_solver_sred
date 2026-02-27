@@ -31,7 +31,7 @@ def test_canonical_flattening_persistence(stage_name, factory):
     target_idx = 25
     
     # We assume the dummy/state contains a mask of size nx*ny*nz
-    mask = np.array(state.masks.masks.mask)
+    mask = np.array(state.masks.mask)
     
     # Reverse Map (Solver logic)
     idx = target_idx
@@ -51,6 +51,6 @@ def test_mask_value_integrity():
     """
     state = make_output_schema_dummy()
     allowed_values = {-1, 0, 1}
-    actual_values = set(np.unique(state.masks.masks.mask))
+    actual_values = set(np.unique(state.masks.mask))
     
     assert actual_values.issubset(allowed_values), f"Undefined mask values detected in final output: {actual_values}"

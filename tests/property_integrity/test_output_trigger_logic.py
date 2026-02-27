@@ -22,7 +22,7 @@ def test_output_interval_persistence(stage_name, factory):
         params = getattr(state, "config", {})
     
     assert hasattr(params, "output_interval"), f"{stage_name}: Property 'output_interval' lost"
-    assert isinstance(params["output_interval"], (int, float)), "Interval must be numeric"
+    assert isinstance(params.output_interval, (int, float)), "Interval must be numeric"
 
 def test_step5_write_trigger_logic():
     """
@@ -41,7 +41,7 @@ def test_step5_write_trigger_logic():
         params = getattr(state, "config", {})
         diagnostics = getattr(state, "health", {})
     
-    interval = params.get("output_interval")
+    interval = params.output_interval
     
     # Validation
     assert diagnostics, "Step 5 failed to log execution diagnostics"
