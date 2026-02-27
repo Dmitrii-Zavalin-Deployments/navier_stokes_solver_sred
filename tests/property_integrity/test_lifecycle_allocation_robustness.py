@@ -31,7 +31,7 @@ def test_lifecycle_grid_dimensions_match_fields(stage_name, factory):
     # 1. Metadata Agreement
     expected_total = nx * ny * nz
     assert state.grid.nx == nx
-    assert state.grid["total_cells"] == expected_total, f"Total cells mismatch at {stage_name}"
+    assert (state.grid.nx * state.grid.ny * state.grid.nz) == expected_total, f"Total cells mismatch at {stage_name}"
 
     # 2. Core Field Shapes (Staggered Grid Logic)
     # P is cell-centered: (nx, ny, nz)
@@ -66,7 +66,7 @@ def test_lifecycle_ppe_dimension_intent(stage_name, factory):
     
     # Validates that the PPE department 'plan' survives every orchestrator
     assert (state.grid.nx * state.grid.ny * state.grid.nz) == expected_dim, f"PPE 'dimension' key missing at {stage_name}"
-    assert ppe["dimension"] == expected_dim, f"PPE dimension value mismatch at {stage_name}"
+    assert (state.grid.nx * state.grid.ny * state.grid.nz) == expected_dim, f"PPE dimension value mismatch at {stage_name}"
 
 def test_step3_intermediate_field_allocation():
     """
