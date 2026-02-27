@@ -65,4 +65,4 @@ def test_mask_persistence_between_stages():
     s1 = make_step1_output_dummy()
     s4 = make_step4_output_dummy()
     
-    assert s1.masks.mask == s4.masks.mask, "Critical Failure: Spatial mask modified during computation steps!"
+    assert np.array_equal(s1.masks.mask, s4.masks.mask), "Critical Failure: Spatial mask modified during computation steps!"
