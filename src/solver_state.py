@@ -151,7 +151,6 @@ class GridContext(ValidatedContainer):
     def z_max(self, val: float): self._set_safe("z_max", val, float)
 
     # Derived spacing properties
-    # These will trigger a RuntimeError if any required component is None
     @property
     def dx(self) -> float: 
         return float((self.x_max - self.x_min) / self.nx)
@@ -163,6 +162,19 @@ class GridContext(ValidatedContainer):
     @property
     def dz(self) -> float: 
         return float((self.z_max - self.z_min) / self.nz)
+
+    # Performance Shortcuts: Inverse Spacing
+    @property
+    def inv_dx(self) -> float:
+        return 1.0 / self.dx
+
+    @property
+    def inv_dy(self) -> float:
+        return 1.0 / self.dy
+
+    @property
+    def inv_dz(self) -> float:
+        return 1.0 / self.dz
 
 @dataclass
 class FieldData(ValidatedContainer):
@@ -707,45 +719,29 @@ class SolverState:
     # ---------------------------------------------------------
     def to_json_safe(self) -> dict:
         """
-        Bridges the Departmental State to the Legacy Schema.
-        Returns a hybrid structure: nested departments + mirrored root properties.
+        The Clean Contract: Article 3 Alignment.
+        
+        Converts the departmentalized state into a structured dictionary.
+        This removes all 'Artificial Bridges' and legacy root-level lifting
+        to satisfy the Zero-Debt Mandate.
         """
-        # 1. Convert all departments to dictionaries
-        config_dict = self.config.to_dict()
-        grid_dict   = self.grid.to_dict()
-        fields_dict = self.fields.to_dict()
-        health_dict = self.health.to_dict()
-        masks_dict  = self.masks.to_dict()
-        ppe_dict    = self.ppe.to_dict()
-
-        # 2. Build the Hybrid Dictionary
-        # This structure satisfies both modern internal code and legacy external schemas.
-        data = {
-            # Metadata & Odometers
+        return {
+            # --- Global Metadata ---
             "time": self.time,
             "iteration": self.iteration,
             "ready_for_time_loop": self.ready_for_time_loop,
-            
-            # Departments (Schema requires these as objects)
-            "config": config_dict,
-            "grid": grid_dict,
-            "fields": fields_dict,
-            "health": health_dict,
-            "ppe": ppe_dict,
-            "history": self.history.to_dict(),
-            "manifest": self.manifest.to_dict(),
 
-            # Legacy Root-Level Properties (Mirroring/Lifting)
-            # These are explicitly listed in the schema's "required" block
-            "mask": masks_dict.get("mask"),
-            "constants": config_dict.get("constants"),
-            "boundary_conditions": config_dict.get("boundary_conditions"),
-            
-            # Extended Fields (Ghost Cell Regions)
-            "P_ext": fields_dict.get("P_ext"),
-            "U_ext": fields_dict.get("U_ext"),
-            "V_ext": fields_dict.get("V_ext"),
-            "W_ext": fields_dict.get("W_ext")
+            # --- Departmental Safes ---
+            "config": self.config.to_dict(),
+            "grid": self.grid.to_dict(),
+            "fields": self.fields.to_dict(),
+            "masks": self.masks.to_dict(),
+            "fluid": self.fluid.to_dict(),
+            "operators": self.operators.to_dict(),
+            "advection": self.advection.to_dict(),
+            "ppe": self.ppe.to_dict(),
+            "health": self.health.to_dict(),
+            "history": self.history.to_dict(),
+            "diagnostics": self.diagnostics.to_dict(),
+            "manifest": self.manifest.to_dict()
         }
-        
-        return data
