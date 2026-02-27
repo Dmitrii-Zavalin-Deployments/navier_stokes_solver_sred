@@ -25,10 +25,10 @@ def test_external_forces_persistence_across_lifecycle(stage_name, factory):
     state = factory()
     
     # Check for dictionary existence
-    assert hasattr(state, "external_forces"), f"{stage_name} is missing external_forces attribute"
+    assert hasattr(state.config, "external_forces"), f"{stage_name} is config missing external_forces attribute"
     
     # Check for force_vector integrity
-    force = state.external_forces.get("force_vector")
+    force = state.config.external_forces.get("force_vector")
     assert force is not None, f"{stage_name} lost the force_vector"
     assert len(force) == 3, f"{stage_name} force_vector must have 3 components (x, y, z)"
     
