@@ -244,17 +244,17 @@ class FieldData(ValidatedContainer):
     Step 1, 3 & 4: The Memory Map. 
     Contains both the core physical fields and the extended boundary workhorses.
 
-    ## 2. Updated Physical Fields (`state.fields`)
-    These are updated **every single iteration** inside the loop by `orchestrate_step3_state`. 
-    When Step 5 returns, these contain the "Final Snapshot" of the fluid.
-
-    * **state.fields.U, V, W**: The corrected, divergence-free velocity vectors at t_final.
-    * **state.fields.P**: The final pressure field required to maintain incompressibility.
+    * **state.fields.U, V, W**: The corrected, divergence-free velocity vectors.
+    * **state.fields.P**: The final pressure field.
+    * **state.fields.U_star, V_star, W_star**: Predictor fields (Step 3 intermediate).
     * **state.fields.U_ext, V_ext, W_ext, P_ext**: Extended arrays (with ghost cells).
     """
     # --- Core Fields (Step 1 & 3) ---
     _P: np.ndarray = None; _U: np.ndarray = None
     _V: np.ndarray = None; _W: np.ndarray = None
+
+    # --- Predictor Fields (Step 3 Intermediate) ---
+    _U_star: np.ndarray = None; _V_star: np.ndarray = None; _W_star: np.ndarray = None
 
     # --- Extended Fields (Step 4) ---
     _P_ext: np.ndarray = None; _U_ext: np.ndarray = None
@@ -281,52 +281,71 @@ class FieldData(ValidatedContainer):
     @W.setter
     def W(self, val: np.ndarray): self._set_safe("W", val, np.ndarray)
 
-    # --- Extended Properties (The Step 4 "Workhorses") ---
+    # --- Predictor Properties ---
     @property
-    def P_ext(self) -> np.ndarray: 
-        """Pressure with ghost cells for Neumann BC enforcement."""
-        return self._get_safe("P_ext")
+    def U_star(self) -> np.ndarray: return self._get_safe("U_star")
+    @U_star.setter
+    def U_star(self, v: np.ndarray): self._set_safe("U_star", v, np.ndarray)
+
+    @property
+    def V_star(self) -> np.ndarray: return self._get_safe("V_star")
+    @V_star.setter
+    def V_star(self, v: np.ndarray): self._set_safe("V_star", v, np.ndarray)
+
+    @property
+    def W_star(self) -> np.ndarray: return self._get_safe("W_star")
+    @W_star.setter
+    def W_star(self, v: np.ndarray): self._set_safe("W_star", v, np.ndarray)
+
+    # --- Extended Properties ---
+    @property
+    def P_ext(self) -> np.ndarray: return self._get_safe("P_ext")
     @P_ext.setter
     def P_ext(self, val: np.ndarray): self._set_safe("P_ext", val, np.ndarray)
 
     @property
-    def U_ext(self) -> np.ndarray: 
-        """U-velocity with ghost cells for stencil safety."""
-        return self._get_safe("U_ext")
+    def U_ext(self) -> np.ndarray: return self._get_safe("U_ext")
     @U_ext.setter
     def U_ext(self, val: np.ndarray): self._set_safe("U_ext", val, np.ndarray)
 
     @property
-    def V_ext(self) -> np.ndarray: 
-        """V-velocity with ghost cells for stencil safety."""
-        return self._get_safe("V_ext")
+    def V_ext(self) -> np.ndarray: return self._get_safe("V_ext")
     @V_ext.setter
     def V_ext(self, val: np.ndarray): self._set_safe("V_ext", val, np.ndarray)
 
     @property
-    def W_ext(self) -> np.ndarray: 
-        """W-velocity with ghost cells for stencil safety."""
-        return self._get_safe("W_ext")
+    def W_ext(self) -> np.ndarray: return self._get_safe("W_ext")
     @W_ext.setter
     def W_ext(self, val: np.ndarray): self._set_safe("W_ext", val, np.ndarray)
 
-    def __setitem__(self, key: str, value: np.ndarray):
-        """
-        Step 3 & 4 Support: Handles both core and extended assignments.
-        Example: state.fields["U_ext"] = padded_array
-        """
-        key_upper = key.upper()
-        # Direct mapping for both standard and extended fields
-        mapping = {
+    def _get_mapping(self) -> dict:
+        """Internal helper for dictionary-style key translation."""
+        return {
             "U": "U", "V": "V", "W": "W", "P": "P",
+            "U_STAR": "U_star", "V_STAR": "V_star", "W_STAR": "W_star",
             "U_EXT": "U_ext", "V_EXT": "V_ext", "W_EXT": "W_ext", "P_EXT": "P_ext"
         }
-        
-        target = mapping.get(key_upper)
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        """
+        Step 3 Support: Allows reading fields using dictionary syntax.
+        Example: velocity = state.fields["U_star"]
+        """
+        target = self._get_mapping().get(key.upper())
+        if target:
+            return getattr(self, target)
+        raise KeyError(f"Field '{key}' is not recognized.")
+
+    def __setitem__(self, key: str, value: np.ndarray):
+        """
+        Step 3 & 4 Support: Handles both core, predictor, and extended assignments.
+        Example: state.fields["U_star"] = intermediate_u
+        """
+        target = self._get_mapping().get(key.upper())
         if target:
             setattr(self, target, value)
         else:
-            raise KeyError(f"Field '{key}' is not a recognized core or extended field.")
+            raise KeyError(f"Field '{key}' is not recognized.")
 
 @dataclass
 class MaskData(ValidatedContainer):

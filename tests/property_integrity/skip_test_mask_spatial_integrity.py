@@ -27,7 +27,7 @@ def test_mask_value_constraints_and_shape(stage_name, factory):
     Compatibility: Handles Article 8 Flattened Masks by validating size and logic.
     """
     state = factory()
-    nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]
+    nx, ny, nz = state.grid.nx, state.grid.ny, state.grid.nz
     total_expected = nx * ny * nz
     
     # 1. Shape Integrity (Article 8 Flattened Protocol)
