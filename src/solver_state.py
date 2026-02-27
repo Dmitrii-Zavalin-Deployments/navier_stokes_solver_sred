@@ -55,7 +55,7 @@ class ValidatedContainer:
             # 2. Handle NumPy arrays (Crucial for JSON)
             elif isinstance(val, np.ndarray):
                 out[clean_key] = val.tolist()
-            # 3. Handle nested dictionaries (like boundary_conditions)
+            # 3. Handle nested dictionaries
             elif isinstance(val, dict):
                 # Ensure no numpy types inside dicts
                 out[clean_key] = {k: (v.tolist() if isinstance(v, np.ndarray) else v) 
