@@ -23,6 +23,11 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     state.fields.V = np.zeros((nx, ny + 1, nz))
     state.fields.W = np.zeros((nx, ny, nz + 1))
     state.fields.P = np.zeros((nx, ny, nz))
+ 
+    # Predictor fields for Step 3 Projection logic
+    state.fields.U_star = np.zeros((nx + 1, ny, nz))
+    state.fields.V_star = np.zeros((nx, ny + 1, nz))
+    state.fields.W_star = np.zeros((nx, ny, nz + 1))
 
     # ------------------------------------------------------------------
     # 3. Update Health (Post-Correction Vitals)
