@@ -10,13 +10,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.config.case_name = "dummy_verification"
     state.config.method = "jacobi"
     
-    state.config.boundary_definitions = [
-        {"location": "x_min", "type": "no-slip"},
-        {"location": "x_max", "type": "outflow"},
-        {"location": "y_min", "type": "no-slip"},
-        {"location": "y_max", "type": "no-slip"},
-        {"location": "z_min", "type": "no-slip"},
-        {"location": "z_max", "type": "no-slip"}
+    state.config.boundary_conditions = [
+        {"location": "x_min", "type": "no-slip", "values": {}},
+        {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},
+        {"location": "y_min", "type": "no-slip", "values": {}},
+        {"location": "y_max", "type": "no-slip", "values": {}},
+        {"location": "z_min", "type": "no-slip", "values": {}},
+        {"location": "z_max", "type": "no-slip", "values": {}}
     ]
     state.config.simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1}
 

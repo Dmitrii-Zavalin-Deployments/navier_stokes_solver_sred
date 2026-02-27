@@ -22,9 +22,9 @@ def test_boundary_values_presence_and_type(stage_name, factory):
     
     # Adaptive Access (Handles both dict-style and object-style states)
     if isinstance(state, dict):
-        bc_list = state.get("config", {}).get("boundary_definitions", [])
+        bc_list = state.get("config", {}).get("boundary_conditions", [])
     else:
-        bc_list = getattr(state.config, "boundary_definitions", [])
+        bc_list = getattr(state.config, "boundary_conditions", [])
 
     assert len(bc_list) > 0, f"Setup Error: No boundaries defined at {stage_name}"
 
@@ -51,8 +51,8 @@ def test_specific_inflow_value_persistence():
     state = make_step2_output_dummy()
     
     # Manually inject a specific value for this test case
-    state.config.boundary_definitions[0]["values"]["u"] = 5.0
+    state.config.boundary_conditions[0]["values"]["u"] = 5.0
     
     # In a real pipeline, Step 3 would receive this. We check if the dictionary 
     # structure supports this retention.
-    assert state.config.boundary_definitions[0]["values"]["u"] == 5.0
+    assert state.config.boundary_conditions[0]["values"]["u"] == 5.0

@@ -28,10 +28,10 @@ def test_boundary_type_persistence_and_validity(stage_name, factory):
     # Adaptive Access: Extract the BC list from the config safe
     if isinstance(state, dict):
         # Path for serialized JSON-safe state
-        bc_list = state.get("config", {}).get("boundary_definitions", [])
+        bc_list = state.get("config", {}).get("boundary_conditions", [])
     else:
         # Path for live SolverState object
-        bc_list = state.config.boundary_definitions
+        bc_list = state.config.boundary_conditions
     
     # 1. Structure Check: Must be a list of objects per Solver Input Schema
     assert isinstance(bc_list, list), f"{stage_name}: BC definitions must be a list in the config safe"
@@ -57,5 +57,5 @@ def test_step2_matrix_bc_logic():
     assert state.ppe.A is not None, "Step 2: PPE Matrix A missing"
     
     # Ensure 3D closure
-    bc_count = len(state.config.boundary_definitions)
+    bc_count = len(state.config.boundary_conditions)
     assert bc_count >= 6, f"Step 2: 3D domain requires 6 boundary faces, found {bc_count}"
