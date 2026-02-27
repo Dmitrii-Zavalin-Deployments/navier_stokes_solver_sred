@@ -3,114 +3,58 @@
   "title": "Final Solver Output Schema",
   "type": "object",
   "properties": {
-    "config": {
-      "type": "object"
-    },
-    "grid": {
-      "type": "object"
-    },
+    "time": { "type": "number" },
+    "iteration": { "type": "integer" },
+    "ready_for_time_loop": { "type": "boolean" },
+    "config": { "type": "object" },
+    "grid": { "type": "object" },
     "fields": {
       "type": "object",
       "properties": {
         "P": { "type": "array" },
         "U": { "type": "array" },
         "V": { "type": "array" },
-        "W": { "type": "array" }
+        "W": { "type": "array" },
+        "P_ext": { "type": ["array", "null"] },
+        "U_ext": { "type": ["array", "null"] },
+        "V_ext": { "type": ["array", "null"] },
+        "W_ext": { "type": ["array", "null"] }
       },
       "additionalProperties": true
     },
-    "mask": {
-      "type": ["array", "null"]
-    },
-    "is_fluid": {
-      "type": ["array", "null"]
-    },
-    "is_boundary_cell": {
-      "type": ["array", "null"]
-    },
-    "is_solid": {
-      "type": ["array", "null"]
-    },
-    "constants": {
-      "type": "object"
-    },
-    "boundary_conditions": {
-      "type": "array",
-      "description": "Schema-compliant list of spatial boundary constraints",
-      "items": {
-        "type": "object",
-        "required": ["location", "type"],
-        "properties": {
-          "location": { "type": "string" },
-          "type": { 
-            "type": "string",
-            "enum": ["no-slip", "free-slip", "inflow", "outflow", "pressure", "moving_wall"]
-          }
-        }
+    "masks": {
+      "type": "object",
+      "properties": {
+        "mask": { "type": ["array", "null"] },
+        "is_fluid": { "type": ["array", "null"] },
+        "is_boundary": { "type": ["array", "null"] }
       }
     },
-    "health": {
-      "type": "object"
-    },
-    "operators": {
-      "type": "object"
-    },
-    "ppe": {
-      "type": "object"
-    },
-    "intermediate_fields": {
-      "type": "object"
-    },
-    "step3_diagnostics": {
-      "type": "object"
-    },
-    "history": {
-      "type": "object"
-    },
-    "P_ext": {
-      "type": ["array", "null"]
-    },
-    "U_ext": {
-      "type": ["array", "null"]
-    },
-    "V_ext": {
-      "type": ["array", "null"]
-    },
-    "W_ext": {
-      "type": ["array", "null"]
-    },
-    "step4_diagnostics": {
-      "type": "object"
-    },
-    "step5_outputs": {
-      "type": "object"
-    },
-    "ready_for_time_loop": {
-      "type": "boolean"
-    },
-    "iteration": {
-      "type": "integer"
-    },
-    "time": {
-      "type": "number"
-    }
+    "fluid": { "type": "object" },
+    "operators": { "type": "object" },
+    "advection": { "type": "object" },
+    "ppe": { "type": "object" },
+    "health": { "type": "object" },
+    "history": { "type": "object" },
+    "diagnostics": { "type": "object" },
+    "manifest": { "type": "object" }
   },
   "required": [
+    "time",
+    "iteration",
+    "ready_for_time_loop",
     "config",
     "grid",
     "fields",
-    "mask",
-    "constants",
-    "boundary_conditions",
-    "health",
+    "masks",
+    "fluid",
+    "operators",
+    "advection",
     "ppe",
-    "P_ext",
-    "U_ext",
-    "V_ext",
-    "W_ext",
-    "ready_for_time_loop",
-    "iteration",
-    "time"
+    "health",
+    "history",
+    "diagnostics",
+    "manifest"
   ],
   "additionalProperties": true
 }
