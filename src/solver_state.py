@@ -565,7 +565,9 @@ class Diagnostics(ValidatedContainer):
     _source_term_applied: bool = True
  
     @property
-    def source_term_applied(self) -> bool: return self._source_term_applied
+    def source_term_applied(self) -> bool: return self._get_safe("source_term_applied")
+ 
+    @property
 
     @property
     def memory_footprint_gb(self) -> float: 
@@ -597,13 +599,13 @@ class Diagnostics(ValidatedContainer):
             "memory_footprint": "memory_footprint_gb",
             "bc_verification": "bc_verification_passed",
             "cfl_limit": "initial_cfl_dt",
-            "source_term_applied": self._source_term_applied
+            "source_term_applied": "source_term_applied"
         }
         # If the key is a legacy alias, use the new name; else use the key as-is.
         target = mapping.get(key, key)
         
         # Route through the actual Security Guard logic
-        return getattr(self, target) if target.startswith("_") else self._get_safe(target)
+        return self._get_safe(target)
 
     def get(self, key: str, default: Any = None) -> Any:
         """A safe wrapper around __getitem__ that respects the default value."""
