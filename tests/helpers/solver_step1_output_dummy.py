@@ -20,6 +20,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_max", "type": "no-slip", "values": {}}
     ]
     state.config.simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1, "g": 9.81}
+    state.config.initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
 
     # 2. Grid Initialization (UNLOCKED)
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz
