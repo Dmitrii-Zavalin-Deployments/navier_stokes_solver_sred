@@ -86,7 +86,7 @@ class SolverConfig(ValidatedContainer):
     
     # --- Cloned Blocks from Input Schema ---
     _simulation_parameters: dict = None  # Clones the 'simulation_parameters' block
-    _boundary_definitions: list = None   # Clones the 'boundary_conditions' list
+    _boundary_conditions: list = None    # Renamed to match schema/dummies
 
     # --- PPE Property Group ---
     @property
@@ -129,13 +129,13 @@ class SolverConfig(ValidatedContainer):
 
     # --- Boundary Property Group ---
     @property
-    def boundary_definitions(self) -> list:
+    def boundary_conditions(self) -> list:
         """The 'Frozen' list of BC dictionaries from the input schema."""
-        return self._get_safe("boundary_definitions")
+        return self._get_safe("boundary_conditions")
     
-    @boundary_definitions.setter
-    def boundary_definitions(self, v: list):
-        self._set_safe("boundary_definitions", v, list)
+    @boundary_conditions.setter
+    def boundary_conditions(self, v: list):
+        self._set_safe("boundary_conditions", v, list)
 
 @dataclass
 class GridContext(ValidatedContainer):
