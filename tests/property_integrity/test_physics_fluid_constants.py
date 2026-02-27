@@ -22,10 +22,10 @@ def test_density_persistence_and_validity(stage_name, factory):
     state = factory()
     
     # 1. Existence Check
-    assert "density" in state.fluid_properties, f"{stage_name}: Density missing from fluid_properties"
+    assert hasattr(state.config, "density"), f"{stage_name}: Density missing from fluid_properties"
     
     # 2. Scale Guard: Density must be positive to prevent division by zero in correction
-    rho = state.fluid_properties["density"]
+    rho = state.config.density
     assert rho > 0, f"{stage_name}: Non-physical density detected ({rho})"
     
     # 3. Type Check
@@ -40,10 +40,10 @@ def test_viscosity_persistence_and_validity(stage_name, factory):
     state = factory()
     
     # 1. Existence Check
-    assert "viscosity" in state.fluid_properties, f"{stage_name}: Viscosity missing from fluid_properties"
+    assert hasattr(state.config, "viscosity"), f"{stage_name}: Viscosity missing from fluid_properties"
     
     # 2. Scale Guard: Negative viscosity is mathematically unstable (anti-diffusion)
-    nu = state.fluid_properties["viscosity"]
+    nu = state.config.viscosity
     assert nu > 0, f"{stage_name}: Non-physical viscosity detected ({nu})"
     
     # 3. Type Check
@@ -56,8 +56,8 @@ def test_velocity_correction_scaling_consistency():
     """
     state = make_step3_output_dummy()
     
-    dt = state.config.simulation_parameters.get("dt", 0.001)
-    rho = state.fluid_properties["density"]
+    dt = state.config.time_step
+    rho = state.config.density
     
     correction_factor = dt / rho
     assert np.isfinite(correction_factor), "Step 3: Velocity correction factor (dt/rho) is invalid"
@@ -69,8 +69,8 @@ def test_diffusion_stability_coefficient():
     """
     state = make_step3_output_dummy()
     
-    nu = state.fluid_properties["viscosity"]
-    dt = state.config.simulation_parameters.get("dt", 0.001)
+    nu = state.config.viscosity
+    dt = state.config.time_step
     dx = state.grid.get("dx", 0.1)
     
     # Stability factor must be a finite number
