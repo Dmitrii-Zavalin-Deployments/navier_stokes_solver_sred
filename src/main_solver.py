@@ -1,8 +1,6 @@
 # src/main_solver.py
 import json
-import os
 import shutil
-from typing import Dict, Any
 from pathlib import Path
 
 from src.solver_state import SolverState
