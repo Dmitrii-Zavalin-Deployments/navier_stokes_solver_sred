@@ -3,67 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any
 import numpy as np
-
-# =========================================================
-# THE PARENT GUARD
-# =========================================================
-
-class ValidatedContainer:
-    """
-    The 'Security Guard' Parent Class.
-    Handles checking for None and Type validation for all sub-classes.
-    """
-    
-    def _get_safe(self, name: str) -> Any:
-        """Checks if the internal value is None. If not, returns it."""
-        attr_name = f"_{name}"
-        if not hasattr(self, attr_name):
-            raise AttributeError(
-                f"Coding Error: '{attr_name}' is not defined in {self.__class__.__name__}."
-            )
-            
-        val = getattr(self, attr_name)
-        if val is None:
-            raise RuntimeError(
-                f"Access Error: '{name}' in {self.__class__.__name__} has not been initialized. "
-                f"Did you skip a function in orchestrate_step1?"
-            )
-        return val
-
-    def _set_safe(self, name: str, value: Any, expected_type: type):
-        """Ensures the value is the correct type before saving it."""
-        if value is not None and not isinstance(value, expected_type):
-            raise TypeError(
-                f"Validation Error: '{name}' must be {expected_type}, but got {type(value)}."
-            )
-        setattr(self, f"_{name}", value)
-
-    def to_dict(self) -> dict:
-        """
-        Recursively converts the container to a JSON-serializable dictionary.
-        Strips leading underscores and converts NumPy arrays to lists.
-        """
-        out = {}
-        # We iterate over instance variables to capture the state
-        for attr, val in self.__dict__.items():
-            # Clean the key name (strip leading underscore)
-            clean_key = attr.lstrip('_')
-            
-            # 1. Handle nested containers
-            if isinstance(val, ValidatedContainer):
-                out[clean_key] = val.to_dict()
-            # 2. Handle NumPy arrays (Crucial for JSON)
-            elif isinstance(val, np.ndarray):
-                out[clean_key] = val.tolist()
-            # 3. Handle nested dictionaries
-            elif isinstance(val, dict):
-                # Ensure no numpy types inside dicts
-                out[clean_key] = {k: (v.tolist() if isinstance(v, np.ndarray) else v) 
-                                 for k, v in val.items()}
-            # 4. Basic types
-            else:
-                out[clean_key] = val
-        return out
+from src.common.base_container import ValidatedContainer
 
 # =========================================================
 # STEP 1: THE DEPARTMENT SAFES
@@ -623,8 +563,6 @@ class Diagnostics(ValidatedContainer):
  
     @property
     def source_term_applied(self) -> bool: return self._get_safe("source_term_applied")
- 
-    @property
 
     @property
     def memory_footprint_gb(self) -> float: 
