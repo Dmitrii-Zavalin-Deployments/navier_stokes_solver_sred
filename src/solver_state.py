@@ -89,7 +89,7 @@ class SolverConfig(ValidatedContainer):
     _boundary_conditions: list = None    # Renamed to match schema/dummies
     _external_forces: dict = None
     _initial_conditions: dict = None
-    _fluid_properties: dict = None
+    _fluid_properties: dict = None       # The storage slot for physics
 
     # --- PPE Property Group ---
     @property
@@ -121,6 +121,11 @@ class SolverConfig(ValidatedContainer):
     @property
     def dt(self) -> float: 
         return float(self.simulation_parameters["time_step"])
+
+    @property
+    def time_step(self) -> float:
+        """Legacy Alias to satisfy tests expecting 'time_step' directly."""
+        return self.dt
 
     @property
     def total_time(self) -> float:
@@ -731,7 +736,6 @@ class SolverState:
     """
 
     # --- 1. Hardened Safe Objects ---
-    # These containers house all validated numerical and physical data.
     config: SolverConfig = field(default_factory=SolverConfig)
     grid: GridContext = field(default_factory=GridContext)
     fields: FieldData = field(default_factory=FieldData)
@@ -746,23 +750,15 @@ class SolverState:
     manifest: OutputManifest = field(default_factory=OutputManifest)
 
     # --- 2. Global Simulation Odometer ---
-    # Tracks the physical and temporal progression of the solver.
-    # | Attribute          | Type  | Description                                   |
-    # |--------------------|-------|-----------------------------------------------|
-    # | state.time         | float | Total simulated physical time (seconds).      |
-    # | state.iteration    | int   | Current time-step count.                      |
     iteration: int = 0
     time: float = 0.0
 
     # --- 3. Execution Gate ---
-    # ready_for_time_loop: A safety toggle. It must be flipped to True 
-    # only after Steps 1-4 successfully initialize all required data.
     ready_for_time_loop: bool = False
 
     # ---------------------------------------------------------
     # Attribute Interface (Facade)
     # ---------------------------------------------------------
-    # These properties provide clean aliases to deeply nested data.
     
     @property
     def pressure(self) -> np.ndarray:
@@ -784,6 +780,17 @@ class SolverState:
     def is_fluid(self) -> np.ndarray:
         return self.masks.is_fluid
 
+    # --- Physics Delegation ---
+    @property
+    def rho(self) -> float:
+        """Delegates to config.density."""
+        return self.config.density
+
+    @property
+    def mu(self) -> float:
+        """Delegates to config.viscosity."""
+        return self.config.viscosity
+
     # --- Step 4 Extended Field Shortcuts ---
     @property
     def U_ext(self) -> np.ndarray: return self.fields.U_ext
@@ -797,12 +804,10 @@ class SolverState:
     # --- Numerical Shortcuts (Validated by Config & Grid) ---
     @property
     def dt(self) -> float:
-        """Accesses the validated time-step from the configuration safe."""
         return self.config.dt
 
     @property
     def inv_dx(self) -> float:
-        """Pre-calculated inverse grid spacing for performance."""
         return self.grid.inv_dx
 
     @property
@@ -818,14 +823,9 @@ class SolverState:
     # ---------------------------------------------------------
     @property
     def step4_diagnostics(self) -> Diagnostics:
-        """Alias for the legacy Step 4 adapter."""
         return self.diagnostics
 
     def to_legacy_dict(self) -> Dict[str, Any]:
-        """
-        Extracts a flat dictionary for legacy Step 4 orchestrators 
-        that do not yet support the full State object.
-        """
         return {
             "U_ext": self.U_ext,
             "V_ext": self.V_ext,
@@ -839,20 +839,10 @@ class SolverState:
     # Serialization (Contract Bridge)
     # ---------------------------------------------------------
     def to_json_safe(self) -> dict:
-        """
-        The Clean Contract: Article 3 Alignment.
-        
-        Converts the departmentalized state into a structured dictionary.
-        This removes all 'Artificial Bridges' and legacy root-level lifting
-        to satisfy the Zero-Debt Mandate.
-        """
         return {
-            # --- Global Metadata ---
             "time": self.time,
             "iteration": self.iteration,
             "ready_for_time_loop": self.ready_for_time_loop,
-
-            # --- Departmental Safes ---
             "config": self.config.to_dict(),
             "grid": self.grid.to_dict(),
             "fields": self.fields.to_dict(),
