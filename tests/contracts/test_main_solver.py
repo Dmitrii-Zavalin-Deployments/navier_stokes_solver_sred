@@ -8,10 +8,10 @@ from src.main_solver import run_solver_from_file
 
 # Import your helpers
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
-from tests.helpers.solver_step1_output_dummy import solver_step1_output_dummy
-from tests.helpers.solver_step2_output_dummy import solver_step2_output_dummy
-from tests.helpers.solver_step3_output_dummy import solver_step3_output_dummy
-from tests.helpers.solver_step4_output_dummy import solver_step4_output_dummy
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy # Assuming this is the step 5 final output
 
 class TestMainSolverOrchestration:
@@ -35,10 +35,10 @@ class TestMainSolverOrchestration:
         input_file.write_text(json.dumps(solver_input_schema_dummy()))
         
         # 2. Setup Dummy Returns (The Stubbing)
-        mock_s1.return_value = solver_step1_output_dummy()
-        mock_s2.return_value = solver_step2_output_dummy()
-        mock_s3.return_value = solver_step3_output_dummy()
-        mock_s4.return_value = solver_step4_output_dummy()
+        mock_s1.return_value = make_step1_output_dummy()
+        mock_s2.return_value = make_step2_output_dummy()
+        mock_s3.return_value = make_step3_output_dummy()
+        mock_s4.return_value = make_step4_output_dummy()
         mock_s5.return_value = make_output_schema_dummy()
         
         mock_arch.return_value = "simulation_results.zip"
