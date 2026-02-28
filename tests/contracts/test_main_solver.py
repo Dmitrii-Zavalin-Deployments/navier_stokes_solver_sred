@@ -38,11 +38,11 @@ class TestMainSolverOrchestration:
         
         return input_file, data_dir
 
-    @patch("src.main_solver.orchestrate_step1_state")
+    @patch("src.main_solver.orchestrate_step1")
     @patch("src.main_solver.orchestrate_step2")
-    @patch("src.main_solver.orchestrate_step3_state")
-    @patch("src.main_solver.orchestrate_step4_state")
-    @patch("src.main_solver.orchestrate_step5_state")
+    @patch("src.main_solver.orchestrate_step3")
+    @patch("src.main_solver.orchestrate_step4")
+    @patch("src.main_solver.orchestrate_step5")
     @patch("src.main_solver.validate_final_state")
     def test_main_solver_full_pipeline_flow(
         self, mock_val, mock_s5, mock_s4, mock_s3, mock_s2, mock_s1, setup_test_env
@@ -78,7 +78,7 @@ class TestMainSolverOrchestration:
         with pytest.raises(FileNotFoundError):
             run_solver_from_file("non_existent_file.json")
 
-    @patch("src.main_solver.orchestrate_step1_state")
+    @patch("src.main_solver.orchestrate_step1")
     def test_step_failure_propagation(self, mock_s1, setup_test_env):
         """Scenario: A step fails. The solver should crash immediately without archiving."""
         input_file, _ = setup_test_env

@@ -15,10 +15,10 @@ Registry Status: Ready for Step 2 Handoff.
 Last Updated: 2026-02-23
 """
 
-from .orchestrate_step1 import orchestrate_step1_state
+from .orchestrate_step1 import orchestrate_step1
 
 # Encapsulation: Only expose the orchestrator to maintain the "Pure Path" 
 # mandated by the Project Constitution.
 __all__ = [
-    "orchestrate_step1_state",
+    "orchestrate_step1",
 ]
