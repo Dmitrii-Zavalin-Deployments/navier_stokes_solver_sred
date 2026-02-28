@@ -71,7 +71,7 @@ def test_diffusion_stability_coefficient():
     
     nu = state.config.viscosity
     dt = state.config.time_step
-    dx = state.grid.get("dx", 0.1)
+    dx = state.grid.dx
     
     # Stability factor must be a finite number
     stability_factor = (nu * dt) / (dx**2)
