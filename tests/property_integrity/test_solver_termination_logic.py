@@ -23,8 +23,8 @@ def test_termination_persistence_across_lifecycle(stage_name, factory):
     Integrity: Ensure total_time survives every transition in the pipeline.
     """
     state = factory()
-    assert "total_time" in state.simulation_parameters, f"{stage_name} lost total_time metadata"
-    assert state.simulation_parameters["total_time"] > 0, f"{stage_name} has non-physical total_time"
+    assert "total_time" in state.config.simulation_parameters, f"{stage_name} lost total_time metadata"
+    assert state.config.simulation_parameters["total_time"] > 0, f"{stage_name} has non-physical total_time"
 
 def test_termination_logic_math_precision():
     """
@@ -35,14 +35,14 @@ def test_termination_logic_math_precision():
     dt = 0.01
     state = make_step1_output_dummy()
     
-    state.simulation_parameters["total_time"] = total_time
-    state.simulation_parameters["time_step"] = dt
+    state.config.simulation_parameters["total_time"] = total_time
+    state.config.simulation_parameters["time_step"] = dt
     
     current_time = 0.0
     iterations = 0
     
-    while current_time < state.simulation_parameters["total_time"]:
-        current_time += state.simulation_parameters["time_step"]
+    while current_time < state.config.simulation_parameters["total_time"]:
+        current_time += state.config.simulation_parameters["time_step"]
         iterations += 1
         
     assert iterations == 5
@@ -55,7 +55,7 @@ def test_final_state_exit_condition():
     state = make_output_schema_dummy()
     
     t_final = state.time
-    t_target = state.simulation_parameters["total_time"]
+    t_target = state.config.simulation_parameters["total_time"]
     
     # Boundary: t_final must be the first step where t >= t_target
     assert t_final >= t_target, f"Snapshot generated at {t_final} before completion goal {t_target}"
