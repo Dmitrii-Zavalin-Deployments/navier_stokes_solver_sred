@@ -59,13 +59,19 @@ class TestMainSolverOrchestration:
 
     @patch("shutil.make_archive")
     def test_archive_artifacts_missing_snapshots(self, mock_zip, tmp_path):
+        """Tests archiver's resilience when snapshots listed in manifest don't exist."""
         state = make_output_schema_dummy()
         state.manifest.saved_snapshots = ["ghost.vtk"]
         
-        # The lambda fix: accept 'self' (the Path instance)
-        with patch.object(Path, "exists", side_effect=lambda p: "navier-stokes-output" in str(p)):
+        # We define a side effect that handles the 'self' argument passed by Path.exists
+        def exists_side_effect(path_instance):
+            path_str = str(path_instance)
+            # Allow the output directory checks to pass, but the ghost file to fail
+            return "navier-stokes-output" in path_str or "data" in path_str
+
+        with patch.object(Path, "exists", side_effect=exists_side_effect):
             with patch.object(Path, "mkdir"):
-                # Mock open to avoid actual file writes
+                # Mock open to avoid actual file writes to disk
                 with patch("builtins.open", MagicMock()):
                     result = archive_simulation_artifacts(state)
                     assert "navier-stokes-output" in result
