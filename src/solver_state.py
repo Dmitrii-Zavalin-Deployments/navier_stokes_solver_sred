@@ -838,11 +838,6 @@ class SolverState:
     # ---------------------------------------------------------
     # Serialization (Contract Bridge)
     # ---------------------------------------------------------
-    def sync_physics(self):
-        """Bridges Config values to Numerical Safes."""
-        self.fluid.rho = self.config.density
-        self.fluid.mu = self.config.viscosity
-
     def to_json_safe(self) -> dict:
         """
         The Clean Contract: Article 3 Alignment.
