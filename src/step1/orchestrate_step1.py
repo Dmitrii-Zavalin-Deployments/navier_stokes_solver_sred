@@ -5,7 +5,6 @@ import os
 import json
 import jsonschema
 from typing import Any, Dict
-import numpy as np
 
 from src.solver_state import SolverState
 from .parse_config import parse_config
@@ -70,7 +69,7 @@ def orchestrate_step1(
     grid = initialize_grid(grid_params)
     
     # 2. Config Context (Solver Tuning)
-    config = parse_config(json_input)
+    parse_config(json_input)
 
     # 3. Memory Architect (Staggered Field Allocation)
     fields = allocate_fields(grid)
