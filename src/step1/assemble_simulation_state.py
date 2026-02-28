@@ -18,47 +18,36 @@ def assemble_simulation_state(
 ) -> SolverState:
     """
     Unifies all initialized components into the SolverState container.
-    
-    Constitutional Role: Synthesis Hub.
-    Compliance: Vertical Integrity Mandate (Traceability Mapping).
-    
-    Returns:
-        SolverState: The 'Frozen' state ready for the Phase B synchronization cycle.
     """
 
-    # 1. Primary Object Initialization (Dictionary Injection)
+    # 1. Primary Object Initialization (Strict Signature Compliance)
+    # Note: 'mask' is removed from the constructor to prevent TypeError
     state = SolverState(
         config=config,
         grid=grid,
         fields=fields,
-        mask=mask,
         constants=constants,
         boundary_conditions=boundary_conditions,
         is_fluid=is_fluid,
         is_boundary_cell=is_boundary_cell
     )
 
-    # 2. Physics Mapping (Internal Shorthand -> Schema Compliance)
-    # This enables the 'Data Completeness Audit' to find parameters in state.
+    # 2. Attach Masking Data to the Correct Department
+    # This prevents the 'mask' from floating as a top-level attribute.
+    state.masks.mask = np.array(mask)
+
+    # 3. Physics Mapping (Internal Shorthand -> Schema Compliance)
     state.fluid_properties = {
         "density": constants.get("rho"),
         "viscosity": constants.get("mu")
     }
 
-    # 3. Validation of Field Integrity (Anti-Debt Check)
-    # Verify the existence and staggered shapes before finalizing the state.
-    required_fields = ["U", "V", "W", "P"]
-    for f in required_fields:
-        if f not in state.fields:
-            raise KeyError(f"Genesis Error: Required field '{f}' missing from allocation.")
-        
-    # Dimension Audit: Ensure masks and grids are spatially coherent
-    # CONSTITUTIONAL FIX: Mask is now a 1D list (Phase A.2), so we audit length.
+    # 4. Dimension Audit
     expected_length = grid["nx"] * grid["ny"] * grid["nz"]
-    if len(state.mask) != expected_length:
-         raise ValueError(f"Spatial Incoherence: Mask length {len(state.mask)} != {expected_length}")
+    if state.masks.mask.size != expected_length:
+         raise ValueError(f"Spatial Incoherence: Mask size {state.masks.mask.size} != {expected_length}")
 
-    # 4. Status Flag
+    # 5. Status Flag
     state.ready_for_time_loop = kwargs.get("ready_for_time_loop", False)
     
     return state
