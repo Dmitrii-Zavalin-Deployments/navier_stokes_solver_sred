@@ -91,3 +91,35 @@ class TestMainSolverOrchestration:
              patch("src.main_solver.orchestrate_step5"):
             with pytest.raises(RuntimeError, match="ARCHIVE FAILURE"):
                 run_solver_from_file(str(input_file))
+    # --- Additional Coverage Tests ---
+    @patch("builtins.open")
+    def test_run_solver_generic_read_error(self, mock_open, tmp_path):
+        """Covers lines 34-35: generic Exception block during file reading."""
+        input_file = tmp_path / "perm_error.json"
+        input_file.write_text("{}") 
+        mock_open.side_effect = RuntimeError("Permission Denied")
+        with pytest.raises(RuntimeError, match="Unexpected error reading input file"):
+            run_solver_from_file(str(input_file))
+
+    @patch("shutil.make_archive")
+    @patch("shutil.rmtree")
+    @patch("pathlib.Path.exists")
+    def test_archive_cleanup_existing_dir(self, mock_exists, mock_rmtree, mock_zip):
+        """Covers line 81: simulating that the output_dir already exists."""
+        state = make_output_schema_dummy()
+        mock_exists.return_value = True
+        with patch("pathlib.Path.mkdir"), patch("builtins.open", MagicMock()):
+            archive_simulation_artifacts(state)
+            mock_rmtree.assert_called()
+
+    @patch("shutil.make_archive")
+    @patch("shutil.copy2")
+    def test_archive_successful_snapshot_copy(self, mock_copy, mock_zip, tmp_path):
+        """Covers line 89: simulating a snapshot that actually exists."""
+        state = make_output_schema_dummy()
+        fake_snapshot = tmp_path / "real_snapshot.vtk"
+        fake_snapshot.write_text("data")
+        state.manifest.saved_snapshots = [str(fake_snapshot)]
+        with patch("pathlib.Path.mkdir"), patch("builtins.open", MagicMock()):
+            archive_simulation_artifacts(state)
+            mock_copy.assert_called_once()
