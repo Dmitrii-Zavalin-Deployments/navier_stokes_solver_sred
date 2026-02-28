@@ -63,10 +63,11 @@ class TestMainSolverOrchestration:
         state = make_output_schema_dummy()
         state.manifest.saved_snapshots = ["ghost.vtk"]
         
-        # We define a side effect that handles the 'self' argument passed by Path.exists
-        def exists_side_effect(path_instance):
-            path_str = str(path_instance)
-            # Allow the output directory checks to pass, but the ghost file to fail
+        # Using *args makes the mock signature flexible enough to handle the 
+        # 'self' argument passed by instance calls (output_dir.exists()).
+        def exists_side_effect(*args, **kwargs):
+            path_str = str(args[0]) if args else ""
+            # Logic: Path exists if it's our target output directory or data root
             return "navier-stokes-output" in path_str or "data" in path_str
 
         with patch.object(Path, "exists", side_effect=exists_side_effect):
@@ -75,7 +76,7 @@ class TestMainSolverOrchestration:
                 with patch("builtins.open", MagicMock()):
                     result = archive_simulation_artifacts(state)
                     assert "navier-stokes-output" in result
-
+                    
     @patch("src.main_solver.orchestrate_step1")
     @patch("src.main_solver.archive_simulation_artifacts")
     def test_run_solver_archive_failure(self, mock_arch, mock_s1, tmp_path):
