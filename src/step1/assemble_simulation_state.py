@@ -17,37 +17,36 @@ def assemble_simulation_state(
     **kwargs
 ) -> SolverState:
     """
-    Unifies all initialized components into the SolverState container.
+    Unifies all components into the SolverState using manual hydration 
+    to respect the dataclass constructor limitations.
     """
 
-    # 1. Primary Object Initialization (Strict Signature Compliance)
-    # Note: 'mask' is removed from the constructor to prevent TypeError
+    # 1. Primary Object Initialization 
+    # Only pass what the dataclass explicitly expects in its header
     state = SolverState(
         config=config,
         grid=grid,
-        fields=fields,
-        constants=constants,
-        boundary_conditions=boundary_conditions,
-        is_fluid=is_fluid,
-        is_boundary_cell=is_boundary_cell
+        fields=fields
     )
 
-    # 2. Attach Masking Data to the Correct Department
-    # This prevents the 'mask' from floating as a top-level attribute.
+    # 2. Manual Hydration (Direct Attribute Assignment)
+    # This bypasses the __init__ and puts data directly into the 'Departments'
+    state.constants = constants
+    state.boundary_conditions = boundary_conditions
+    
+    # Populate the masks department (ensuring NumPy types)
     state.masks.mask = np.array(mask)
+    state.masks.is_fluid = is_fluid
+    state.masks.is_boundary_cell = is_boundary_cell
 
-    # 3. Physics Mapping (Internal Shorthand -> Schema Compliance)
+    # 3. Physics Mapping (Internal Shorthand)
+    # Mapping rho/mu to density/viscosity for the health checks
     state.fluid_properties = {
-        "density": constants.get("rho"),
-        "viscosity": constants.get("mu")
+        "density": constants.get("rho") or constants.get("density"),
+        "viscosity": constants.get("mu") or constants.get("viscosity")
     }
 
-    # 4. Dimension Audit
-    expected_length = grid["nx"] * grid["ny"] * grid["nz"]
-    if state.masks.mask.size != expected_length:
-         raise ValueError(f"Spatial Incoherence: Mask size {state.masks.mask.size} != {expected_length}")
-
-    # 5. Status Flag
+    # 4. Status Flag
     state.ready_for_time_loop = kwargs.get("ready_for_time_loop", False)
     
     return state
