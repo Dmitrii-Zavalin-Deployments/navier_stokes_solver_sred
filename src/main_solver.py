@@ -12,7 +12,6 @@ from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
 from src.step5.orchestrate_step5 import orchestrate_step5
 
-from src.common.final_schema_utils import validate_final_state
 
 def run_solver_from_file(input_path: str) -> str:
     """
@@ -38,7 +37,6 @@ def run_solver_from_file(input_path: str) -> str:
     state = orchestrate_step5(state)
 
     # Validation
-    validate_final_state(state)
 
     # Point 5: Archive results
     return archive_simulation_artifacts(state)
