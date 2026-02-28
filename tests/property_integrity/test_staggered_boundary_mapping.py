@@ -26,7 +26,7 @@ def test_staggered_value_lifecycle_persistence(stage_name, factory):
     target_location = "x_min"
     
     # 1. Existence Check
-    assert hasattr(state, "boundary_conditions"), f"{stage_name} missing boundary_conditions"
+    assert hasattr(state.config, "boundary_conditions"), f"{stage_name} missing boundary_conditions"
     
     # 2. Locate the specific BC entry for x_min
     bc_entry = next((bc for bc in state.config.boundary_conditions if bc["location"] == target_location), None)
