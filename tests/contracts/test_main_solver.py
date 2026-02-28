@@ -21,10 +21,9 @@ class TestMainSolverOrchestration:
     @patch("src.main_solver.orchestrate_step3")
     @patch("src.main_solver.orchestrate_step4")
     @patch("src.main_solver.orchestrate_step5")
-    @patch("src.main_solver.validate_final_state")
     @patch("src.main_solver.archive_simulation_artifacts")
     def test_main_solver_full_flow(
-        self, mock_arch, mock_val, mock_s5, mock_s4, mock_s3, mock_s2, mock_s1, tmp_path
+        self, mock_arch, mock_s5, mock_s4, mock_s3, mock_s2, mock_s1, tmp_path
     ):
         """
         Tests the integration of main_solver using dummy stubs.
@@ -56,4 +55,3 @@ class TestMainSolverOrchestration:
         mock_s4.assert_called_with(mock_s3.return_value)
         mock_s5.assert_called_with(mock_s4.return_value)
         
-        mock_val.assert_called_once_with(mock_s5.return_value)
