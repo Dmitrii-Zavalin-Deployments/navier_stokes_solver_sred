@@ -843,7 +843,7 @@ class SolverState:
             "time": self.time,
             "iteration": self.iteration,
             "ready_for_time_loop": self.ready_for_time_loop,
-            "config": self.config,
+            "config": self.config.to_dict(),
             "grid": self.grid.to_dict(),
             "fields": self.fields.to_dict(),
             "masks": self.masks.to_dict(),
