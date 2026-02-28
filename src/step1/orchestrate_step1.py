@@ -95,6 +95,3 @@ def orchestrate_step1(
 
     return state
 
-def orchestrate_step1_state(json_input: Dict[str, Any]) -> SolverState:
-    """External API wrapper for Step 1."""
-    return orchestrate_step1(json_input)
