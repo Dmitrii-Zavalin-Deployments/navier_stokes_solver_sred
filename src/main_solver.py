@@ -10,7 +10,7 @@ from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
-from src.step5.orchestrate_step5_state import orchestrate_step5
+from src.step5.orchestrate_step5 import orchestrate_step5
 
 from src.common.final_schema_utils import validate_final_state
 
