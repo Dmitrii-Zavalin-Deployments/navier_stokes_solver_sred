@@ -5,7 +5,6 @@ import shutil
 import os
 import logging
 from pathlib import Path
-from typing import Optional
 
 from src.solver_state import SolverState
 from src.step1.orchestrate_step1 import orchestrate_step1
