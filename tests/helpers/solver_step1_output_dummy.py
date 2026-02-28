@@ -12,12 +12,12 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     
     state.config.external_forces = {"force_vector": [0.0, 0.0, -9.81]}
     state.config.boundary_conditions = [
-        {"location": "x_min", "type": "no-slip", "values": {}},
+        {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},
-        {"location": "y_min", "type": "no-slip", "values": {}},
-        {"location": "y_max", "type": "no-slip", "values": {}},
-        {"location": "z_min", "type": "no-slip", "values": {}},
-        {"location": "z_max", "type": "no-slip", "values": {}}
+        {"location": "y_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
+        {"location": "y_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
+        {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
+        {"location": "z_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}}
     ]
     state.config.simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1, "g": 9.81}
     state.config.initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
