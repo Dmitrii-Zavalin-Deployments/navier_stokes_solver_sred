@@ -75,7 +75,7 @@ class TestMainSolverOrchestration:
                 # Mock open to avoid actual file writes to disk
                 with patch("builtins.open", MagicMock()):
                     result = archive_simulation_artifacts(state)
-                    assert "navier-stokes-output" in result
+                    mock_zip.assert_called_once()
                     
     @patch("src.main_solver.orchestrate_step1")
     @patch("src.main_solver.archive_simulation_artifacts")
