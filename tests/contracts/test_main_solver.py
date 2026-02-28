@@ -104,23 +104,21 @@ class TestMainSolverOrchestration:
     @patch("shutil.make_archive")
     @patch("shutil.rmtree")
     @patch("pathlib.Path.exists")
-    def test_archive_cleanup_existing_dir(self, mock_rmtree, mock_zip):
+    def test_archive_cleanup_existing_dir(self, mock_exists, mock_rmtree, mock_zip):
         """Covers line 81: simulating that the output_dir already exists."""
         state = make_output_schema_dummy()
-        # Ensure we don't have snapshots that trigger the copy logic during this specific test
+        # Empty snapshots to avoid triggering the copy2 logic and subsequent crashes
         state.manifest.saved_snapshots = []
         
-        # We use a context manager for Path.exists to keep it localized
-        with patch.object(Path, "exists") as mock_exists:
-            # First call (check if output_dir exists) -> True
-            # Subsequent calls (during cleanup) -> False
-            mock_exists.side_effect = [True, False, False]
+        # side_effect handles multiple calls: 
+        # 1. output_dir.exists() -> True (triggers rmtree)
+        # 2. Final cleanup exists() -> False
+        mock_exists.side_effect = [True, False, False]
+        
+        with patch("pathlib.Path.mkdir"), patch("builtins.open", MagicMock()):
+            archive_simulation_artifacts(state)
             
-            with patch("pathlib.Path.mkdir"), patch("builtins.open", MagicMock()):
-                archive_simulation_artifacts(state)
-                
-        # Verify rmtree was called at the start (line 81)
-        # It's usually called with the output_dir Path object
+        # Verify rmtree was called to clean the existing directory
         assert mock_rmtree.called
 
     @patch("shutil.make_archive")
