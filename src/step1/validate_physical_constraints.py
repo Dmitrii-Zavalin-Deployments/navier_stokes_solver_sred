@@ -35,7 +35,9 @@ def validate_physical_constraints(state: SolverState) -> None:
     grid = state.grid
     constants = state.constants
     fields = state.fields
-    mask = state.mask
+    
+    # SURGICAL FIX: Accessing mask via the 'masks' department
+    mask = state.masks.mask
 
     # 1. Structural Integrity Guard
     required_grid_keys = ["nx", "ny", "nz", "dx", "dy", "dz"]
@@ -68,13 +70,13 @@ def validate_physical_constraints(state: SolverState) -> None:
                 raise ValueError(f"Domain Inversion: {dim}_max ({v_max}) <= {dim}_min ({v_min})")
 
     # 5. Topological Consistency
-    # CONSTITUTIONAL FIX: Mask is a 1D list (Phase A.2). Audit length, not shape.
+    # CONSTITUTIONAL FIX: Mask is accessed from the MaskData container.
     if mask is not None:
         expected_len = nx * ny * nz
         if len(mask) != expected_len:
             raise ValueError(f"Mask Length Mismatch: {len(mask)} != {expected_len}")
         
-        # Use a list comprehension for high-speed value check on the Python list
+        # Check values
         unauthorized = [v for v in mask if v not in {-1, 0, 1}]
         if unauthorized:
             raise ValueError(f"Forbidden Topology: Mask contains values outside range {-1, 0, 1}: {set(unauthorized)}")
