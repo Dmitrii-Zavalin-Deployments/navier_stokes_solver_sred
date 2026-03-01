@@ -26,7 +26,9 @@ class TestStructuralIntegrity:
     @pytest.fixture(scope="class")
     def step1_state(self):
         """STEP 1: Domain setup and field allocation."""
-        input_data = SolverInput(**solver_input_schema_dummy())
+    dummy = solver_input_schema_dummy()
+    dummy["solver_settings"] = {"max_iterations": 100, "tolerance": 1e-6, "method": "jacobi"}
+        input_data = SolverInput(**dummy)
         return orchestrate_step1(input_data)
 
     @pytest.fixture(scope="class")
