@@ -1,22 +1,21 @@
 # src/solver_input.py
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 from src.common.base_container import ValidatedContainer
+
+# =========================================================
+# 1. SUB-DEPARTMENT CONTAINERS (The Building Blocks)
+# =========================================================
 
 @dataclass
 class GridInput(ValidatedContainer):
-    """
-    Step 1a: The Spatial World (Input Blueprint).
-    Maps to the "grid" block in the JSON schema.
-    """
-    # --- Protected Slots ---
+    """Maps to the 'grid' block in the JSON schema."""
     _x_min: float = None; _x_max: float = None
     _y_min: float = None; _y_max: float = None
     _z_min: float = None; _z_max: float = None
     _nx: int = None; _ny: int = None; _nz: int = None
 
-    # --- X-Axis Properties ---
     @property
     def x_min(self) -> float: return self._get_safe("x_min")
     @x_min.setter
@@ -30,9 +29,10 @@ class GridInput(ValidatedContainer):
     @property
     def nx(self) -> int: return self._get_safe("nx")
     @nx.setter
-    def nx(self, v: int): self._set_safe("nx", v, int)
+    def nx(self, v: int): 
+        if v is not None and v < 1: raise ValueError(f"nx must be >= 1, got {v}")
+        self._set_safe("nx", v, int)
 
-    # --- Y-Axis Properties ---
     @property
     def y_min(self) -> float: return self._get_safe("y_min")
     @y_min.setter
@@ -46,9 +46,10 @@ class GridInput(ValidatedContainer):
     @property
     def ny(self) -> int: return self._get_safe("ny")
     @ny.setter
-    def ny(self, v: int): self._set_safe("ny", v, int)
+    def ny(self, v: int): 
+        if v is not None and v < 1: raise ValueError(f"ny must be >= 1, got {v}")
+        self._set_safe("ny", v, int)
 
-    # --- Z-Axis Properties ---
     @property
     def z_min(self) -> float: return self._get_safe("z_min")
     @z_min.setter
@@ -62,183 +63,119 @@ class GridInput(ValidatedContainer):
     @property
     def nz(self) -> int: return self._get_safe("nz")
     @nz.setter
-    def nz(self, v: int): self._set_safe("nz", v, int)
+    def nz(self, v: int): 
+        if v is not None and v < 1: raise ValueError(f"nz must be >= 1, got {v}")
+        self._set_safe("nz", v, int)
 
 @dataclass
 class FluidInput(ValidatedContainer):
-    """
-    Step 1c: The Physics Safe.
-    Maps to the "fluid_properties" block in the JSON schema.
-    """
+    """Maps to the 'fluid_properties' block in the JSON schema."""
     _density: float = None
     _viscosity: float = None
 
     @property
-    def density(self) -> float:
-        """The mass per unit volume (rho)."""
-        return self._get_safe("density")
-    
+    def density(self) -> float: return self._get_safe("density")
     @density.setter
     def density(self, v: float):
-        """Schema: exclusiveMinimum: 0."""
-        if v is not None and v <= 0:
-            raise ValueError(f"Density must be strictly greater than 0, got {v}")
+        if v is not None and v <= 0: raise ValueError(f"Density must be > 0, got {v}")
         self._set_safe("density", v, float)
 
     @property
-    def viscosity(self) -> float:
-        """The dynamic viscosity (mu)."""
-        return self._get_safe("viscosity")
-    
+    def viscosity(self) -> float: return self._get_safe("viscosity")
     @viscosity.setter
     def viscosity(self, v: float):
-        """Schema: minimum: 0."""
-        if v is not None and v < 0:
-            raise ValueError(f"Viscosity cannot be negative, got {v}")
+        if v is not None and v < 0: raise ValueError(f"Viscosity must be >= 0, got {v}")
         self._set_safe("viscosity", v, float)
 
 @dataclass
 class InitialConditionsInput(ValidatedContainer):
-    """
-    Step 1b: The Starting State.
-    Maps to the "initial_conditions" block in the JSON schema.
-    """
+    """Maps to the 'initial_conditions' block in the JSON schema."""
     _velocity: list = None
     _pressure: float = None
 
     @property
-    def velocity(self) -> list:
-        """The initial [u, v, w] vector."""
-        return self._get_safe("velocity")
-    
+    def velocity(self) -> list: return self._get_safe("velocity")
     @velocity.setter
     def velocity(self, v: list):
-        """Strict Schema Enforcement: exactly 3 elements."""
-        if v is not None and len(v) != 3:
-            raise ValueError(f"Velocity array must have exactly 3 elements, got {len(v)}")
+        if v is not None and len(v) != 3: raise ValueError("velocity must have 3 items")
         self._set_safe("velocity", v, list)
 
     @property
-    def pressure(self) -> float:
-        """The initial scalar pressure field value."""
-        return self._get_safe("pressure")
-    
+    def pressure(self) -> float: return self._get_safe("pressure")
     @pressure.setter
-    def pressure(self, v: float):
-        self._set_safe("pressure", v, float)
-
-    # --- Tactical Facades for physics logic ---
-    @property
-    def u_init(self) -> float: return float(self.velocity[0])
-    @property
-    def v_init(self) -> float: return float(self.velocity[1])
-    @property
-    def w_init(self) -> float: return float(self.velocity[2])
+    def pressure(self, v: float): self._set_safe("pressure", v, float)
 
 @dataclass
 class SimParamsInput(ValidatedContainer):
-    """
-    Step 0: Global Instructions & Numerical Tuning.
-    Maps to the "simulation_parameters" block in the JSON schema.
-    """
+    """Maps to the 'simulation_parameters' block in the JSON schema."""
     _time_step: float = None
     _total_time: float = None
     _output_interval: int = None
 
     @property
-    def time_step(self) -> float:
-        """The discrete time increment (dt)."""
-        return self._get_safe("time_step")
-    
+    def time_step(self) -> float: return self._get_safe("time_step")
     @time_step.setter
     def time_step(self, v: float):
-        """Schema: exclusiveMinimum: 0."""
-        if v is not None and v <= 0:
-            raise ValueError(f"time_step must be > 0, got {v}")
+        if v is not None and v <= 0: raise ValueError("time_step must be > 0")
         self._set_safe("time_step", v, float)
 
     @property
-    def total_time(self) -> float:
-        """The final simulation time (T_end)."""
-        return self._get_safe("total_time")
-    
+    def total_time(self) -> float: return self._get_safe("total_time")
     @total_time.setter
     def total_time(self, v: float):
-        """Schema: exclusiveMinimum: 0."""
-        if v is not None and v <= 0:
-            raise ValueError(f"total_time must be > 0, got {v}")
+        if v is not None and v <= 0: raise ValueError("total_time must be > 0")
         self._set_safe("total_time", v, float)
 
     @property
-    def output_interval(self) -> int:
-        """Frequency of data exports (in iterations)."""
-        return self._get_safe("output_interval")
-    
+    def output_interval(self) -> int: return self._get_safe("output_interval")
     @output_interval.setter
     def output_interval(self, v: int):
-        """Schema: minimum: 1."""
-        if v is not None and v < 1:
-            raise ValueError(f"output_interval must be >= 1, got {v}")
+        if v is not None and v < 1: raise ValueError("output_interval must be >= 1")
         self._set_safe("output_interval", v, int)
 
 @dataclass
 class BoundaryConditionItem(ValidatedContainer):
-    """A single boundary face definition from the JSON array."""
+    """A single object within the boundary_conditions array."""
     _location: str = None 
     _type: str = None      
     _values: dict = field(default_factory=dict)
     _comment: str = ""
 
     @property
-    def location(self) -> str:
-        return self._get_safe("location")
-
+    def location(self) -> str: return self._get_safe("location")
     @location.setter
     def location(self, v: str):
-        valid_locations = ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
-        if v not in valid_locations:
-            raise ValueError(f"Invalid boundary location '{v}'. Must be one of {valid_locations}")
+        valid = ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
+        if v not in valid: raise ValueError(f"Invalid location: {v}")
         self._set_safe("location", v, str)
 
     @property
-    def type(self) -> str:
-        return self._get_safe("type")
-
+    def type(self) -> str: return self._get_safe("type")
     @type.setter
     def type(self, v: str):
-        valid_types = ["no-slip", "free-slip", "inflow", "outflow", "pressure"]
-        if v not in valid_types:
-            raise ValueError(f"Invalid BC type '{v}'. Must be one of {valid_types}")
+        valid = ["no-slip", "free-slip", "inflow", "outflow", "pressure"]
+        if v not in valid: raise ValueError(f"Invalid type: {v}")
         self._set_safe("type", v, str)
 
     @property
-    def values(self) -> dict:
-        return self._get_safe("values")
-
+    def values(self) -> dict: return self._get_safe("values")
     @values.setter
-    def values(self, v: dict):
-        self._set_safe("values", v, dict)
+    def values(self, v: dict): self._set_safe("values", v, dict)
 
     @property
-    def comment(self) -> str:
-        return self._get_safe("comment")
-
+    def comment(self) -> str: return self._get_safe("comment")
     @comment.setter
-    def comment(self, v: str):
-        self._set_safe("comment", v, str)
+    def comment(self, v: str): self._set_safe("comment", v, str)
 
 @dataclass
 class BoundaryConditionsInput(ValidatedContainer):
-    """Manager for the list of boundary condition items."""
+    """The Boundary Manager: manages the array of items."""
     _items: List[BoundaryConditionItem] = field(default_factory=list)
 
     @property
-    def items(self) -> List[BoundaryConditionItem]:
-        return self._get_safe("items")
-
+    def items(self) -> List[BoundaryConditionItem]: return self._get_safe("items")
     @items.setter
     def items(self, v: list):
-        """Converts raw list of dicts from JSON into BoundaryConditionItem objects."""
         processed = []
         if isinstance(v, list):
             for entry in v:
@@ -249,74 +186,119 @@ class BoundaryConditionsInput(ValidatedContainer):
                     bc.values = entry.get("values", {})
                     bc.comment = entry.get("comment", "")
                     processed.append(bc)
-                else:
-                    processed.append(entry)
-        
+                else: processed.append(entry)
         self._set_safe("items", processed, list)
 
 @dataclass
 class MaskInput(ValidatedContainer):
-    """
-    Step 1d: The Geometry Blueprint.
-    Maps to the "mask" block in the JSON schema.
-    """
+    """Maps to the 'mask' array in the JSON schema."""
     _data: list = None
 
     @property
-    def data(self) -> list:
-        """
-        The flat integer array of length nx*ny*nz.
-        1 = fluid, 0 = solid, -1 = boundary-fluid.
-        """
-        return self._get_safe("data")
-
+    def data(self) -> list: return self._get_safe("data")
     @data.setter
     def data(self, v: list):
-        """Schema: enum check [-1, 0, 1] for all items."""
         if v is not None:
-            # Enforce the strict enum values from the schema
-            valid_entries = {-1, 0, 1}
-            if not all(val in valid_entries for val in v):
-                # Identifying the offending value for easier debugging
-                offenders = {val for val in v if val not in valid_entries}
-                raise ValueError(f"Mask contains invalid values {offenders}. Only -1, 0, 1 allowed.")
-        
+            if not all(val in {-1, 0, 1} for val in v):
+                raise ValueError("Mask contains invalid values. Only -1, 0, 1 allowed.")
         self._set_safe("data", v, list)
 
 @dataclass
 class ExternalForcesInput(ValidatedContainer):
-    """
-    Step 2: Source Terms & Body Forces.
-    Maps to the "external_forces" block in the JSON schema.
-    """
+    """Maps to the 'external_forces' block in the JSON schema."""
     _force_vector: list = None
     _comment: str = ""
 
     @property
-    def force_vector(self) -> list:
-        """Physical source terms like gravity: [fx, fy, fz]."""
-        return self._get_safe("force_vector")
-
+    def force_vector(self) -> list: return self._get_safe("force_vector")
     @force_vector.setter
     def force_vector(self, v: list):
-        """Strict Schema Enforcement: exactly 3 elements."""
-        if v is not None and len(v) != 3:
-            raise ValueError(f"force_vector must have exactly 3 elements, got {len(v)}")
+        if v is not None and len(v) != 3: raise ValueError("force_vector must have 3 items")
         self._set_safe("force_vector", v, list)
 
     @property
-    def comment(self) -> str:
-        """Optional metadata describing the force."""
-        return self._get_safe("comment")
-
+    def comment(self) -> str: return self._get_safe("comment")
     @comment.setter
-    def comment(self, v: str):
-        self._set_safe("comment", v, str)
+    def comment(self, v: str): self._set_safe("comment", v, str)
 
-    # --- Tactical Facades ---
-    @property
-    def fx(self) -> float: return float(self.force_vector[0])
-    @property
-    def fy(self) -> float: return float(self.force_vector[1])
-    @property
-    def fz(self) -> float: return float(self.force_vector[2])
+# =========================================================
+# 2. THE UNIVERSAL INPUT CONTAINER (The Entry Contract)
+# =========================================================
+
+@dataclass
+class SolverInput(ValidatedContainer):
+    """The Root Entry Point for all JSON data (The Grader)."""
+    grid: GridInput = field(default_factory=GridInput)
+    fluid_properties: FluidInput = field(default_factory=FluidInput)
+    initial_conditions: InitialConditionsInput = field(default_factory=InitialConditionsInput)
+    simulation_parameters: SimParamsInput = field(default_factory=SimParamsInput)
+    external_forces: ExternalForcesInput = field(default_factory=ExternalForcesInput)
+    mask: MaskInput = field(default_factory=MaskInput)
+    boundary_conditions: BoundaryConditionsInput = field(default_factory=BoundaryConditionsInput)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SolverInput":
+        """Factory method: Ingests raw JSON and validates it."""
+        obj = cls()
+        
+        # Hydrate sub-sections
+        g = data.get("grid", {})
+        for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]:
+            if k in g: setattr(obj.grid, k, g[k])
+            
+        f = data.get("fluid_properties", {})
+        if "density" in f: obj.fluid_properties.density = f["density"]
+        if "viscosity" in f: obj.fluid_properties.viscosity = f["viscosity"]
+        
+        ic = data.get("initial_conditions", {})
+        if "velocity" in ic: obj.initial_conditions.velocity = ic["velocity"]
+        if "pressure" in ic: obj.initial_conditions.pressure = ic["pressure"]
+        
+        sp = data.get("simulation_parameters", {})
+        if "time_step" in sp: obj.simulation_parameters.time_step = sp["time_step"]
+        if "total_time" in sp: obj.simulation_parameters.total_time = sp["total_time"]
+        if "output_interval" in sp: obj.simulation_parameters.output_interval = sp["output_interval"]
+        
+        ef = data.get("external_forces", {})
+        if "force_vector" in ef: obj.external_forces.force_vector = ef["force_vector"]
+        if "comment" in ef: obj.external_forces.comment = ef["comment"]
+        
+        obj.mask.data = data.get("mask", [])
+        obj.boundary_conditions.items = data.get("boundary_conditions", [])
+        
+        return obj
+
+    def to_dict(self) -> dict:
+        """Serialization method: Returns the triaged, valid JSON dictionary."""
+        return {
+            "grid": {
+                "x_min": self.grid.x_min, "x_max": self.grid.x_max,
+                "y_min": self.grid.y_min, "y_max": self.grid.y_max,
+                "z_min": self.grid.z_min, "z_max": self.grid.z_max,
+                "nx": self.grid.nx, "ny": self.grid.ny, "nz": self.grid.nz
+            },
+            "fluid_properties": {
+                "density": self.fluid_properties.density,
+                "viscosity": self.fluid_properties.viscosity
+            },
+            "initial_conditions": {
+                "velocity": self.initial_conditions.velocity,
+                "pressure": self.initial_conditions.pressure
+            },
+            "simulation_parameters": {
+                "time_step": self.simulation_parameters.time_step,
+                "total_time": self.simulation_parameters.total_time,
+                "output_interval": self.simulation_parameters.output_interval
+            },
+            "boundary_conditions": [
+                {
+                    "location": bc.location, "type": bc.type, 
+                    "values": bc.values, "comment": bc.comment
+                } for bc in self.boundary_conditions.items
+            ],
+            "mask": self.mask.data,
+            "external_forces": {
+                "force_vector": self.external_forces.force_vector,
+                "comment": self.external_forces.comment
+            }
+        }
