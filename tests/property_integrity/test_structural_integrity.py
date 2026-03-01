@@ -3,7 +3,7 @@ import numpy as np
 from src.solver_state import SolverState
 
 # --- PIPELINE IMPORTS ---
-from src.step1.orchestrate_step1 import orchestrate_step1_state
+from src.step1.orchestrate_step1 import orchestrate_step1
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 # Note: These will need to be imported as you implement each stage
@@ -26,7 +26,7 @@ class TestStructuralIntegrity:
     def step1_state(self):
         """STEP 1: Domain setup and field allocation."""
         input_data = solver_input_schema_dummy()
-        return orchestrate_step1_state(input_data)
+        return orchestrate_step1(input_data)
 
     @pytest.fixture(scope="class")
     def step2_state(self, step1_state):
