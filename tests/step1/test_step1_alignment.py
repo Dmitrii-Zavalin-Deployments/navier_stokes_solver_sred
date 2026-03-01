@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1
+from src.solver_input import SolverInput
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
@@ -23,7 +24,8 @@ def test_step1_alignment_logic_to_frozen_truth():
     
     # 2. Execution: Run the actual orchestration logic
     # The input dummy defines nx=2, ny=2, nz=2
-    result_state = orchestrate_step1(input_data)
+    input_obj = SolverInput(**input_data)
+    result_state = orchestrate_step1(input_obj)
     
     # 3. Reference: The 'Frozen Truth' required for Step 2 ingestion
     expected_state = make_step1_output_dummy(nx=2, ny=2, nz=2)
@@ -74,6 +76,7 @@ def test_step1_sensitivity_firewall():
     invalid_input["grid"]["nx"] = -1 
     
     with pytest.raises(RuntimeError) as excinfo:
-        orchestrate_step1(invalid_input)
+        invalid_obj = SolverInput(**invalid_input)
+        orchestrate_step1(invalid_obj)
     
     assert "Contract Violation" in str(excinfo.value)
