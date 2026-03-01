@@ -1,7 +1,7 @@
 # src/solver_input.py
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List
 from src.common.base_container import ValidatedContainer
 
 @dataclass
