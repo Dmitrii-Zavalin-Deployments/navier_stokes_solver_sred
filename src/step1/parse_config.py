@@ -18,6 +18,7 @@ def parse_config(data: Dict[str, Any]) -> Dict[str, Any]:
     Compliance: Phase F (Sensitivity Gate & Data Completeness Audit).
     """
 
+    if not isinstance(data, dict): data = data.__dict__
     # 1. Grid Parameters (Spatial Requirements)
     grid = _ensure_dict("grid", data.get("grid", {}))
     required_grid = ["nx", "ny", "nz", "x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
