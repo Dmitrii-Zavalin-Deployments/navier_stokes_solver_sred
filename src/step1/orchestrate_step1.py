@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import logging
-from typing import Any
 
 from src.solver_state import SolverState
 from src.solver_input import SolverInput  # The Typed Input Contract
