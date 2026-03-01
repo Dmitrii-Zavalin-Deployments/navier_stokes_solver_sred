@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from src.solver_state import SolverState
+from src.solver_input import SolverInput
 
 # --- PIPELINE IMPORTS ---
 from src.step1.orchestrate_step1 import orchestrate_step1
