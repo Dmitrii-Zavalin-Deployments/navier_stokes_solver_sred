@@ -175,10 +175,10 @@ class BoundaryConditionsInput(ValidatedContainer):
             for entry in v:
                 if isinstance(entry, dict):
                     bc = BoundaryConditionItem()
-                    bc.location = entry.get("location")
-                    bc.type = entry.get("type")
-                    bc.values = entry.get("values", {})
-                    bc.comment = entry.get("comment", "")
+                    bc["location"] if isinstance(bc, dict) else bc.location = entry.get("location")
+                    bc["type"] if isinstance(bc, dict) else bc.type = entry.get("type")
+                    bc["values"] if isinstance(bc, dict) else bc.values = entry.get("values", {})
+                    bc["comment"] if isinstance(bc, dict) else bc.comment = entry.get("comment", "")
                     processed.append(bc)
                 else: processed.append(entry)
         self._set_safe("items", processed, list)
@@ -261,10 +261,10 @@ class SolverInput(ValidatedContainer):
         """Serializes back to a clean JSON-compatible dictionary."""
         return {
             "grid": {
-                "x_min": self.grid.x_min, "x_max": self.grid.x_max,
-                "y_min": self.grid.y_min, "y_max": self.grid.y_max,
-                "z_min": self.grid.z_min, "z_max": self.grid.z_max,
-                "nx": self.grid.nx, "ny": self.grid.ny, "nz": self.grid.nz
+                "x_min": self.grid["x_min"] if isinstance(self.grid, dict) else self.grid.x_min, "x_max": self.grid["x_max"] if isinstance(self.grid, dict) else self.grid.x_max,
+                "y_min": self.grid["y_min"] if isinstance(self.grid, dict) else self.grid.y_min, "y_max": self.grid["y_max"] if isinstance(self.grid, dict) else self.grid.y_max,
+                "z_min": self.grid["z_min"] if isinstance(self.grid, dict) else self.grid.z_min, "z_max": self.grid["z_max"] if isinstance(self.grid, dict) else self.grid.z_max,
+                "nx": self.grid["nx"] if isinstance(self.grid, dict) else self.grid.nx, "ny": self.grid["ny"] if isinstance(self.grid, dict) else self.grid.ny, "nz": self.grid["nz"] if isinstance(self.grid, dict) else self.grid.nz
             },
             "fluid_properties": {
                 "density": self.fluid_properties.density,
@@ -281,9 +281,9 @@ class SolverInput(ValidatedContainer):
             },
             "boundary_conditions": [
                 {
-                    "location": bc.location, "type": bc.type, 
-                    "values": bc.values, "comment": bc.comment
-                } for bc in self.boundary_conditions.items
+                    "location": bc["location"] if isinstance(bc, dict) else bc.location, "type": bc["type"] if isinstance(bc, dict) else bc.type, 
+                    "values": bc["values"] if isinstance(bc, dict) else bc.values, "comment": bc["comment"] if isinstance(bc, dict) else bc.comment
+                } for bc in (self.boundary_conditions.items if hasattr(self.boundary_conditions, "items") else self.boundary_conditions)
             ],
             "mask": self.mask.data,
             "external_forces": {
