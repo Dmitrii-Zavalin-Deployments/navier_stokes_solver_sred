@@ -54,7 +54,7 @@ def orchestrate_step1(
 
     # 1. Spatial Governor (Grid Context)
     # Passed as the specific GridInput sub-container
-    grid = initialize_grid(input_data.grid if isinstance(input_data.grid, dict) else input_data.grid if isinstance(input_data.grid, dict) else input_data.grid.__dict__)
+    grid = initialize_grid(input_data.grid if isinstance(input_data.grid, dict) else input_data.grid.__dict__)
     
     # 2. Config Context (Solver Tuning)
     # We pass the full object; internal logic extracts what it needs
@@ -70,7 +70,7 @@ def orchestrate_step1(
     # 5. Topology Interpreter (Masks & Boundaries)
     # Mask input is a validated list; BCs are a list of BoundaryConditionItems
     mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask.data if hasattr(input_data.mask, "data") else input_data.mask, input_data.grid if isinstance(input_data.grid, dict) else input_data.grid.__dict__)
-    bc_table = parse_boundary_conditions(input_data.boundary_conditions.items, grid)
+    bc_table = parse_boundary_conditions(input_data.boundary_conditions.items if hasattr(input_data.boundary_conditions, "items") else input_data.boundary_conditions, grid)
 
     # 6. Mathematical Translator (Physical Constants)
     # Pass Typed objects for density, viscosity, dt, etc.
