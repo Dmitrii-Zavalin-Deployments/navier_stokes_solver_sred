@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
-from src.dropbox_utils import refresh_access_token
+from src.io.dropbox_utils import refresh_access_token
 
 def test_refresh_token_success():
     """Verify auth utility handles successful API responses."""

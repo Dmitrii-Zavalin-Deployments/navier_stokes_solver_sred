@@ -6,7 +6,7 @@ import shutil
 import json
 from pathlib import Path
 from src.main_solver import run_solver_from_file
-from tests.helpers.solver_input_schema_dummy import make_input_schema_dict
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture
 def setup_integration_env():
@@ -17,10 +17,9 @@ def setup_integration_env():
     
     # 1. Generate a valid input dictionary (Phase A Contract)
     # We set total_time = 3 * dt to ensure exactly 3 iterations
-    input_data = make_input_schema_dict(nx=4, ny=4, nz=4)
-    dt = input_data["config"]["dt"]
-    input_data["config"]["total_time"] = dt * 3
-    input_data["config"]["output_directory"] = "output/integration_test"
+    input_data = solver_input_schema_dummy()
+    dt = input_data["simulation_parameters"]["time_step"]
+    input_data["simulation_parameters"]["total_time"] = dt * 3
     
     with open(input_file, "w") as f:
         json.dump(input_data, f)
