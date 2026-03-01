@@ -1,6 +1,5 @@
 # src/step3/predictor.py
 
-import numpy as np
 from src.solver_state import SolverState
 
 def predict_velocity(state: SolverState) -> None:
