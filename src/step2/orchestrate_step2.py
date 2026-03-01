@@ -1,49 +1,50 @@
 # src/step2/orchestrate_step2.py
 
-from __future__ import annotations
+import json
 from src.solver_state import SolverState
-
-from .load_numerical_config import load_numerical_config
-from .enforce_mask_semantics import enforce_mask_semantics
-from .create_fluid_mask import create_fluid_mask
-from .build_divergence_operator import build_divergence_operator
-from .build_gradient_operators import build_gradient_operators
-from .build_laplacian_operators import build_laplacian_operators
-from .build_advection_structure import build_advection_structure
-from .prepare_ppe_structure import prepare_ppe_structure
-from .compute_initial_health import compute_initial_health
+from .operators import build_numerical_operators
+from .advection import build_advection_stencils
 
 def orchestrate_step2(state: SolverState) -> SolverState:
     """
-    Finalized Orchestrator for Step 2.
-    Ensures mask logic, operator construction, and health checks are performed.
+    Step 2 Orchestrator: Mathematical Readiness.
+    
+    Rule 5: Explicit or Error. No defaults/fallbacks. 
+    We use try-except to provide clear error reporting for missing runner config.
     """
     
-    # 0. Load Numerical Tuning (from config.json)
-    load_numerical_config(state)
+    # --- Point 2: Calculate & Prepare ---
+    try:
+        with open("config.json", "r") as f:
+            external_config = json.load(f)
+        
+        settings = external_config["solver_settings"]
+        
+        # Explicit mapping: No .get() allowed per Phase C mandate.
+        state.config.ppe_atol = settings["ppe_atol"]
+        state.config.ppe_max_iter = settings["ppe_max_iter"]
+        
+    except FileNotFoundError:
+        raise FileNotFoundError("Critical Error: 'config.json' not found in root directory.")
+    except KeyError as e:
+        raise KeyError(f"Critical Error: Missing required solver setting {e} in 'config.json'.")
+    except json.JSONDecodeError:
+        raise ValueError("Critical Error: 'config.json' is not a valid JSON file.")
+
+    # Delegate math to worker files
+    build_numerical_operators(state)
+    build_advection_stencils(state)
+
+    # --- Point 3: Insertion & State Baseline ---
+    state.ppe.A = state.operators.laplacian
+    state.ppe.preconditioner = None 
+
+    # Initialize Health Vitals (Baseline Reset)
+    state.health.max_u = 0.0
+    state.health.divergence_norm = 0.0
+    state.health.is_stable = True
+    state.health.post_correction_divergence_norm = 0.0
+
+    state.ready_for_time_loop = False 
     
-    # 1. Derived Constants (Required by test_orchestrate_step2)
-    # We pre-calculate inverse spacings to speed up operator applications later.
-    state.constants["inv_dx"] = 1.0 / state.grid['dx']
-    state.constants["inv_dy"] = 1.0 / state.grid['dy']
-    state.constants["inv_dz"] = 1.0 / state.grid['dz']
-    
-    # 2. Geometry & Masking
-    enforce_mask_semantics(state)
-    create_fluid_mask(state)
-    
-    # 3. Sparse Operator Construction
-    # build_divergence_operator creates the 'divergence' key in state.operators
-    build_divergence_operator(state)
-    build_gradient_operators(state)
-    build_laplacian_operators(state)
-    
-    # 4. Numerical Structures
-    build_advection_structure(state)
-    prepare_ppe_structure(state)
-    
-    # 5. Initialization Health Check
-    compute_initial_health(state)
-    
-    state.ready_for_time_loop = False
     return state
