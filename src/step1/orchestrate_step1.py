@@ -5,7 +5,6 @@ import logging
 
 from src.solver_state import SolverState
 from src.solver_input import SolverInput  # The Typed Input Contract
-from .parse_config import parse_config
 from .initialize_grid import initialize_grid
 from .allocate_fields import allocate_fields
 from .map_geometry_mask import map_geometry_mask
@@ -58,7 +57,6 @@ def orchestrate_step1(
     
     # 2. Config Context (Solver Tuning)
     # We pass the full object; internal logic extracts what it needs
-    parse_config(input_data)
 
     # 3. Memory Architect (Staggered Field Allocation)
     fields = allocate_fields(grid)
@@ -76,7 +74,7 @@ def orchestrate_step1(
     # Pass Typed objects for density, viscosity, dt, etc.
     constants = compute_derived_constants(grid, input_data.fluid_properties, input_data.simulation_parameters)
     state = assemble_simulation_state(
-        config_raw=input_data.to_dict(),
+        config_raw=input_data,
         grid_raw=grid,
         fields=fields,
         mask=mask,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict
 import numpy as np
+from src.solver_input import SolverInput
 
 from src.solver_state import (
     SolverState, 
@@ -12,7 +13,7 @@ from src.solver_state import (
 )
 
 def assemble_simulation_state(
-    config_raw: Dict[str, Any],
+    config_raw: SolverInput,
     grid_raw: Dict[str, Any],
     fields: Dict[str, np.ndarray],
     mask: list,
@@ -29,12 +30,14 @@ def assemble_simulation_state(
 
     # 1. Map Config - EXPLICIT OR ERROR
     # Note: solver_settings must be present in the config_raw
+    # NOTE: Run float64 conversion for the numbers before running the calculator
     solver_settings = config_raw.solver_settings
     
     config_obj = SolverConfig(
         _simulation_parameters=config_raw.simulation_parameters,
+        _time_step=float(config_raw.simulation_parameters.time_step),
         _boundary_conditions=config_raw.boundary_conditions,
-        _external_forces=config_raw.external_forces,
+        _external_forces=[float(x) for x in config_raw.external_forces.force_vector],
         _initial_conditions=config_raw.initial_conditions,
         _fluid_properties=config_raw.fluid_properties,
         _ppe_tolerance=solver_settings.ppe_tolerance,
