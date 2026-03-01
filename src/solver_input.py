@@ -175,10 +175,10 @@ class BoundaryConditionsInput(ValidatedContainer):
             for entry in v:
                 if isinstance(entry, dict):
                     bc = BoundaryConditionItem()
-                    bc["location"] if isinstance(bc, dict) else bc.location = entry.get("location")
-                    bc["type"] if isinstance(bc, dict) else bc.type = entry.get("type")
-                    bc["values"] if isinstance(bc, dict) else bc.values = entry.get("values", {})
-                    bc["comment"] if isinstance(bc, dict) else bc.comment = entry.get("comment", "")
+                    bc.location = entry.get("location")
+                    bc.type = entry.get("type")
+                    bc.values = entry.get("values", {})
+                    bc.comment = entry.get("comment", "")
                     processed.append(bc)
                 else: processed.append(entry)
         self._set_safe("items", processed, list)
@@ -259,35 +259,19 @@ class SolverInput(ValidatedContainer):
 
     def to_dict(self) -> dict:
         """Serializes back to a clean JSON-compatible dictionary."""
+        def get_val(obj, key, default=None):
+            if isinstance(obj, dict): return obj.get(key, default)
+            return getattr(obj, key, default)
+
         return {
-            "grid": {
-                "x_min": self.grid["x_min"] if isinstance(self.grid, dict) else self.grid.x_min, "x_max": self.grid["x_max"] if isinstance(self.grid, dict) else self.grid.x_max,
-                "y_min": self.grid["y_min"] if isinstance(self.grid, dict) else self.grid.y_min, "y_max": self.grid["y_max"] if isinstance(self.grid, dict) else self.grid.y_max,
-                "z_min": self.grid["z_min"] if isinstance(self.grid, dict) else self.grid.z_min, "z_max": self.grid["z_max"] if isinstance(self.grid, dict) else self.grid.z_max,
-                "nx": self.grid["nx"] if isinstance(self.grid, dict) else self.grid.nx, "ny": self.grid["ny"] if isinstance(self.grid, dict) else self.grid.ny, "nz": self.grid["nz"] if isinstance(self.grid, dict) else self.grid.nz
-            },
-            "fluid_properties": {
-                "density": self.fluid_properties.density,
-                "viscosity": self.fluid_properties.viscosity
-            },
-            "initial_conditions": {
-                "velocity": self.initial_conditions.velocity,
-                "pressure": self.initial_conditions.pressure
-            },
-            "simulation_parameters": {
-                "time_step": self.simulation_parameters.time_step,
-                "total_time": self.simulation_parameters.total_time,
-                "output_interval": self.simulation_parameters.output_interval
-            },
+            "grid": {k: get_val(self.grid, k) for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]},
+            "fluid_properties": {k: get_val(self.fluid_properties, k) for k in ["density", "viscosity"]},
+            "initial_conditions": {k: get_val(self.initial_conditions, k) for k in ["velocity", "pressure"]},
+            "simulation_parameters": {k: get_val(self.simulation_parameters, k) for k in ["time_step", "total_time", "output_interval"]},
             "boundary_conditions": [
-                {
-                    "location": bc["location"] if isinstance(bc, dict) else bc.location, "type": bc["type"] if isinstance(bc, dict) else bc.type, 
-                    "values": bc["values"] if isinstance(bc, dict) else bc.values, "comment": bc["comment"] if isinstance(bc, dict) else bc.comment
-                } for bc in (self.boundary_conditions.items if hasattr(self.boundary_conditions, "items") else self.boundary_conditions)
+                {k: get_val(bc, k) for k in ["location", "type", "values", "comment"]}
+                for bc in (self.boundary_conditions.items if hasattr(self.boundary_conditions, "items") else self.boundary_conditions)
             ],
-            "mask": self.mask.data,
-            "external_forces": {
-                "force_vector": self.external_forces.force_vector,
-                "comment": self.external_forces.comment
-            }
+            "mask": self.mask.data if hasattr(self.mask, "data") else self.mask,
+            "external_forces": {k: get_val(self.external_forces, k) for k in ["force_vector", "comment"]}
         }
