@@ -14,7 +14,7 @@ from src.solver_state import (
 
 def assemble_simulation_state(
     config_raw: SolverInput,
-    grid_raw: Dict[str, Any],
+    grid_raw: GridInput,
     fields: Dict[str, np.ndarray],
     mask: list,
     constants: Dict[str, Any],

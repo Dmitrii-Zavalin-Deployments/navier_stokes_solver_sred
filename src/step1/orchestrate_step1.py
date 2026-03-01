@@ -5,7 +5,6 @@ import logging
 
 from src.solver_state import SolverState
 from src.solver_input import SolverInput  # The Typed Input Contract
-from .initialize_grid import initialize_grid
 from .allocate_fields import allocate_fields
 from .map_geometry_mask import map_geometry_mask
 from .parse_boundary_conditions import parse_boundary_conditions
@@ -53,13 +52,12 @@ def orchestrate_step1(
 
     # 1. Spatial Governor (Grid Context)
     # Passed as the specific GridInput sub-container
-    grid = initialize_grid(input_data.grid)
     
     # 2. Config Context (Solver Tuning)
     # We pass the full object; internal logic extracts what it needs
 
     # 3. Memory Architect (Staggered Field Allocation)
-    fields = allocate_fields(grid)
+    fields = allocate_fields(input_data.grid)
     
     # 4. Field Primer (Initial Conditions)
     # Uses InitialConditionsInput sub-container
@@ -67,15 +65,15 @@ def orchestrate_step1(
 
     # 5. Topology Interpreter (Masks & Boundaries)
     # Mask input is a validated list; BCs are a list of BoundaryConditionItems
-    mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask, input_data.grid)
-    bc_table = parse_boundary_conditions(input_data.boundary_conditions, grid)
+    mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask.data, input_data.grid)
+    bc_table = parse_boundary_conditions(input_data.boundary_conditions.items, input_data.grid)
 
     # 6. Mathematical Translator (Physical Constants)
     # Pass Typed objects for density, viscosity, dt, etc.
-    constants = compute_derived_constants(grid, input_data.fluid_properties, input_data.simulation_parameters)
+    constants = compute_derived_constants(input_data.grid, input_data.fluid_properties, input_data.simulation_parameters)
     state = assemble_simulation_state(
         config_raw=input_data,
-        grid_raw=grid,
+        grid_raw=input_data.grid,
         fields=fields,
         mask=mask,
         constants=constants,

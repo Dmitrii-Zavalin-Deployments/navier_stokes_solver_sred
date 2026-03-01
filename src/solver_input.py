@@ -15,6 +15,7 @@ class GridInput(ValidatedContainer):
     _z_min: float = None; _z_max: float = None
     _nx: int = None; _ny: int = None; _nz: int = None
 
+    # --- Properties (Getters/Setters) ---
     @property
     def x_min(self) -> float: return self._get_safe("x_min")
     @x_min.setter
@@ -65,6 +66,23 @@ class GridInput(ValidatedContainer):
     def nz(self, v: int): 
         if v is not None and v < 1: raise ValueError(f"nz must be >= 1, got {v}")
         self._set_safe("nz", v, int)
+
+    # --- Geometric Derived Properties (Spatial Governor) ---
+    @property
+    def dx(self) -> float:
+        return (self.x_max - self.x_min) / self.nx
+
+    @property
+    def dy(self) -> float:
+        return (self.y_max - self.y_min) / self.ny
+
+    @property
+    def dz(self) -> float:
+        return (self.z_max - self.z_min) / self.nz
+
+    @property
+    def total_cells(self) -> int:
+        return self.nx * self.ny * self.nz
 
 @dataclass
 class FluidInput(ValidatedContainer):
@@ -270,8 +288,8 @@ class SolverInput(ValidatedContainer):
             "simulation_parameters": {k: get_val(self.simulation_parameters, k) for k in ["time_step", "total_time", "output_interval"]},
             "boundary_conditions": [
                 {k: get_val(bc, k) for k in ["location", "type", "values", "comment"]}
-                for bc in (self.boundary_conditions.items if hasattr(self.boundary_conditions, "items") else self.boundary_conditions)
+                for bc in self.boundary_conditions.items
             ],
-            "mask": self.mask.data if hasattr(self.mask, "data") else self.mask,
+            "mask": self.mask.data,
             "external_forces": {k: get_val(self.external_forces, k) for k in ["force_vector", "comment"]}
         }
