@@ -1,9 +1,8 @@
 #!/bin/bash
-# 📦 Dropbox Sync Script — Updated for src/io/ architecture
-# Enforces the Phase C "Explicit or Error" mandate for Cloud I/O.
+# src/download_from_dropbox.sh
+# 📦 Ingestion Orchestrator — Bridges Dropbox Cloud to the Solver local state.
 
 # 1. Environment Guard
-# These are populated by GitHub Actions secrets via the .yml file
 APP_KEY="${APP_KEY}"
 APP_SECRET="${APP_SECRET}"
 REFRESH_TOKEN="${REFRESH_TOKEN}"
@@ -14,17 +13,16 @@ LOCAL_FOLDER="./data/testing-input-output"
 LOG_FILE="./dropbox_download_log.txt"
 
 # 3. Setup
-echo "📂 Initializing local workspace at $LOCAL_FOLDER..."
+echo "📂 Preparing ingestion workspace at $LOCAL_FOLDER..."
 mkdir -p "$LOCAL_FOLDER"
 
-# 4. Execution
-# We use -m to run the module correctly or set PYTHONPATH to ensure
-# that 'src.dropbox_utils' remains resolvable from the root.
+# 4. Execution Logic
+# Ensure Python can resolve 'src.io.dropbox_utils'
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-echo "🔄 Invoking Dropbox Python Worker (src/io/download_dropbox_files.py)..."
+echo "🔄 Triggering Python Ingestion Worker (src/io/download_from_dropbox.py)..."
 
-python3 src/io/download_dropbox_files.py \
+python3 src/io/download_from_dropbox.py \
     "$DROPBOX_FOLDER" \
     "$LOCAL_FOLDER" \
     "$REFRESH_TOKEN" \
@@ -32,15 +30,14 @@ python3 src/io/download_dropbox_files.py \
     "$APP_SECRET" \
     "$LOG_FILE"
 
-# 5. Audit Trace & Validation
-if [ -f "$LOG_FILE" ]; then
-    echo "📜 Worker Log snippet:"
-    tail -n 5 "$LOG_FILE"
-fi
-
-if [ "$(ls -A "$LOCAL_FOLDER")" ]; then
-    echo "✅ SUCCESS: Files successfully synchronized to $LOCAL_FOLDER"
+# 5. Result Verification
+if [ $? -eq 0 ] && [ "$(ls -A "$LOCAL_FOLDER")" ]; then
+    echo "✅ SUCCESS: Inputs synchronized. Ready for Solver execution."
+    if [ -f "$LOG_FILE" ]; then
+        echo "📜 Log Summary:"
+        tail -n 3 "$LOG_FILE"
+    fi
 else
-    echo "❌ ERROR: Local folder is empty. Dropbox sync failed or no valid files found."
+    echo "❌ ERROR: No input files found or sync failed. Pipeline halted."
     exit 1
 fi
