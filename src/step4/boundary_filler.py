@@ -1,6 +1,5 @@
 # src/step4/boundary_filler.py
 
-import numpy as np
 from src.solver_state import SolverState
 
 def fill_ghost_boundaries(state: SolverState) -> None:
