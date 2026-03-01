@@ -1,51 +1,60 @@
 #!/bin/bash
-# src/upload_to_dropbox.sh
-# 📤 Dropbox Upload Script — zips simulation output and uploads to Dropbox with audit-grade trace
+# 📤 Dropbox Upload Orchestrator — Updated for src/io/ architecture
+# Final Phase of the Navier-Stokes Pipeline: Archiving & Cloud Export.
 
-# Set environment variables from GitHub Actions secrets
-APP_KEY="${APP_KEY}"             # Dropbox App Key (Client ID)
-APP_SECRET="${APP_SECRET}"       # Dropbox App Secret (Client Secret)
-REFRESH_TOKEN="${REFRESH_TOKEN}" # Dropbox Refresh Token
+# 1. Environment Guard (From GitHub Secrets)
+APP_KEY="${APP_KEY}"
+APP_SECRET="${APP_SECRET}"
+REFRESH_TOKEN="${REFRESH_TOKEN}"
 
-# Location of archive output
-BASE_OUTPUT_DIR="${GITHUB_WORKSPACE}/data/testing-input-output"
+# 2. Path Definition (SSoT)
+# Ensure we use the workspace root provided by GitHub Actions
+BASE_WORK_DIR="${GITHUB_WORKSPACE:-$(pwd)}"
+DATA_DIR="${BASE_WORK_DIR}/data/testing-input-output"
 ZIP_FILE_NAME="navier_stokes_output.zip"
-LOCAL_ZIP_FILE_PATH="${BASE_OUTPUT_DIR}/${ZIP_FILE_NAME}"
+LOCAL_ZIP_PATH="${DATA_DIR}/${ZIP_FILE_NAME}"
 
-# Create zip archive from simulation output (flattened structure, no folders)
-(
-  cd "${GITHUB_WORKSPACE}/data/testing-input-output/navier_stokes_output" || exit 1
-  echo "📦 Creating archive: ${ZIP_FILE_NAME}"
-  zip -r -j "${ZIP_FILE_NAME}" ./*
-  mv "${ZIP_FILE_NAME}" "${LOCAL_ZIP_FILE_PATH}"
-)
+# 3. Archive Creation
+# We zip the contents of the solver output directory created by Step 5
+echo "📦 Finalizing Archive: ${ZIP_FILE_NAME}"
 
-# Confirm zip file exists
-if [ ! -f "${LOCAL_ZIP_FILE_PATH}" ]; then
-    echo "❌ ERROR: Archive not found at ${LOCAL_ZIP_FILE_PATH}"
+if [ -d "${DATA_DIR}/navier-stokes-output" ]; then
+    (
+      cd "${DATA_DIR}/navier-stokes-output" || exit 1
+      zip -r -j "${ZIP_FILE_NAME}" ./*
+      mv "${ZIP_FILE_NAME}" "${LOCAL_ZIP_PATH}"
+    )
+else
+    echo "❌ ERROR: Solver output directory not found. Simulation may have failed."
     exit 1
 fi
 
-# Define Dropbox destination folder path
-DROPBOX_UPLOAD_FOLDER="/engineering_simulations_pipeline"
+# 4. Confirm ZIP Integrity
+if [ ! -f "${LOCAL_ZIP_PATH}" ]; then
+    echo "❌ ERROR: Failed to create ZIP archive at ${LOCAL_ZIP_PATH}"
+    exit 1
+fi
 
-echo "🔄 Uploading ${ZIP_FILE_NAME} to Dropbox folder: ${DROPBOX_UPLOAD_FOLDER}"
+# 5. Cloud Export Execution
+# Define Dropbox destination
+DROPBOX_DEST_FOLDER="/engineering_simulations_pipeline"
 
-# Use absolute path for the Python uploader
-python3 "${GITHUB_WORKSPACE}/src/upload_to_dropbox.py" \
-    "${LOCAL_ZIP_FILE_PATH}" \
-    "${DROPBOX_UPLOAD_FOLDER}" \
+# Set PYTHONPATH so src.io.upload_to_dropbox can find src.dropbox_utils
+export PYTHONPATH="${PYTHONPATH}:${BASE_WORK_DIR}"
+
+echo "🔄 Uploading to Dropbox: ${DROPBOX_DEST_FOLDER}/${ZIP_FILE_NAME}"
+
+python3 "${BASE_WORK_DIR}/src/io/upload_to_dropbox.py" \
+    "${LOCAL_ZIP_PATH}" \
+    "${DROPBOX_DEST_FOLDER}" \
     "${REFRESH_TOKEN}" \
     "${APP_KEY}" \
     "${APP_SECRET}"
 
-# Check result
+# 6. Final Result Audit
 if [ $? -eq 0 ]; then
-    echo "✅ Upload completed: ${ZIP_FILE_NAME} was successfully uploaded to Dropbox."
+    echo "✅ PIPELINE COMPLETE: ${ZIP_FILE_NAME} is now in the cloud."
 else
-    echo "❌ ERROR: Dropbox upload failed."
+    echo "❌ CRITICAL ERROR: Dropbox upload failed at the final gate."
     exit 1
 fi
-
-
-

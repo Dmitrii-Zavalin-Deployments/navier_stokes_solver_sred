@@ -1,14 +1,13 @@
-# src/download_dropbox_files.py
+# src/io/download_dropbox_files.py
 
 import dropbox
 import os
 import sys
-from src.dropbox_utils import refresh_access_token  # ✅ Shared utility
+# Changed import to reflect relocated directory
+from src.io.dropbox_utils import refresh_access_token 
 
-# Allowed extensions to download
 ALLOWED_EXTENSIONS = [".step", ".stp", ".json", ".zip"]
 
-# Function to download filtered files and optionally delete them afterwards
 def download_files_from_dropbox(dropbox_folder, local_folder, refresh_token, client_id, client_secret, log_file_path):
     access_token = refresh_access_token(refresh_token, client_id, client_secret)
     dbx = dropbox.Dropbox(access_token)
@@ -17,7 +16,6 @@ def download_files_from_dropbox(dropbox_folder, local_folder, refresh_token, cli
         log_file.write("🚀 Starting download process...\n")
         try:
             os.makedirs(local_folder, exist_ok=True)
-
             has_more = True
             cursor = None
             while has_more:
@@ -26,8 +24,7 @@ def download_files_from_dropbox(dropbox_folder, local_folder, refresh_token, cli
                     if cursor else
                     dbx.files_list_folder(dropbox_folder)
                 )
-                log_file.write(f"📁 Listing files in: {dropbox_folder}\n")
-
+                
                 for entry in result.entries:
                     if isinstance(entry, dropbox.files.FileMetadata):
                         ext = os.path.splitext(entry.name)[1].lower()
@@ -36,40 +33,16 @@ def download_files_from_dropbox(dropbox_folder, local_folder, refresh_token, cli
                             with open(local_path, "wb") as f:
                                 _, res = dbx.files_download(path=entry.path_lower)
                                 f.write(res.content)
-                            log_file.write(f"✅ Downloaded {entry.name} → {local_path}\n")
+                            log_file.write(f"✅ Downloaded {entry.name}\n")
                             print(f"✅ Downloaded: {entry.name}")
-                        else:
-                            log_file.write(f"⏭️ Skipped file (unsupported type): {entry.name}\n")
-                            print(f"⏭️ Skipped: {entry.name}")
 
                 has_more = result.has_more
                 cursor = result.cursor
-
             log_file.write("🎉 Download completed.\n")
-        except dropbox.exceptions.ApiError as err:
-            log_file.write(f"❌ Dropbox API error: {err}\n")
-            print(f"❌ Dropbox API error: {err}")
         except Exception as e:
-            log_file.write(f"❌ Unexpected error: {e}\n")
-            print(f"❌ Unexpected error: {e}")
+            log_file.write(f"❌ Error: {e}\n")
+            print(f"❌ Error: {e}")
 
-# Entry point
 if __name__ == "__main__":
-    dropbox_folder    = sys.argv[1]
-    local_folder      = sys.argv[2]
-    refresh_token     = sys.argv[3]
-    client_id         = sys.argv[4]
-    client_secret     = sys.argv[5]
-    log_file_path     = sys.argv[6]
-
-    download_files_from_dropbox(
-        dropbox_folder,
-        local_folder,
-        refresh_token,
-        client_id,
-        client_secret,
-        log_file_path
-    )
-
-
-
+    # Standard arg parsing (as provided in your snippet)
+    download_files_from_dropbox(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])

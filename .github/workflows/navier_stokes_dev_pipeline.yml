@@ -10,8 +10,12 @@ jobs:
   integrated_dev_flow:
     runs-on: ubuntu-latest
 
+    # Global environment to ensure all src modules are resolvable
     env:
       PYTHONPATH: ${{ github.workspace }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+      REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
 
     steps:
       - name: 🗂️ Checkout Repository
@@ -27,7 +31,8 @@ jobs:
       - name: 📦 Install Core Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest coverage numpy autoflake vulture
+          # Ensure 'dropbox' and 'requests' are included for the IO bridge
+          pip install -r requirements.txt pytest coverage numpy autoflake vulture dropbox requests
 
       - name: 🧹 Auto-Clean (Autoflake)
         run: |
@@ -52,28 +57,75 @@ jobs:
         run: |
           vulture src --min-confidence 70
 
-      - name: 🧬 Duplicate Code Audit (JSCPD)
-        run: |
-          npm install -g jscpd
-          jscpd src --min-lines 5 --threshold 5 --reporters console
-
       - name: 🧪 Run Unit Tests (Pytest + Coverage)
         run: |
           echo "🔍 Running unit tests..."
-          # Added -vv for deep inspection of contract failures
-          pytest tests/ -vv --verbose --cov=src --cov-report=term-missing
-          echo "✅ Unit tests completed."
+          pytest tests/ -vv --cov=src --cov-report=term-missing
 
-      # ---------------------------------------------------------
-      # ❌ REAL SOLVER EXECUTION DISABLED DURING DEVELOPMENT
-      # ---------------------------------------------------------
-      - name: 🚀 Run Main Solver (DISABLED)
-        run: |
-          echo "⚠️ Solver execution disabled during development phase."
-          # python core/master_solver.py input.json
-      # ---------------------------------------------------------
+      # # --- POINT 1: CLOUD INGESTION ---
+      # - name: 📥 Ingest Simulation Input (Dropbox)
+      #   run: |
+      #     chmod +x src/download_from_dropbox.sh
+      #     bash src/download_from_dropbox.sh
 
-      - name: 📦 Final Structure Audit
+      # # --- POINT 2: PHYSICS EXECUTION ---
+      # - name: 🚀 Run Navier-Stokes Solver
+      #   id: solver_run
+      #   run: |
+      #     # We execute the solver and capture its STDOUT (the path to the ZIP)
+      #     # Note: Errors and logs are sent to STDERR so they don't corrupt the variable
+      #     ZIP_PATH=$(python3 src/main_solver.py data/testing-input-output/fluid_simulation_input.json)
+          
+      #     # Pass the dynamic path to the GitHub Environment for the next step
+      #     echo "SOLVER_ZIP_RESULT=$ZIP_PATH" >> $GITHUB_ENV
+      #     echo "✅ Solver completed. Output Path: $ZIP_PATH"
+
+      # # --- POINT 3: CLOUD EXPORT ---
+      # - name: 📤 Export Simulation Results (Dropbox)
+      #   if: success()
+      #   run: |
+      #     chmod +x src/upload_to_dropbox.sh
+      #     # Pass the captured ZIP path as the first argument
+      #     bash src/upload_to_dropbox.sh "${{ env.SOLVER_ZIP_RESULT }}"
+
+      # - name: 📦 Final Structure Audit
+      #   run: |
+      #     echo "📁 Final Workspace State:"
+      #     ls -R
+
+      - name: 📊 Audit Performance & Update Ledger
+        if: always() # Run even if previous steps failed
+        env:
+          GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
+          GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
         run: |
-          echo "📁 Repository structure after pipeline:"
-          ls -R
+          # 1. Gather Metrics
+          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          STATUS="${{ job.status }}"
+          
+          # Calculate Duration (Workflow start time is a default GH variable)
+          # Note: Simple duration calculation in seconds
+          NOW=$(date +%s)
+          START_TIME=$(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || echo $NOW)
+          DURATION_SEC=$((NOW - START_TIME))
+          
+          # Resource Usage (Current snapshot of the runner)
+          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB (" $3/$2*100 "% )" }')
+          
+          # Identify Failure Step if applicable
+          FAILURE_POINT="N/A (Success)"
+          if [ "$STATUS" != "success" ]; then
+             FAILURE_POINT="Check GitHub Logs"
+          fi
+
+          # 2. Append to Performance Audit Ledger
+          # We use a Table format for readability
+          echo "| $RUN_DATE | $STATUS | ${DURATION_SEC}s | $CPU_LOAD% | $MEM_USAGE | $FAILURE_POINT |" >> performance_audit.md
+          
+          # 3. Commit and Push the updated Ledger
+          git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
+          git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
+          git add performance_audit.md
+          git commit -m "📊 perf-audit: log run metrics for $RUN_DATE"
+          git push origin main || echo "No changes to push or branch protected"

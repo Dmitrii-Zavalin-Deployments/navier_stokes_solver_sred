@@ -1,4 +1,4 @@
-# src/dropbox_utils.py
+# src/io/dropbox_utils.py
 
 import requests
 
@@ -14,7 +14,4 @@ def refresh_access_token(refresh_token, client_id, client_secret):
     if response.status_code == 200:
         return response.json()["access_token"]
     else:
-        raise Exception(f"Failed to refresh access token: Status Code {response.status_code}, Response: {response.text}")
-
-
-
+        raise Exception(f"Failed to refresh access token: Status {response.status_code}, {response.text}")
