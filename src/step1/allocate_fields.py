@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from src.solver_input import GridInput
-from typing import Dict, Any
+from typing import Dict
 import numpy as np
 
 def allocate_fields(grid: GridInput) -> Dict[str, np.ndarray]:

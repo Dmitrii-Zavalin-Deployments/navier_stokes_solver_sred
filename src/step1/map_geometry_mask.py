@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from src.solver_input import GridInput
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
 import numpy as np
 
 def map_geometry_mask(mask_flat: List[int], grid: GridInput) -> Tuple[List[int], np.ndarray, np.ndarray]:
