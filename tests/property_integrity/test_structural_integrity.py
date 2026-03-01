@@ -26,12 +26,11 @@ class TestStructuralIntegrity:
     @pytest.fixture(scope="class")
     def step1_state(self):
         """STEP 1: Domain setup and field allocation."""
-    dummy = solver_input_schema_dummy()
-    dummy["solver_settings"] = {"max_iterations": 100, "tolerance": 1e-6, "method": "jacobi"}
+        dummy = solver_input_schema_dummy()
+        dummy["solver_settings"] = {"max_iterations": 100, "tolerance": 1e-6, "method": "jacobi"}
         input_data = SolverInput(**dummy)
         return orchestrate_step1(input_data)
 
-    @pytest.fixture(scope="class")
     def step2_state(self, step1_state):
         """STEP 2: Operator Assembly (Placeholder until Step 2 is wired)."""
         # return orchestrate_step2_state(step1_state)
