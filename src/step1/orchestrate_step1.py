@@ -1,12 +1,11 @@
 # src/step1/orchestrate_step1.py
 
 from __future__ import annotations
-import os
-import json
-import jsonschema
-from typing import Any, Dict
+import logging
+from typing import Any
 
 from src.solver_state import SolverState
+from src.solver_input import SolverInput  # The Typed Input Contract
 from .parse_config import parse_config
 from .initialize_grid import initialize_grid
 from .allocate_fields import allocate_fields
@@ -17,6 +16,8 @@ from .validate_physical_constraints import validate_physical_constraints
 from .assemble_simulation_state import assemble_simulation_state
 from .apply_initial_conditions import apply_initial_conditions
 
+logger = logging.getLogger(__name__)
+
 # Constitutional Toggle: Set to False in production to avoid I/O overhead
 DEBUG_STEP1 = True
 
@@ -26,7 +27,6 @@ def debug_state_step1(state_obj: SolverState) -> None:
     Ensures the SSoT containers are correctly populated.
     """
     print("\n" + "="*20 + " DEBUG: STEP-1 STATE SUMMARY " + "="*20)
-    # We audit the key sub-containers as per SSoT Architecture
     containers = ["grid", "fields", "masks", "fluid", "config"]
     for attr in containers:
         value = getattr(state_obj, attr, None)
@@ -42,55 +42,50 @@ def debug_state_step1(state_obj: SolverState) -> None:
     print("\n" + "="*69 + "\n")
 
 def orchestrate_step1(
-    json_input: Dict[str, Any],
+    input_data: SolverInput,
     **kwargs,
 ) -> SolverState:
     """
     Main entry point for Step 1. 
-    Transforms raw JSON input into a validated, high-fidelity SolverState.
+    Transforms the validated SolverInput object into a high-fidelity SolverState.
     
-    Constitutional Role: The High Command.
-    Mandate: Explicit Schema Validation before execution.
+    Constitutional Role: The Memory Architect.
+    Mandate: Hydrate the SSoT (Single Source of Truth) from the Triaged Input.
     """
 
-    # 0. Contractual Gatekeeper (Structural Validation)
-    # We check the input against the schema before any logic execution.
-    schema_path = os.path.join("schema", "solver_input_schema.json")
-    try:
-        with open(schema_path, "r") as f:
-            input_schema = json.load(f)
-        jsonschema.validate(instance=json_input, schema=input_schema)
-    except (jsonschema.ValidationError, FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
-        # Halt execution immediately if the input doesn't meet the legal requirement
-        raise RuntimeError(f"Contract Violation: Input schema validation FAILED: {exc}") from exc
-
     # 1. Spatial Governor (Grid Context)
-    grid_params = json_input["grid"]
-    grid = initialize_grid(grid_params)
+    # Passed as the specific GridInput sub-container
+    grid = initialize_grid(input_data.grid)
     
     # 2. Config Context (Solver Tuning)
-    parse_config(json_input)
+    # We pass the full object; internal logic extracts what it needs
+    parse_config(input_data)
 
     # 3. Memory Architect (Staggered Field Allocation)
     fields = allocate_fields(grid)
     
     # 4. Field Primer (Initial Conditions)
-    apply_initial_conditions(fields, json_input["initial_conditions"])
+    # Uses InitialConditionsInput sub-container
+    apply_initial_conditions(fields, input_data.initial_conditions)
 
     # 5. Topology Interpreter (Masks & Boundaries)
-    mask, is_fluid, is_boundary_cell = map_geometry_mask(json_input["mask"], grid_params)
-    bc_table = parse_boundary_conditions(json_input["boundary_conditions"], grid)
+    # Mask input is a validated list; BCs are a list of BoundaryConditionItems
+    mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask.data, input_data.grid)
+    bc_table = parse_boundary_conditions(input_data.boundary_conditions.items, grid)
 
     # 6. Mathematical Translator (Physical Constants)
+    # Pass Typed objects for density, viscosity, dt, etc.
     constants = compute_derived_constants(
         grid, 
-        json_input["fluid_properties"], 
-        json_input["simulation_parameters"]
+        input_data.fluid_properties, 
+        input_data.simulation_parameters
     )
 
     # 7. Synthesis Hub (Assembly into SSoT Hierarchy)
+    # Note: assemble_simulation_state may still want a dict for the 'config_raw' field,
+    # so we use input_data.to_dict() to satisfy that requirement.
     state = assemble_simulation_state(
-        config_raw=json_input,
+        config_raw=input_data.to_dict(),
         grid_raw=grid,
         fields=fields,
         mask=mask,

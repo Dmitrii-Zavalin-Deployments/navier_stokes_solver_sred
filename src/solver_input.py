@@ -1,16 +1,15 @@
 # src/solver_input.py
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 from src.common.base_container import ValidatedContainer
 
 # =========================================================
-# 1. SUB-DEPARTMENT CONTAINERS (The Building Blocks)
+# 1. SUB-DEPARTMENT CONTAINERS
 # =========================================================
 
 @dataclass
 class GridInput(ValidatedContainer):
-    """Maps to the 'grid' block in the JSON schema."""
     _x_min: float = None; _x_max: float = None
     _y_min: float = None; _y_max: float = None
     _z_min: float = None; _z_max: float = None
@@ -69,7 +68,6 @@ class GridInput(ValidatedContainer):
 
 @dataclass
 class FluidInput(ValidatedContainer):
-    """Maps to the 'fluid_properties' block in the JSON schema."""
     _density: float = None
     _viscosity: float = None
 
@@ -89,7 +87,6 @@ class FluidInput(ValidatedContainer):
 
 @dataclass
 class InitialConditionsInput(ValidatedContainer):
-    """Maps to the 'initial_conditions' block in the JSON schema."""
     _velocity: list = None
     _pressure: float = None
 
@@ -107,7 +104,6 @@ class InitialConditionsInput(ValidatedContainer):
 
 @dataclass
 class SimParamsInput(ValidatedContainer):
-    """Maps to the 'simulation_parameters' block in the JSON schema."""
     _time_step: float = None
     _total_time: float = None
     _output_interval: int = None
@@ -135,7 +131,6 @@ class SimParamsInput(ValidatedContainer):
 
 @dataclass
 class BoundaryConditionItem(ValidatedContainer):
-    """A single object within the boundary_conditions array."""
     _location: str = None 
     _type: str = None      
     _values: dict = field(default_factory=dict)
@@ -169,7 +164,6 @@ class BoundaryConditionItem(ValidatedContainer):
 
 @dataclass
 class BoundaryConditionsInput(ValidatedContainer):
-    """The Boundary Manager: manages the array of items."""
     _items: List[BoundaryConditionItem] = field(default_factory=list)
 
     @property
@@ -191,7 +185,6 @@ class BoundaryConditionsInput(ValidatedContainer):
 
 @dataclass
 class MaskInput(ValidatedContainer):
-    """Maps to the 'mask' array in the JSON schema."""
     _data: list = None
 
     @property
@@ -205,7 +198,6 @@ class MaskInput(ValidatedContainer):
 
 @dataclass
 class ExternalForcesInput(ValidatedContainer):
-    """Maps to the 'external_forces' block in the JSON schema."""
     _force_vector: list = None
     _comment: str = ""
 
@@ -222,12 +214,11 @@ class ExternalForcesInput(ValidatedContainer):
     def comment(self, v: str): self._set_safe("comment", v, str)
 
 # =========================================================
-# 2. THE UNIVERSAL INPUT CONTAINER (The Entry Contract)
+# 2. THE UNIVERSAL INPUT CONTAINER
 # =========================================================
 
 @dataclass
 class SolverInput(ValidatedContainer):
-    """The Root Entry Point for all JSON data (The Grader)."""
     grid: GridInput = field(default_factory=GridInput)
     fluid_properties: FluidInput = field(default_factory=FluidInput)
     initial_conditions: InitialConditionsInput = field(default_factory=InitialConditionsInput)
@@ -238,10 +229,8 @@ class SolverInput(ValidatedContainer):
 
     @classmethod
     def from_dict(cls, data: dict) -> "SolverInput":
-        """Factory method: Ingests raw JSON and validates it."""
         obj = cls()
         
-        # Hydrate sub-sections
         g = data.get("grid", {})
         for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]:
             if k in g: setattr(obj.grid, k, g[k])
@@ -261,7 +250,7 @@ class SolverInput(ValidatedContainer):
         
         ef = data.get("external_forces", {})
         if "force_vector" in ef: obj.external_forces.force_vector = ef["force_vector"]
-        if "comment" in ef: obj.external_forces.comment = ef["comment"]
+        if "comment" in ef: obj.external_forces.comment = ef.get("comment", "")
         
         obj.mask.data = data.get("mask", [])
         obj.boundary_conditions.items = data.get("boundary_conditions", [])
@@ -269,7 +258,7 @@ class SolverInput(ValidatedContainer):
         return obj
 
     def to_dict(self) -> dict:
-        """Serialization method: Returns the triaged, valid JSON dictionary."""
+        """Serializes back to a clean JSON-compatible dictionary."""
         return {
             "grid": {
                 "x_min": self.grid.x_min, "x_max": self.grid.x_max,
