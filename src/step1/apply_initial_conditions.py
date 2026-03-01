@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from src.solver_input import InitialConditionsInput
-from typing import Dict, Any
+from typing import Dict
 import numpy as np
 
 def apply_initial_conditions(fields: Dict[str, np.ndarray], initial_conditions: InitialConditionsInput) -> None:
