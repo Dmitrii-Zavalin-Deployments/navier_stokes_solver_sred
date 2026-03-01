@@ -5,7 +5,7 @@ import os
 import shutil
 import json
 from pathlib import Path
-from tests.helpers.solver_input_schema_dummy import make_input_schema_dict
+from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 @pytest.fixture(scope="session")
 def test_env_root():
@@ -40,10 +40,9 @@ def sample_input_file(test_env_root):
     input_path = test_env_root / "contract_input.json"
     
     # Generate standard 3-step contract
-    data = make_input_schema_dict(nx=4, ny=4, nz=4)
-    dt = data["config"]["dt"]
-    data["config"]["total_time"] = dt * 3
-    data["config"]["output_directory"] = "output/simulation_test"
+    data = solver_input_schema_dummy()
+    dt = data["simulation_parameters"]["time_step"]
+    data["simulation_parameters"]["total_time"] = dt * 3
     
     with open(input_path, "w") as f:
         json.dump(data, f)
@@ -58,6 +57,6 @@ def mock_solver_state():
     from src.solver_input import SolverInput
     from src.step1.orchestrate_step1 import orchestrate_step1
     
-    raw_data = make_input_schema_dict(nx=4, ny=4, nz=4)
+    raw_data = solver_input_schema_dummy()
     input_obj = SolverInput.from_dict(raw_data)
     return orchestrate_step1(input_obj)
