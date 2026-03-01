@@ -1,12 +1,13 @@
 # src/step1/compute_derived_constants.py
 
 from __future__ import annotations
+from src.solver_input import FluidInput, SimParamsInput
 from typing import Dict, Any
 
 def compute_derived_constants(
     grid_config: Dict[str, Any],
-    fluid_properties: Dict[str, Any],
-    simulation_parameters: Dict[str, Any],
+    fluid_properties: FluidInput,
+    simulation_parameters: SimParamsInput,
 ) -> Dict[str, Any]:
     """
     Computes numerical and physical constants from the validated configuration.
@@ -18,11 +19,11 @@ def compute_derived_constants(
         Dict[str, float]: Flat dictionary of constants for SolverState.
     """
     # 1. Physical Properties (Schema Mapping)
-    rho = float(fluid_properties["density"])
-    mu = float(fluid_properties["viscosity"])
+    rho = float(fluid_properties.density)
+    mu = float(fluid_properties.viscosity)
     
     # 2. Temporal Step
-    dt = float(simulation_parameters["time_step"])
+    dt = float(simulation_parameters.time_step)
     
     # 3. Spatial Steps
     dx = float(grid_config["dx"])

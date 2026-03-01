@@ -1,10 +1,11 @@
 # src/step1/apply_initial_conditions.py
 
 from __future__ import annotations
+from src.solver_input import InitialConditionsInput
 from typing import Dict, Any
 import numpy as np
 
-def apply_initial_conditions(fields: Dict[str, np.ndarray], initial_conditions: Dict[str, Any]) -> None:
+def apply_initial_conditions(fields: Dict[str, np.ndarray], initial_conditions: InitialConditionsInput) -> None:
     """
     Primes the allocated fields with uniform values from the configuration.
 
@@ -19,14 +20,14 @@ def apply_initial_conditions(fields: Dict[str, np.ndarray], initial_conditions: 
     # --- Pressure Priming ---
     if "pressure" in initial_conditions:
         try:
-            p0 = float(initial_conditions["pressure"])
+            p0 = float(initial_conditions.pressure)
             fields["P"].fill(p0)
         except (ValueError, TypeError, KeyError) as e:
             raise ValueError(f"Invalid pressure initial condition: {e}")
 
     # --- Velocity Priming ---
     if "velocity" in initial_conditions:
-        velocity = initial_conditions["velocity"]
+        velocity = initial_conditions.velocity
 
         if not isinstance(velocity, (list, tuple)) or len(velocity) != 3:
             raise ValueError(

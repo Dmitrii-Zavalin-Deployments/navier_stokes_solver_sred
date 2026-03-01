@@ -20,11 +20,12 @@ def test_step1_alignment_logic_to_frozen_truth():
     Ensures the 5-step pipeline remains unbroken at the first link.
     """
     # 1. Input: The Legal Contract start point
-    input_data = solver_input_schema_dummy()
+    raw_json = solver_input_schema_dummy()
+    input_data = SolverInput.from_dict(raw_json)
     
     # 2. Execution: Run the actual orchestration logic
     # The input dummy defines nx=2, ny=2, nz=2
-    input_obj = SolverInput(**input_data)
+    input_obj = input_data
     result_state = orchestrate_step1(input_obj)
     
     # 3. Reference: The 'Frozen Truth' required for Step 2 ingestion

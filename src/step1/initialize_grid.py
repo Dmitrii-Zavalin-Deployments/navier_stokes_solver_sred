@@ -1,10 +1,11 @@
 # src/step1/initialize_grid.py
 
 from __future__ import annotations
+from src.solver_input import GridInput
 from typing import Dict, Any
 import math
 
-def initialize_grid(grid_input: Dict[str, Any]) -> Dict[str, Any]:
+def initialize_grid(grid_input: GridInput) -> Dict[str, Any]:
     """
     Computes grid spacing and validates domain extents.
     
@@ -17,10 +18,10 @@ def initialize_grid(grid_input: Dict[str, Any]) -> Dict[str, Any]:
 
     # 1. Extraction with Strict Type Enforcement
     try:
-        nx, ny, nz = int(grid_input["nx"]), int(grid_input["ny"]), int(grid_input["nz"])
-        x_min, x_max = float(grid_input["x_min"]), float(grid_input["x_max"])
-        y_min, y_max = float(grid_input["y_min"]), float(grid_input["y_max"])
-        z_min, z_max = float(grid_input["z_min"]), float(grid_input["z_max"])
+        nx, ny, nz = int(grid_input.nx), int(grid_input.ny), int(grid_input.nz)
+        x_min, x_max = float(grid_input.x_min), float(grid_input.x_max)
+        y_min, y_max = float(grid_input.y_min), float(grid_input.y_max)
+        z_min, z_max = float(grid_input.z_min), float(grid_input.z_max)
     except (KeyError, ValueError, TypeError) as e:
         raise ValueError(f"Grid initialization failed due to missing or invalid types: {e}")
 

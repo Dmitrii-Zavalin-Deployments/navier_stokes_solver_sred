@@ -54,7 +54,7 @@ def orchestrate_step1(
 
     # 1. Spatial Governor (Grid Context)
     # Passed as the specific GridInput sub-container
-    grid = initialize_grid(input_data.grid if isinstance(input_data.grid, dict) else input_data.grid.__dict__)
+    grid = initialize_grid(input_data.grid)
     
     # 2. Config Context (Solver Tuning)
     # We pass the full object; internal logic extracts what it needs
@@ -65,24 +65,16 @@ def orchestrate_step1(
     
     # 4. Field Primer (Initial Conditions)
     # Uses InitialConditionsInput sub-container
-    apply_initial_conditions(fields, input_data.initial_conditions if isinstance(input_data.initial_conditions, dict) else input_data.initial_conditions.__dict__)
+    apply_initial_conditions(fields, input_data.initial_conditions)
 
     # 5. Topology Interpreter (Masks & Boundaries)
     # Mask input is a validated list; BCs are a list of BoundaryConditionItems
-    mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask.data if hasattr(input_data.mask, "data") else input_data.mask, input_data.grid if isinstance(input_data.grid, dict) else input_data.grid.__dict__)
-    bc_table = parse_boundary_conditions(input_data.boundary_conditions.items if hasattr(input_data.boundary_conditions, "items") else input_data.boundary_conditions, grid)
+    mask, is_fluid, is_boundary_cell = map_geometry_mask(input_data.mask, input_data.grid)
+    bc_table = parse_boundary_conditions(input_data.boundary_conditions, grid)
 
     # 6. Mathematical Translator (Physical Constants)
     # Pass Typed objects for density, viscosity, dt, etc.
-    constants = compute_derived_constants(
-        grid, 
-        input_data.fluid_properties if isinstance(input_data.fluid_properties, dict) else input_data.fluid_properties.__dict__, 
-        input_data.simulation_parameters if isinstance(input_data.simulation_parameters, dict) else input_data.simulation_parameters.__dict__
-    )
-
-    # 7. Synthesis Hub (Assembly into SSoT Hierarchy)
-    # Note: assemble_simulation_state may still want a dict for the 'config_raw' field,
-    # so we use input_data.to_dict() to satisfy that requirement.
+    constants = compute_derived_constants(grid, input_data.fluid_properties, input_data.simulation_parameters)
     state = assemble_simulation_state(
         config_raw=input_data.to_dict(),
         grid_raw=grid,
