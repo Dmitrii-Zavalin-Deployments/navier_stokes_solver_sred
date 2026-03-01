@@ -1,17 +1,18 @@
 # src/step1/map_geometry_mask.py
 
 from __future__ import annotations
+from src.solver_input import GridInput
 from typing import List, Dict, Any, Tuple
 import numpy as np
 
-def map_geometry_mask(mask_flat: List[int], grid: Dict[str, Any]) -> Tuple[List[int], np.ndarray, np.ndarray]:
+def map_geometry_mask(mask_flat: List[int], grid: GridInput) -> Tuple[List[int], np.ndarray, np.ndarray]:
     """
     Reconstructs the 3D geometry mask and returns the canonical 1D list.
     
     Constitutional Role: Topology Interpreter.
     Phase A.2 Compliance: Returns 1D list for serialization parity.
     """
-    nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+    nx, ny, nz = int(grid.nx), int(grid.ny), int(grid.nz)
     expected_len = nx * ny * nz
 
     # 1. Structural Validation

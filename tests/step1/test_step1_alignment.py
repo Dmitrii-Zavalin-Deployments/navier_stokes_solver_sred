@@ -77,7 +77,7 @@ def test_step1_sensitivity_firewall():
     invalid_input["grid"]["nx"] = -1 
     
     with pytest.raises(RuntimeError) as excinfo:
-        invalid_obj = SolverInput(**invalid_input)
+        invalid_obj = SolverInput.from_dict(invalid_input)
         orchestrate_step1(invalid_obj)
     
     assert "Contract Violation" in str(excinfo.value)

@@ -29,26 +29,26 @@ def assemble_simulation_state(
 
     # 1. Map Config - EXPLICIT OR ERROR
     # Note: solver_settings must be present in the config_raw
-    solver_settings = config_raw["solver_settings"]
+    solver_settings = config_raw.solver_settings
     
     config_obj = SolverConfig(
-        _simulation_parameters=config_raw["simulation_parameters"],
-        _boundary_conditions=config_raw["boundary_conditions"],
-        _external_forces=config_raw["external_forces"],
-        _initial_conditions=config_raw["initial_conditions"],
-        _fluid_properties=config_raw["fluid_properties"],
-        _ppe_tolerance=solver_settings["ppe_tolerance"],
-        _ppe_atol=solver_settings["ppe_atol"],
-        _ppe_max_iter=solver_settings["ppe_max_iter"]
+        _simulation_parameters=config_raw.simulation_parameters,
+        _boundary_conditions=config_raw.boundary_conditions,
+        _external_forces=config_raw.external_forces,
+        _initial_conditions=config_raw.initial_conditions,
+        _fluid_properties=config_raw.fluid_properties,
+        _ppe_tolerance=solver_settings.ppe_tolerance,
+        _ppe_atol=solver_settings.ppe_atol,
+        _ppe_max_iter=solver_settings.ppe_max_iter
     )
 
     # 2. Map Grid Context - Geometric SSoT
     grid_obj = GridContext(
-        _nx=grid_raw["nx"], _ny=grid_raw["ny"], _nz=grid_raw["nz"],
-        _x_min=grid_raw["x_min"], _x_max=grid_raw["x_max"],
-        _y_min=grid_raw["y_min"], _y_max=grid_raw["y_max"],
-        _z_min=grid_raw["z_min"], _z_max=grid_raw["z_max"],
-        _dx=grid_raw["dx"], _dy=grid_raw["dy"], _dz=grid_raw["dz"]
+        _nx=grid_raw.nx, _ny=grid_raw.ny, _nz=grid_raw.nz,
+        _x_min=grid_raw.x_min, _x_max=grid_raw.x_max,
+        _y_min=grid_raw.y_min, _y_max=grid_raw.y_max,
+        _z_min=grid_raw.z_min, _z_max=grid_raw.z_max,
+        _dx=grid_raw.dx, _dy=grid_raw.dy, _dz=grid_raw.dz
     )
 
     # 3. Field Data - Physical SSoT

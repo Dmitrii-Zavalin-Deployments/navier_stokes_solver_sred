@@ -24,7 +24,7 @@ def verify_cell_centered_shapes(state: Dict[str, Any]) -> None:
     fields = state["fields"]
 
     try:
-        nx, ny, nz = int(grid["nx"]), int(grid["ny"]), int(grid["nz"])
+        nx, ny, nz = int(grid.nx), int(grid.ny), int(grid.nz)
     except (KeyError, TypeError, ValueError):
         # Grid exists but is malformed; validation fails elsewhere
         return
