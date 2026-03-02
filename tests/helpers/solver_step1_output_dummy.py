@@ -4,15 +4,21 @@ import numpy as np
 from src.solver_state import SolverState
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
-    from src.solver_state import SolverState, FluidProperties, SolverConfig
-    state = SolverState(_fluid=FluidProperties(_rho=1000.0, _mu=0.001), _config=SolverConfig(_simulation_parameters={"total_time": 1.0, "dt": 0.001}))
-
-    # 1. Config & Schema-Compliant Boundary Conditions
-    state.config.case_name = "dummy_verification"
-    state.config.method = "jacobi"
+    """
+    Step 1 Dummy: Explicitly hydrated to satisfy ValidatedContainer.
+    """
+    state = SolverState()
     
-    state.config.external_forces = {"force_vector": [0.0, 0.0, -9.81]}
-    state.config.boundary_conditions = [
+    # --- PHYSICAL CONSTANTS (Safe Hydration) ---
+    # We set the private slots directly to bypass the 'Access Error' 
+    # and satisfy the Deterministic Initialization Mandate.
+    state.fluid._rho = 1000.0
+    state.fluid._mu = 0.001
+    
+    # --- CONFIGURATION (Safe Hydration) ---
+    state.config._simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1}
+    state.config._external_forces = {"force_vector": [0.0, 0.0, -9.81]}
+    state.config._boundary_conditions = [
         {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},
         {"location": "y_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
@@ -20,9 +26,13 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "z_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}}
     ]
-    state.config.initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
+    state.config._initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
 
-    # 2. Grid Initialization (UNLOCKED)
+    # 1. Boilerplate Metadata
+    state.config.case_name = "dummy_verification"
+    state.config.method = "jacobi"
+
+    # 2. Grid Initialization
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz
     state.grid.x_min, state.grid.x_max = 0.0, 1.0
     state.grid.y_min, state.grid.y_max = 0.0, 1.0
@@ -34,19 +44,11 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.fields.V = np.zeros((nx, ny + 1, nz))
     state.fields.W = np.zeros((nx, ny, nz + 1))
 
-    state.fields.P_ext = None
-    state.fields.U_ext = None
-    state.fields.V_ext = None
-    state.fields.W_ext = None
-
-    # 4. Topology
+    # 4. Topology & Health
     state.masks.mask = np.ones((nx, ny, nz), dtype=int)
-
-    # 5. Global State
     state.iteration = 0
     state.time = 0.0
     state.ready_for_time_loop = False
-
     state.health.is_stable = True 
     state.ppe.status = "initialized"
 
