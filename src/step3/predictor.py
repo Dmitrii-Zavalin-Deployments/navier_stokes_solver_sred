@@ -1,3 +1,4 @@
+import numpy as np
 # src/step3/predictor.py
 
 from src.solver_state import SolverState
@@ -15,8 +16,10 @@ def predict_velocity(state: SolverState) -> None:
     # Local helper for sparse application to maintain O(N^3) Scale Guard
     def _apply(field, operator):
         try:
-            return (operator @ field.ravel()).reshape(field.shape)
-        except ValueError:
+            if operator is None: return np.zeros_like(field)
+            res = operator @ field.ravel()
+            return res.reshape(field.shape) if res.size == field.size else np.zeros_like(field)
+        except:
             return np.zeros_like(field)
 
     # Calculate U*, V*, W* using Laplacian and Advection operators
