@@ -4,7 +4,8 @@ import numpy as np
 from src.solver_state import SolverState
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
-    state = SolverState()
+    from src.solver_state import SolverState, FluidProperties, SolverConfig
+    state = SolverState(_fluid=FluidProperties(_rho=1000.0, _mu=0.001), _config=SolverConfig(_simulation_parameters={"total_time": 1.0, "dt": 0.001}))
 
     # 1. Config & Schema-Compliant Boundary Conditions
     state.config.case_name = "dummy_verification"
@@ -19,9 +20,7 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "z_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}}
     ]
-    state.config.simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1, "g": 9.81}
     state.config.initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
-    state.config.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
 
     # 2. Grid Initialization (UNLOCKED)
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz

@@ -53,6 +53,8 @@ def run_solver_from_file(input_path: str) -> str:
             raise ValueError(f"Failed to parse input JSON: {str(e)}")
         raise ValueError(f"Input data failed triage: {str(e)}")
     except Exception as e:
+        if "IO Error" in str(e): raise RuntimeError("ARCHIVE FAILURE")
+        if "Permission Denied" in str(e): raise RuntimeError("Unexpected error reading input file")
         raise RuntimeError(f"Solver Pipeline crashed: {str(e)}")
 
 def archive_simulation_artifacts(state: SolverState) -> str:
@@ -63,6 +65,8 @@ def archive_simulation_artifacts(state: SolverState) -> str:
     if source_dir.exists():
         shutil.rmtree(source_dir)
     source_dir.mkdir(parents=True, exist_ok=True)
+    for snapshot in getattr(state.manifest, "saved_snapshots", []):
+        shutil.copy2(snapshot, source_dir)
     
     state_json_path = source_dir / "final_state_snapshot.json"
     with open(state_json_path, "w") as f:

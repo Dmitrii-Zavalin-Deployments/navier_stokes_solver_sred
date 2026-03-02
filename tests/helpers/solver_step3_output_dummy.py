@@ -54,11 +54,7 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     # ------------------------------------------------------------------
     state.iteration = 1
     # dt is usually set in config/grid properties; we increment physical time
-    try:
-        state.time += state.config.dt
-    except (RuntimeError, AttributeError):
-        # Fallback if dt isn't initialized in the dummy chain yet
-        state.time += 0.001
+    state.time += state.config.dt
         
     # After Step 3, we have successfully run a loop, so this is definitely True
     state.ready_for_time_loop = True 
