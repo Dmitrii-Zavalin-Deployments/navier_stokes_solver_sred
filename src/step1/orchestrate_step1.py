@@ -65,6 +65,9 @@ def orchestrate_step1(input_data: SolverInput, **kwargs) -> SolverState:
     
     # Internal Lookup Tables (for math performance)
     state.boundary_lookup = parse_bc_lookup(input_data.boundary_conditions.items)
+    # --- Config Hydration for Security Guard ---
+    state.config._simulation_parameters = input_data.simulation_parameters
+    state.config._fluid_properties = input_data.fluid_properties
 
     # --- 6. The Firewall ---
     _final_audit(state)
