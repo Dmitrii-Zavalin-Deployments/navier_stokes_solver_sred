@@ -11,6 +11,9 @@ from src.common.base_container import ValidatedContainer
 
 @dataclass
 class SolverConfig(ValidatedContainer):
+    @property
+    def output_directory(self):
+        return "output"
     """
     Step 0: Global Instructions, Numerical Tuning, & Boundary Definitions.
     Acts as the 'Immutable Instruction Manual' for the simulation run.
@@ -665,6 +668,9 @@ class OutputManifest(ValidatedContainer):
 
 @dataclass
 class SolverState:
+    @property
+    def constants(self):
+        return self.fluid
     """
     The Project Constitution: Article 3 (The Universal State Container).
     

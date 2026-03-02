@@ -49,9 +49,9 @@ def run_solver_from_file(input_path: str) -> str:
         return archive_simulation_artifacts(state)
 
     except (json.JSONDecodeError, ValueError, KeyError) as e:
-        return f"Triage Failure: {str(e)}"
+        raise ValueError(f"Input data failed triage: {str(e)}")
     except Exception as e:
-        return f"Pipeline Failure: {str(e)}"
+        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}")
 
 def archive_simulation_artifacts(state: SolverState) -> str:
     """Rule 4: SSoT Archiving. Creates a ZIP of all snapshots."""
@@ -62,7 +62,7 @@ def archive_simulation_artifacts(state: SolverState) -> str:
     
     state_json_path = source_dir / "final_state_snapshot.json"
     with open(state_json_path, "w") as f:
-        json.dump(state.to_json_safe(), f)
+        json.dump(state.to_json_safe(), f, default=lambda x: "<unserializable object>")
     
     return shutil.make_archive(str(zip_base_name), 'zip', str(source_dir))
 
