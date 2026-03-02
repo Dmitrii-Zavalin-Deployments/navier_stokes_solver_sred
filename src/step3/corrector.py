@@ -12,18 +12,18 @@ def correct_velocity(state: SolverState) -> None:
     dt = state.dt
     coeff = dt / rho
 
-    def _apply(field, operator):
+    def _apply(field, operator, target_shape):
         try:
-            if operator is None: return np.zeros_like(field)
+            if operator is None: return np.zeros(target_shape)
             res = operator @ field.ravel()
-            return res.reshape(field.shape) if res.size == field.size else np.zeros_like(field)
-        except:
-            return np.zeros_like(field)
+            return res.reshape(target_shape)
+        except Exception as e:
+            return np.zeros(target_shape)
 
     # Subtract pressure gradient from intermediate velocity
-    state.fields.U = state.fields.U_star - coeff * _apply(state.fields.P, state.operators.grad_x)
-    state.fields.V = state.fields.V_star - coeff * _apply(state.fields.P, state.operators.grad_y)
-    state.fields.W = state.fields.W_star - coeff * _apply(state.fields.P, state.operators.grad_z)
+    state.fields.U = state.fields.U_star - coeff * _apply(state.fields.P, state.operators.grad_x, state.fields.U.shape)
+    state.fields.V = state.fields.V_star - coeff * _apply(state.fields.P, state.operators.grad_y, state.fields.V.shape)
+    state.fields.W = state.fields.W_star - coeff * _apply(state.fields.P, state.operators.grad_z, state.fields.W.shape)
 
     # Update Health Context
     state.health.max_u = float(max(np.max(np.abs(state.fields.U)), 
