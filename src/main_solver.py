@@ -15,12 +15,12 @@ from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
 from src.step5.orchestrate_step5 import orchestrate_step5
 
-# Configure logging to stderr
+# Configure logging to stderr so it doesn't interfere with stdout path capture
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
 def run_solver_from_file(input_path: str) -> str:
-    """The Master Controller with Error Triage."""
+    """The Master Controller with Error Triage and Chronos Guard."""
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file missing at {input_path}")
 
@@ -39,6 +39,10 @@ def run_solver_from_file(input_path: str) -> str:
             state = orchestrate_step4(state)
             state = orchestrate_step5(state)
             
+            # THE CHRONOS GUARD: Prevent Infinite Loops
+            if state.time >= state.config.total_time:
+                state.ready_for_time_loop = False
+            
             if state.iteration % 10 == 0:
                 logger.info(f"Iteration {state.iteration}: Time = {state.time:.4f}s")
 
@@ -50,7 +54,7 @@ def run_solver_from_file(input_path: str) -> str:
         return f"Pipeline Failure: {str(e)}"
 
 def archive_simulation_artifacts(state: SolverState) -> str:
-    """Rule 4: SSoT Archiving."""
+    """Rule 4: SSoT Archiving. Creates a ZIP of all snapshots."""
     base_dir = Path(".")
     zip_base_name = base_dir / "navier_stokes_output"
     source_dir = Path(getattr(state.manifest, "output_directory", "output"))
@@ -68,8 +72,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     try:
+        # We print the result (ZIP path or Triage/Pipeline Failure message)
         result = run_solver_from_file(sys.argv[1])
         print(result) 
     except Exception as e:
-        logger.error(f"FATAL: {str(e)}")
+        logger.error(f"FATAL PIPELINE ERROR: {str(e)}")
         sys.exit(1)
