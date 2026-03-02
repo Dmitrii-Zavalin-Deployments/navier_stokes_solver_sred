@@ -6,34 +6,36 @@ from src.solver_state import SolverState
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state = SolverState()
     
-    # 1. Hydrate Fluid Safes
+    # --- MANDATORY HYDRATION STEP ---
+    # Initialize the internal dictionaries so the ValidatedContainer allows access
+    state.config._simulation_parameters = {}
+    state.config._fluid_properties = {}
+    state.config._external_forces = {}
+    state.config._initial_conditions = {}
+    # --------------------------------
+
+    # Now dot-notation will work without triggering the RuntimeError
     state.fluid._rho = 1000.0
     state.fluid._mu = 0.001
     
-    # 2. Hydrate Config Safes as Objects
     state.config.case_name = "dummy_verification"
-    
-    # Simulation Parameters
     state.config.simulation_parameters.time_step = 0.001
     state.config.simulation_parameters.total_time = 1.0
     state.config.simulation_parameters.output_interval = 1
     
-    # Fluid Properties
     state.config.fluid_properties.density = 1000.0
     state.config.fluid_properties.viscosity = 0.001
     
-    # External Forces & ICs
     state.config.external_forces.force_vector = [0.0, 0.0, -9.81]
     state.config.initial_conditions.velocity = [0.0, 0.0, 0.0]
     state.config.initial_conditions.pressure = 0.0
     
-    # Boundary Conditions (List of Objects/Dicts depending on your validator)
     state.config._boundary_conditions = [
         {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "x_max", "type": "outflow", "values": {"p": 0.0}}
     ]
 
-    # 3. Standard Grid/Field Setup
+    # Standard Grid/Field Setup
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz
     state.grid.x_min, state.grid.x_max = 0.0, 1.0
     state.grid.y_min, state.grid.y_max = 0.0, 1.0
@@ -45,7 +47,6 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.fields.W = np.zeros((nx, ny, nz + 1))
     state.masks.mask = np.ones((nx, ny, nz), dtype=int)
 
-    # 4. Global Flags
     state.iteration = 0
     state.time = 0.0
     state.ready_for_time_loop = False
