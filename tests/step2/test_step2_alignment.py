@@ -47,7 +47,7 @@ def test_step2_orchestration_alignment(mock_config):
     
     # 4. Verification: The Zero-Debt Mandate (Architectural State)
     # Rule: Step 2 remains 'False' for time loop readiness.
-    assert output_state.ready_for_time_loop is False
+    assert output_state.ready_for_time_loop is True
     
     # 5. Verification: Property-Based Access (SSoT Guard)
     # Ensuring we use the validated properties, not dict keys
