@@ -22,4 +22,4 @@ def run_preflight_audit(state: SolverState) -> None:
     else:
         # Fallback to ppe_tolerance via simulation_parameters dict
         params = state.config.simulation_parameters
-        state.diagnostics.initial_cfl_dt = params.get("ppe_tolerance", 1e-6)
+        state.diagnostics.initial_cfl_dt = getattr(params, "ppe_tolerance", 1e-6)
