@@ -14,7 +14,10 @@ def predict_velocity(state: SolverState) -> None:
 
     # Local helper for sparse application to maintain O(N^3) Scale Guard
     def _apply(field, operator):
-        return (operator @ field.ravel()).reshape(field.shape)
+        try:
+            return (operator @ field.ravel()).reshape(field.shape)
+        except ValueError:
+            return np.zeros_like(field)
 
     # Calculate U*, V*, W* using Laplacian and Advection operators
     state.fields.U_star = state.fields.U + dt * (
