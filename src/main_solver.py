@@ -1,5 +1,6 @@
 # src/main_solver.py
 
+import shutil
 import json
 import os
 import sys
@@ -48,9 +49,11 @@ def run_solver_from_file(input_path: str) -> str:
         return archive_simulation_artifacts(state)
 
     except (json.JSONDecodeError, ValueError, KeyError) as e:
-        raise ValueError(str(e))
+        if isinstance(e, json.JSONDecodeError):
+            raise ValueError(f"Failed to parse input JSON: {str(e)}")
+        raise ValueError(f"Input data failed triage: {str(e)}")
     except Exception as e:
-        raise RuntimeError(str(e))
+        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}")
 
 def archive_simulation_artifacts(state: SolverState) -> str:
     """Rule 4: SSoT Archiving. Creates a ZIP of all snapshots."""
@@ -58,7 +61,6 @@ def archive_simulation_artifacts(state: SolverState) -> str:
     zip_base_name = base_dir / "navier_stokes_output"
     source_dir = Path(getattr(state.manifest, "output_directory", "output"))
     if source_dir.exists():
-        import shutil
         shutil.rmtree(source_dir)
     source_dir.mkdir(parents=True, exist_ok=True)
     
