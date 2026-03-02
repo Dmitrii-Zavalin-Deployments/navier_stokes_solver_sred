@@ -17,8 +17,6 @@ def orchestrate_step3(state: SolverState) -> SolverState:
 
     # 2. Update Progression 
     # Using state.dt facade for consistency with the corrected SolverConfig
-    state.iteration += 1
-    state.time += state.dt
     
     # 3. History Persistence (SSoT Rule 4)
     # Using getattr for health metrics to ensure robustness during the first iteration
