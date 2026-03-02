@@ -9,15 +9,20 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     """
     state = SolverState()
     
-    # --- PHYSICAL CONSTANTS (Safe Hydration) ---
-    # We set the private slots directly to bypass the 'Access Error' 
-    # and satisfy the Deterministic Initialization Mandate.
+    # 1. Hydrate the 'Safes' to satisfy ValidatedContainer
     state.fluid._rho = 1000.0
     state.fluid._mu = 0.001
     
-    # --- CONFIGURATION (Safe Hydration) ---
-    state.config._simulation_parameters = {"time_step": 0.001, "total_time": 1.0, "output_interval": 1}
+    # 2. Add the specific keys the tests are looking for
+    state.config._simulation_parameters = {
+        "time_step": 0.001, 
+        "total_time": 1.0, 
+        "output_interval": 1,
+        "g": 9.81
+    }
+    state.config._fluid_properties = {"density": 1000.0, "viscosity": 0.001}
     state.config._external_forces = {"force_vector": [0.0, 0.0, -9.81]}
+    state.config._initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
     state.config._boundary_conditions = [
         {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},
@@ -26,26 +31,20 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
         {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         {"location": "z_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}}
     ]
-    state.config._initial_conditions = {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0}
 
-    # 1. Boilerplate Metadata
+    # 3. Standard Grid/Field Setup
     state.config.case_name = "dummy_verification"
-    state.config.method = "jacobi"
-
-    # 2. Grid Initialization
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz
     state.grid.x_min, state.grid.x_max = 0.0, 1.0
     state.grid.y_min, state.grid.y_max = 0.0, 1.0
     state.grid.z_min, state.grid.z_max = 0.0, 1.0
-
-    # 3. Field Allocation
     state.fields.P = np.zeros((nx, ny, nz))
     state.fields.U = np.zeros((nx + 1, ny, nz))
     state.fields.V = np.zeros((nx, ny + 1, nz))
     state.fields.W = np.zeros((nx, ny, nz + 1))
-
-    # 4. Topology & Health
     state.masks.mask = np.ones((nx, ny, nz), dtype=int)
+
+    # 4. Global Flags
     state.iteration = 0
     state.time = 0.0
     state.ready_for_time_loop = False
