@@ -762,6 +762,21 @@ class SolverState:
     def inv_dz(self) -> float:
         return self.grid.inv_dz
 
+    @property
+    def density(self) -> float:
+        """Alias for Step 3 Predictor compatibility."""
+        return self.config.density
+
+    @property
+    def viscosity(self) -> float:
+        """Alias for Step 3 Predictor compatibility."""
+        return self.config.viscosity
+
+    @property
+    def total_time(self) -> float:
+        """Alias for Step 5 Chronos Guard compatibility."""
+        return self.config.total_time
+
     # ---------------------------------------------------------
     # Legacy & Pipeline Support
     # ---------------------------------------------------------

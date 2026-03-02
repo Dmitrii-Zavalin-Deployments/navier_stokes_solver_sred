@@ -36,9 +36,15 @@ def run_solver_from_file(input_path: str) -> str:
         logger.info(f"🚀 Starting Simulation: Target Time = {state.config.total_time}s")
         
         while state.ready_for_time_loop:
+            # Physics, Boundaries, and Export
             state = orchestrate_step3(state)
             state = orchestrate_step4(state)
             state = orchestrate_step5(state)
+            
+            # --- MANDATORY ODOMETER UPDATE ---
+            state.iteration += 1
+            state.time += state.dt
+            # ---------------------------------
             
             # THE CHRONOS GUARD: Prevent Infinite Loops
             if float(state.time) >= float(state.config.total_time):
