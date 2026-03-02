@@ -14,7 +14,7 @@ def test_logic_gate_4_linear_advection_transport():
     """
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
-    dx = state.grid["dx"]
+    dx = state.grid.dx
     
     # Input field: u = x
     U_analytic = np.zeros((nx+1, ny, nz), order='F')
@@ -24,7 +24,7 @@ def test_logic_gate_4_linear_advection_transport():
     
     # Build Advection Operator (Logic typically handled in Step 2 or 4)
     state = orchestrate_step2(state)
-    adv_op = state.operators.get("advection_u")
+    adv_op = state.operators.advection_u
     
     if adv_op is None:
         pytest.skip("Advection operator not implemented in state.")

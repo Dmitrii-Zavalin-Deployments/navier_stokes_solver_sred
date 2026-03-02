@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1
+from src.solver_input import SolverInput
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 
 def test_logic_gate_1_structural_unit_cube():
@@ -22,12 +23,12 @@ def test_logic_gate_1_structural_unit_cube():
     })
     
     # 2. Execution
-    state = orchestrate_step1(input_data)
+    state = orchestrate_step1(SolverInput.from_dict(input_data))
     
     # 3. Verification of Analytical Truth
-    assert state.grid["dx"] == 0.5
-    assert state.grid["dy"] == 0.5
-    assert state.grid["dz"] == 0.5
+    assert state.grid.dx == 0.5
+    assert state.grid.dy == 0.5
+    assert state.grid.dz == 0.5
     
     # Staggered Node Counts: (N+1)*N*N for velocities, N*N*N for pressure
     u_nodes = state.fields["U"].size

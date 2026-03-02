@@ -15,8 +15,8 @@ def test_logic_gate_2_quadratic_laplacian():
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     state = orchestrate_step2(state)
     
-    L = state.operators.get("laplacian")
-    dx, dy, dz = state.grid["dx"], state.grid["dy"], state.grid["dz"]
+    L = state.operators.laplacian
+    dx, dy, dz = state.grid.dx, state.grid.dy, state.grid.dz
     
     # Manufacture p field at cell centers
     p_analytic = np.zeros((nx, ny, nz), order='F')

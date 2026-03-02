@@ -17,7 +17,7 @@ def test_logic_gate_3_divergence_pulse():
     state = orchestrate_step2(state)
     
     # Setup Mass Leak: u = x
-    dx = state.grid["dx"]
+    dx = state.grid.dx
     U = np.zeros((nx+1, ny, nz), order='F')
     for i in range(nx+1):
         U[i, :, :] = i * dx
@@ -27,7 +27,7 @@ def test_logic_gate_3_divergence_pulse():
     state_out = orchestrate_step3(state)
     
     # Verification: Calculate Final Divergence
-    D = state.operators["divergence"]
+    D = state.operators.divergence
     v_total = np.concatenate([state_out.fields["U"], state_out.fields["V"], state_out.fields["W"]])
     div_norm = np.linalg.norm(D.dot(v_total), np.inf)
     
