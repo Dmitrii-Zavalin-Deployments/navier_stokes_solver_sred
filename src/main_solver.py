@@ -5,7 +5,6 @@ import os
 import sys
 import logging
 from pathlib import Path
-import shutil
 
 from src.solver_state import SolverState
 from src.solver_input import SolverInput
