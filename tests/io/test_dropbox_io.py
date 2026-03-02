@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from src.io.download_from_dropbox import download_files_from_dropbox
 
 @patch('dropbox.Dropbox')
-@patch('src.io.dropbox_utils.refresh_access_token')
+@patch('src.io.download_from_dropbox.refresh_access_token')
 def test_download_logic_skips_invalid_extensions(mock_token, mock_dbx, tmp_path):
     """Ensure the downloader only touches the ALLOWED_EXTENSIONS."""
     # Setup mocks

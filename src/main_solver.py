@@ -40,7 +40,7 @@ def run_solver_from_file(input_path: str) -> str:
             state = orchestrate_step5(state)
             
             # THE CHRONOS GUARD: Prevent Infinite Loops
-            if state.time >= state.config.total_time:
+            if float(state.time) >= float(state.config.total_time):
                 state.ready_for_time_loop = False
             
             if state.iteration % 10 == 0:
@@ -49,15 +49,18 @@ def run_solver_from_file(input_path: str) -> str:
         return archive_simulation_artifacts(state)
 
     except (json.JSONDecodeError, ValueError, KeyError) as e:
-        raise ValueError(f"Input data failed triage: {str(e)}")
+        raise ValueError(str(e))
     except Exception as e:
-        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}")
+        raise RuntimeError(str(e))
 
 def archive_simulation_artifacts(state: SolverState) -> str:
     """Rule 4: SSoT Archiving. Creates a ZIP of all snapshots."""
     base_dir = Path(".")
     zip_base_name = base_dir / "navier_stokes_output"
     source_dir = Path(getattr(state.manifest, "output_directory", "output"))
+    if source_dir.exists():
+        import shutil
+        shutil.rmtree(source_dir)
     source_dir.mkdir(parents=True, exist_ok=True)
     
     state_json_path = source_dir / "final_state_snapshot.json"
