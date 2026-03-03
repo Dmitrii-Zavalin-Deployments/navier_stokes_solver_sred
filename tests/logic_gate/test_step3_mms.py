@@ -44,6 +44,11 @@ def test_logic_gate_3_divergence_pulse():
     
     # Compute the L-infinity norm of the resulting divergence
     div_norm = np.linalg.norm(D.dot(v_total), np.inf)
+
+    # Add this to tests/logic_gate/test_step3_mms.py
+    print(f"DEBUG: Pressure Norm: {np.linalg.norm(state_out.fields.P)}")
+    print(f"DEBUG: U-star head: {state.fields.U[:5]}")
+    print(f"DEBUG: U-corrected head: {state_out.fields.U[:5]}")
     
     # Assertion against the mathematical zero floor
     assert div_norm < 1e-10
