@@ -1,30 +1,36 @@
+# tests/scientific/test_scientific_step3_predictor.py
+
 import pytest
 import numpy as np
 from scipy import sparse
 from src.solver_state import SolverState
-from src.solver_input import FluidInput, SimParamsInput, ExternalForcesInput
+
+class AttributeDict(dict):
+    """A dict that allows dot notation access, satisfying both type-checks and solver logic."""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
 
 @pytest.fixture
 def state_predictor():
     """
     Fixture to set up a valid state for full predictor physics.
-    Uses actual Input objects to support dot-notation access in the solver.
+    Uses AttributeDict to pass the 'isinstance(dict)' check while supporting dot access.
     """
     state = SolverState()
     
-    # 1. Physics Setup - Using actual objects instead of raw dicts
-    fluid = FluidInput()
-    fluid.density = 1000.0
-    fluid.viscosity = 1.0
-    state.config.fluid_properties = fluid
+    # 1. Physics Setup - Satisfies isinstance(value, dict) in base_container.py
+    state.config.fluid_properties = AttributeDict({
+        "density": 1000.0,
+        "viscosity": 1.0
+    })
 
-    sim = SimParamsInput()
-    sim.time_step = 0.1
-    state.config.simulation_parameters = sim
+    state.config.simulation_parameters = AttributeDict({
+        "time_step": 0.1
+    })
 
-    forces = ExternalForcesInput()
-    forces.force_vector = [1.0, 0.0, 0.0]
-    state.config.external_forces = forces
+    state.config.external_forces = AttributeDict({
+        "force_vector": [1.0, 0.0, 0.0]
+    })
     
     # 2. Field Allocation (3x3x3 grid)
     state.fields._U = np.ones((4, 3, 3)) 
@@ -64,7 +70,6 @@ def test_predict_velocity_instability_debug(state_predictor, capsys):
 
 def test_predict_velocity_component_isolation(state_predictor):
     from src.step3.predictor import predict_velocity
-    # Update object values rather than replacing with dict
     state_predictor.config.external_forces.force_vector = [1.0, 2.0, 3.0]
     predict_velocity(state_predictor)
     assert np.allclose(state_predictor.fields.U_star, 1.0001)
