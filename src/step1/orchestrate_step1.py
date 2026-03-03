@@ -51,20 +51,22 @@ def orchestrate_step1(input_data: SolverInput, **kwargs) -> SolverState:
         state.fields.W.fill(w0)
 
     # --- 4. Topology (Masks) ---
+    # CONSTITUTIONAL ALIGNMENT: We must persist the fluid/boundary distinction
+    # for the Step 2 Operators to build valid sparse matrices.
     mask_3d, is_fluid, is_boundary = generate_3d_masks(input_data.mask.data, grid_in)
+    
     state.masks.mask = mask_3d
-    # Note: If SolverState has specific is_fluid slots, assign them here:
-    # state.masks.is_fluid = is_fluid 
+    state.masks.is_fluid = is_fluid 
+    state.masks.is_boundary = is_boundary
 
     # --- 5. Global Metadata (Deterministic Policy) ---
-    # Using .get() for kwargs is allowed only for transient metadata, 
-    # but the core physics must come from input_data.
     state.iteration = int(kwargs.get("iteration", 0))
     state.time = float(kwargs.get("time", 0.0))
     state.ready_for_time_loop = False
     
     # Internal Lookup Tables (for math performance)
     state.boundary_lookup = parse_bc_lookup(input_data.boundary_conditions.items)
+    
     # --- Config Hydration for Security Guard ---
     state.config._simulation_parameters = input_data.simulation_parameters
     state.config._fluid_properties = input_data.fluid_properties
@@ -80,3 +82,5 @@ def _final_audit(state: SolverState) -> None:
         raise ValueError("Audit Failed: Non-physical density.")
     if not np.all(np.isfinite(state.fields.U)):
         raise ValueError("Audit Failed: Non-finite values in Velocity field.")
+    if state.masks.is_fluid is None:
+        raise ValueError("Audit Failed: Fluid mask was not initialized.")
