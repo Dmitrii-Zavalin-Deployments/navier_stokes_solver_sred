@@ -52,12 +52,10 @@ def test_scientific_mask_validation_error():
 
 def test_scientific_bc_lookup_mapping():
     """Rule 1.3: BC table must map locations and handle missing velocity components."""
-    item = BoundaryConditionItem(
-        location="west",
-        type="inlet",
-        values={"u": 5.0, "p": 101325.0} # v and w are missing
-    )
-    
+    item = BoundaryConditionItem()
+    item.location = "west"
+    item.type = "inlet"
+    item.values = {"u": 5.0, "p": 101325.0}
     bc_map = parse_bc_lookup([item])
     
     assert "west" in bc_map
