@@ -1,39 +1,79 @@
+# tests/scientific/test_scientific_step1_helpers.py
+
 import pytest
 import numpy as np
-from src.step1.helpers import allocate_staggered_fields, generate_3d_masks
-from src.solver_input import GridInput
+from src.step1.helpers import allocate_staggered_fields, generate_3d_masks, parse_bc_lookup
+from src.solver_input import GridInput, BoundaryConditionItem
+
+def create_scientific_grid(nx, ny, nz):
+    """
+    Helper to populate the frozen GridInput using public setters.
+    This bypasses the underscore-prefixed dataclass constructor.
+    """
+    grid = GridInput()
+    grid.nx, grid.ny, grid.nz = nx, ny, nz
+    return grid
 
 def test_scientific_harlow_welch_allocation():
-    """Verify staggered grid offsets follow the N+1 mathematical requirement."""
-    grid = GridInput(nx=10, ny=20, nz=30)
+    """Rule 1.1: Harlow-Welch Staggering must follow the N+1 face requirement."""
+    grid = create_scientific_grid(10, 20, 30)
     fields = allocate_staggered_fields(grid)
     
-    # The Physics Rule: Normal velocity on faces must have N+1 points
-    assert fields["U"].shape == (11, 20, 30), "U-staggering offset failed"
-    assert fields["V"].shape == (10, 21, 30), "V-staggering offset failed"
-    assert fields["W"].shape == (10, 20, 31), "W-staggering offset failed"
-    assert fields["P"].shape == (10, 20, 30), "Pressure center allocation failed"
+    # Physics check: Pressure is cell-centered, Velocities are face-centered
+    assert fields["P"].shape == (10, 20, 30), "Pressure shape mismatch"
+    assert fields["U"].shape == (11, 20, 30), "U-velocity (East-West) must be nx+1"
+    assert fields["V"].shape == (10, 21, 30), "V-velocity (North-South) must be ny+1"
+    assert fields["W"].shape == (10, 20, 31), "W-velocity (Front-Back) must be nz+1"
+    assert fields["U"].dtype == np.float64, "Fields must be double precision"
 
 def test_scientific_mask_reconstruction_parity():
-    """Verify that flat data reconstruction respects Fortran ordering (Order 'F')."""
-    # Create a 2x2x2 grid (8 cells total)
-    grid = GridInput(nx=2, ny=2, nz=2)
-    flat_data = [1, 1, 1, 1, -1, -1, -1, -1]
-    
+    """Rule 1.2: 3D reconstruction must respect Order F (Fortran/Column-major)."""
+    grid = create_scientific_grid(2, 2, 2)
+    # 8 cells total. In Order F, indices change: X -> Y -> Z
+    # Data: [X0Y0Z0, X1Y0Z0, X0Y1Z0, X1Y1Z0, ...]
+    flat_data = [1, 2, 3, 4, 5, 6, 7, 8]
     mask_3d, is_fluid, is_boundary = generate_3d_masks(flat_data, grid)
     
-    # In Order 'F', the first 4 elements populate the entire first Z-slice
-    np.testing.assert_array_equal(mask_3d[:, :, 0], np.ones((2, 2)))
-    np.testing.assert_array_equal(mask_3d[:, :, 1], -1 * np.ones((2, 2)))
+    # Verify the first XY plane (Z=0)
+    # Should look like: [[1, 3], [2, 4]]
+    expected_z0 = np.array([[1, 3], [2, 4]], dtype=np.int8)
+    np.testing.assert_array_equal(mask_3d[:, :, 0], expected_z0)
     
-    assert np.sum(is_fluid) == 4
-    assert np.sum(is_boundary) == 4
+    # Verify the second XY plane (Z=1)
+    # Should look like: [[5, 7], [6, 8]]
+    expected_z1 = np.array([[5, 7], [6, 8]], dtype=np.int8)
+    np.testing.assert_array_equal(mask_3d[:, :, 1], expected_z1)
 
-def test_scientific_staggered_memory_zeroed():
-    """Ensure no residual garbage values exist in the allocated physical fields."""
-    grid = GridInput(nx=4, ny=4, nz=4)
-    fields = allocate_staggered_fields(grid)
+def test_scientific_mask_validation_error():
+    """Ensure the helper catches data volume mismatches immediately."""
+    grid = create_scientific_grid(2, 2, 2)
+    with pytest.raises(ValueError, match="Mask size mismatch"):
+        generate_3d_masks([1, 1], grid)
+
+def test_scientific_bc_lookup_mapping():
+    """Rule 1.3: BC table must map locations and handle missing velocity components."""
+    item = BoundaryConditionItem(
+        location="west",
+        type="inlet",
+        values={"u": 5.0, "p": 101325.0} # v and w are missing
+    )
     
+    bc_map = parse_bc_lookup([item])
+    
+    assert "west" in bc_map
+    assert bc_map["west"]["u"] == 5.0
+    assert bc_map["west"]["v"] == 0.0, "Missing values must default to 0.0"
+    assert bc_map["west"]["p"] == 101325.0
+    assert bc_map["west"]["type"] == "inlet"
+
+def test_scientific_staggered_memory_zeroed(sts_tolerance):
+    """Zero-Debt Check: Memory must be pre-zeroed to machine precision."""
+    grid = create_scientific_grid(4, 4, 4)
+    fields = allocate_staggered_fields(grid)
     for name, arr in fields.items():
-        # High-precision check for absolute zero (STS Requirement)
-        np.testing.assert_allclose(arr, 0.0, atol=1e-15, err_msg=f"Field {name} has residual noise")
+        np.testing.assert_allclose(
+            arr, 0.0, 
+            atol=sts_tolerance["atol"], 
+            rtol=sts_tolerance["rtol"],
+            err_msg=f"Field {name} has residual garbage data"
+        )

@@ -9,16 +9,13 @@ def configure_scientific_precision():
     Forces high-precision printing and strict numerical error handling 
     for all tests within the tests/scientific/ directory.
     """
-    # Force numpy to show full precision in logs/failures
     np.set_printoptions(precision=15, suppress=False, threshold=np.inf)
     
-    # Configure global tolerance for STS (1e-12 for double precision)
     os.environ["STS_RTOL"] = "1e-12"
     os.environ["STS_ATOL"] = "1e-15"
     
     yield
     
-    # Cleanup (Optional)
     np.set_printoptions(edgeitems=3, infstr='inf', linewidth=75, nanstr='nan', precision=8, suppress=False, threshold=1000)
 
 @pytest.fixture
