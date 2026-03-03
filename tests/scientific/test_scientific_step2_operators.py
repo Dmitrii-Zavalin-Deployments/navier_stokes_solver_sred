@@ -1,0 +1,82 @@
+# tests/scientific/test_scientific_step2_operators.py
+
+import pytest
+import numpy as np
+import scipy.sparse as sp
+from src.step2.operators import build_numerical_operators
+from src.solver_state import SolverState
+
+@pytest.fixture
+def state_3d_small():
+    """Setup a minimal 3x3x3 grid to allow for internal nodes and boundaries."""
+    state = SolverState()
+    state.grid.nx, state.grid.ny, state.grid.nz = 3, 3, 3
+    # Use non-unit spacing to verify dx/dy/dz scaling
+    state.grid.x_min, state.grid.x_max = 0.0, 0.3 # dx = 0.1
+    state.grid.y_min, state.grid.y_max = 0.0, 0.3 # dy = 0.1
+    state.grid.z_min, state.grid.z_max = 0.0, 0.3 # dz = 0.1
+    return state
+
+def test_scientific_operators_dof_handshake(state_3d_small, capsys):
+    """Rule 2.1: Verify DOF mapping and Debug Handshake prints."""
+    # P: 3*3*3 = 27
+    # U: 4*3*3 = 36
+    # V: 3*4*3 = 36
+    # W: 3*3*4 = 36
+    # Total Vel DOF: 36+36+36 = 108
+    build_numerical_operators(state_3d_small)
+    captured = capsys.readouterr().out
+    
+    assert "Target DOFs - P:27, U:36, V:36, W:36" in captured
+    assert state_3d_small.operators.divergence.shape == (27, 108)
+    assert state_3d_small.operators.grad_x.shape == (36, 27)
+
+def test_scientific_gradient_coefficients(state_3d_small):
+    """Rule 2.2: Verify finite difference coefficients (1/dx) in Gradient."""
+    build_numerical_operators(state_3d_small)
+    Gx = state_3d_small.operators.grad_x
+    
+    # For dx=0.1, coefficients should be 10.0 and -10.0
+    # Check an internal node: Gx[idx_u, idx_p]
+    # Pick i=1, j=1, k=1 -> idx_u = 1 + 1*4 + 1*4*3 = 17
+    # P cells: (1,1,1) -> 13 and (0,1,1) -> 12
+    assert Gx[17, 13] == pytest.approx(10.0)
+    assert Gx[17, 12] == pytest.approx(-10.0)
+
+def test_scientific_divergence_nullspace(state_3d_small):
+    """Rule 2.3: Divergence of a constant velocity field must be zero."""
+    build_numerical_operators(state_3d_small)
+    D = state_3d_small.operators.divergence
+    
+    # Create constant velocity field [1.0, 1.0, 1.0]
+    total_dofs = D.shape[1]
+    v_const = np.ones(total_dofs)
+    
+    div_v = D @ v_const
+    # Only internal cells are strictly zero due to boundary faces
+    # For a 3x3x3, the center cell is (1,1,1) -> index 13
+    assert div_v[13] == pytest.approx(0.0)
+
+def test_scientific_composite_laplacian(state_3d_small, capsys):
+    """Rule 2.4: Verify L = D @ G composition and non-emptiness."""
+    build_numerical_operators(state_3d_small)
+    captured = capsys.readouterr().out
+    
+    L = state_3d_small.operators.laplacian
+    assert "Laplacian (D@G) nnz:" in captured
+    assert L.nnz > 0
+    assert L.shape == (27, 27)
+    
+    # Check the standard 7-point stencil value for a center cell
+    # L_ii = - (2/dx^2 + 2/dy^2 + 2/dz^2)
+    # For dx=dy=dz=0.1, L_ii = -(200 + 200 + 200) = -600
+    center_idx = 13
+    assert L[center_idx, center_idx] == pytest.approx(-600.0)
+
+def test_scientific_ppe_state_transfer(state_3d_small):
+    """Rule 2.5: Ensure Laplacian is correctly committed to PPE solver state."""
+    build_numerical_operators(state_3d_small)
+    assert state_3d_small.ppe._A is not None
+    assert state_3d_small.ppe._A.shape == (27, 27)
+    # Ensure it is a CSR matrix for performance
+    assert isinstance(state_3d_small.ppe._A, sp.csr_matrix)
