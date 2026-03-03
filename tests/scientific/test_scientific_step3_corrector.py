@@ -11,6 +11,8 @@ from src.solver_state import SolverState
 def state_corrector():
     """Setup a 3D state with pre-built operators and dummy U_star."""
     state = SolverState()
+    from src.solver_input import FluidInput
+    state.config._fluid_properties = FluidInput()
     # 3x3x3 Grid
     state.grid.nx, state.grid.ny, state.grid.nz = 3, 3, 3
     state.grid.x_min, state.grid.x_max = 0.0, 0.3
