@@ -4,40 +4,72 @@ import numpy as np
 from scipy.sparse.linalg import cg
 from src.solver_state import SolverState
 
+# Global Debug Toggle
+DEBUG = True
+
 def solve_pressure(state: SolverState) -> str:
     """
     Step 3.2: Pressure Poisson Solve.
-    Enforces 'F' order to maintain staggered grid alignment.
-    Rule 5 Compliance: No defaults. Accesses config properties directly.
+    Anchors the null space using configured pressure at the first valid fluid cell.
+    Rule 5 Compliance: No hardcoded indices or values. Uses mask and config.
     """
     rho = state.density
     dt = state.dt
     
+    if DEBUG:
+        print(f"DEBUG [Step 3 Solver]: Starting PPE solve. rho={rho}, dt={dt}")
+
     # 1. Build RHS: b = (rho/dt) * Divergence(V_star)
-    # Concatenate using Fortran order to match grid topology
     v_star_flat = np.concatenate([
         state.fields.U_star.flatten(order='F'), 
         state.fields.V_star.flatten(order='F'), 
         state.fields.W_star.flatten(order='F')
     ])
     
-    # Calculate divergence and reshape correctly
-    div_v_star = (state.operators.divergence @ v_star_flat).reshape(state.fields.P.shape, order='F')
-    rhs = (rho / dt) * div_v_star
+    rhs = (rho / dt) * (state.operators.divergence @ v_star_flat)
 
-    # 2. Linear Solve: AP = b
-    # Direct property access triggers _get_safe validation. 
-    # If these are None, the solver will raise a RuntimeError.
+    # 2. DYNAMIC ANCHORING (No hardcoded index 0)
+    # Find the first fluid cell index using the mask (1 = fluid)
+    # We flatten the mask in 'F' order to match the operator indexing
+    mask_flat = state.mask.flatten(order='F')
+    fluid_indices = np.where(mask_flat == 1)[0]
+    
+    if len(fluid_indices) == 0:
+        if DEBUG: print("!!! CRITICAL: No fluid cells found in mask !!!")
+        return "failed"
+    
+    anchor_idx = fluid_indices[0] # Use the first real fluid cell found
+    ref_p = state.config.initial_pressure 
+    
+    A_pinned = state.ppe._A.copy()
+    
+    # Identify the row in the CSR matrix for the anchor index
+    r_start, r_end = A_pinned.indptr[anchor_idx], A_pinned.indptr[anchor_idx + 1]
+    
+    # Zero out the row and set diagonal to 1.0 (Direct Dirichlet constraint)
+    A_pinned.data[r_start:r_end] = 0.0
+    A_pinned[anchor_idx, anchor_idx] = 1.0
+    rhs[anchor_idx] = ref_p
+
+    if DEBUG:
+        print(f"DEBUG [Step 3 Solver]: Pressure anchored at Index {anchor_idx} (Fluid) with P={ref_p}")
+
+    # 3. Linear Solve: AP = b
     p_flat, info = cg(
-        state.ppe._A, 
-        rhs.flatten(order='F'), 
+        A_pinned, 
+        rhs, 
         x0=state.fields.P.flatten(order='F'),
         rtol=state.config.ppe_tolerance,
         atol=state.config.ppe_atol,
         maxiter=state.config.ppe_max_iter
     )
     
-    # Update pressure field in-place with correct memory layout
+    if DEBUG:
+        res_norm = np.linalg.norm(rhs - A_pinned @ p_flat)
+        print(f"DEBUG [Step 3 Solver]: CG status info: {info}, Res Norm: {res_norm:.6e}")
+
+    # 4. Map Back to Grid
     state.fields.P = p_flat.reshape(state.fields.P.shape, order='F')
     
-    return "converged" if info == 0 else "failed"
+    status = "converged" if info == 0 else "failed"
+    return status

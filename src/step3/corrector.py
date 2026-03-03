@@ -3,49 +3,55 @@
 import numpy as np
 from src.solver_state import SolverState
 
+# Global Debug Toggle
+DEBUG = True
+
 def correct_velocity(state: SolverState) -> None:
     """
     Step 3.3: Projection/Correction.
     V_new = V* - (dt/rho) * grad(P)
-    
-    Rule 5 Compliance: Explicit calculation, no silent failures for missing operators.
+    Rule 5 Compliance: Explicit calculation, no silent failures, no defaults.
     """
     rho = state.density
     dt = state.dt
     coeff = dt / rho
 
-    # Ensure pressure is flattened in Fortran order for the matrix multiplication
+    if DEBUG:
+        print(f"DEBUG [Step 3 Corrector]: Applying correction with coeff (dt/rho)={coeff:.6e}")
+
+    # Ensure pressure is flattened in Fortran order for matrix-vector product
     p_flat = state.fields.P.flatten(order='F')
 
     # 1. APPLY CORRECTION
-    # We apply the gradient of pressure to the predicted (star) velocities.
-    # We use the dot product directly to ensure the resulting vector 
-    # matches the flattened dimensions of the velocity fields.
+    # grad_p components must be reshaped back to staggered grid dimensions in 'F' order
     
     # Update U
-    grad_p_x = (state.operators.grad_x @ p_flat).reshape(state.fields.U.shape, order='F')
-    state.fields.U = state.fields.U_star - coeff * grad_p_x
+    grad_p_x_flat = state.operators.grad_x @ p_flat
+    state.fields.U = state.fields.U_star - coeff * grad_p_x_flat.reshape(state.fields.U.shape, order='F')
 
     # Update V
-    grad_p_y = (state.operators.grad_y @ p_flat).reshape(state.fields.V.shape, order='F')
-    state.fields.V = state.fields.V_star - coeff * grad_p_y
+    grad_p_y_flat = state.operators.grad_y @ p_flat
+    state.fields.V = state.fields.V_star - coeff * grad_p_y_flat.reshape(state.fields.V.shape, order='F')
 
     # Update W
-    grad_p_z = (state.operators.grad_z @ p_flat).reshape(state.fields.W.shape, order='F')
-    state.fields.W = state.fields.W_star - coeff * grad_p_z
+    grad_p_z_flat = state.operators.grad_z @ p_flat
+    state.fields.W = state.fields.W_star - coeff * grad_p_z_flat.reshape(state.fields.W.shape, order='F')
+
+    if DEBUG:
+        print(f"DEBUG [Step 3 Corrector]: Max Grad P: {np.max(np.abs(grad_p_x_flat)):.4e}")
 
     # 2. UPDATE HEALTH VITALS
-    # Reconstruct the global velocity vector in Fortran order for divergence check
+    # Global velocity vector concatenation in 'F' order
     v_new_flat = np.concatenate([
         state.fields.U.flatten(order='F'), 
         state.fields.V.flatten(order='F'), 
         state.fields.W.flatten(order='F')
     ])
     
-    # Calculate residual divergence
+    # Calculate residual divergence: D @ V_new
     div_new = state.operators.divergence @ v_new_flat
     
-    # Sync health metrics to state
+    # Final metrics calculation
     state.health.divergence_norm = float(np.linalg.norm(div_new, np.inf))
     state.health.post_correction_divergence_norm = state.health.divergence_norm
     
@@ -54,3 +60,9 @@ def correct_velocity(state: SolverState) -> None:
         np.max(np.abs(state.fields.V)), 
         np.max(np.abs(state.fields.W))
     ))
+
+    if DEBUG:
+        print(f"DEBUG [Step 3 Corrector]: Final Div Norm (Inf): {state.health.divergence_norm:.6e}")
+        print(f"DEBUG [Step 3 Corrector]: Max Velocity: {state.health.max_u:.4f}")
+        if state.health.divergence_norm > 1e-10:
+             print("!!! WARNING: Divergence above logic gate threshold !!!")

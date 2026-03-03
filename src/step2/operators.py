@@ -1,7 +1,11 @@
 # src/step2/operators.py
 
 import scipy.sparse as sp
+import numpy as np
 from src.solver_state import SolverState
+
+# Global Debug Toggle
+DEBUG = True
 
 def build_numerical_operators(state: SolverState) -> None:
     """
@@ -18,12 +22,15 @@ def build_numerical_operators(state: SolverState) -> None:
     dof_w = nx * ny * (nz + 1)
     total_vel_dof = dof_u + dof_v + dof_w
 
+    if DEBUG:
+        print(f"DEBUG [Step 2]: Grid dimensions {nx}x{ny}x{nz}")
+        print(f"DEBUG [Step 2]: Target DOFs - P:{dof_p}, U:{dof_u}, V:{dof_v}, W:{dof_w}")
+
     # --- 1. BUILD GRADIENTS (P -> U, V, W faces) ---
     Gx = sp.lil_matrix((dof_u, dof_p))
     Gy = sp.lil_matrix((dof_v, dof_p))
     Gz = sp.lil_matrix((dof_w, dof_p))
 
-    # Gx maps P-centers to U-faces (i indices 1 to nx-1)
     for k in range(nz):
         for j in range(ny):
             for i in range(1, nx):
@@ -31,7 +38,6 @@ def build_numerical_operators(state: SolverState) -> None:
                 Gx[idx_u, i + j*nx + k*nx*ny] = 1.0 / dx
                 Gx[idx_u, (i-1) + j*nx + k*nx*ny] = -1.0 / dx
 
-    # Gy maps P-centers to V-faces (j indices 1 to ny-1)
     for k in range(nz):
         for j in range(1, ny):
             for i in range(nx):
@@ -39,7 +45,6 @@ def build_numerical_operators(state: SolverState) -> None:
                 Gy[idx_v, i + j*nx + k*nx*ny] = 1.0 / dy
                 Gy[idx_v, i + (j-1)*nx + k*nx*ny] = -1.0 / dy
 
-    # Gz maps P-centers to W-faces (k indices 1 to nz-1)
     for k in range(1, nz):
         for j in range(ny):
             for i in range(nx):
@@ -47,41 +52,44 @@ def build_numerical_operators(state: SolverState) -> None:
                 Gz[idx_w, i + j*nx + k*nx*ny] = 1.0 / dz
                 Gz[idx_w, i + j*nx + (k-1)*nx*ny] = -1.0 / dz
 
+    if DEBUG:
+        print(f"DEBUG [Step 2]: Gx non-zeros: {Gx.nnz}, Gy nnz: {Gy.nnz}, Gz nnz: {Gz.nnz}")
+
     # --- 2. BUILD DIVERGENCE (U, V, W -> P) ---
     D = sp.lil_matrix((dof_p, total_vel_dof))
-    u_offset = 0
-    v_offset = dof_u
-    w_offset = dof_u + dof_v
+    u_off, v_off, w_off = 0, dof_u, dof_u + dof_v
 
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
                 idx_p = i + j*nx + k*nx*ny
-                
-                # U contrib (East/West faces)
-                D[idx_p, u_offset + (i+1) + j*(nx+1) + k*(nx+1)*ny] += 1.0 / dx
-                D[idx_p, u_offset + i + j*(nx+1) + k*(nx+1)*ny] -= 1.0 / dx
-                
-                # V contrib (North/South faces)
-                D[idx_p, v_offset + i + (j+1)*nx + k*nx*(ny+1)] += 1.0 / dy
-                D[idx_p, v_offset + i + j*nx + k*nx*(ny+1)] -= 1.0 / dy
-                
-                # W contrib (Top/Bottom faces)
-                D[idx_p, w_offset + i + j*nx + (k+1)*nx*ny] += 1.0 / dz
-                D[idx_p, w_offset + i + j*nx + k*nx*ny] -= 1.0 / dz
+                D[idx_p, u_off + (i+1) + j*(nx+1) + k*(nx+1)*ny] += 1.0 / dx
+                D[idx_p, u_off + i + j*(nx+1) + k*(nx+1)*ny] -= 1.0 / dx
+                D[idx_p, v_off + i + (j+1)*nx + k*nx*(ny+1)] += 1.0 / dy
+                D[idx_p, v_off + i + j*nx + k*nx*(ny+1)] -= 1.0 / dy
+                D[idx_p, w_off + i + j*nx + (k+1)*nx*ny] += 1.0 / dz
+                D[idx_p, w_off + i + j*nx + k*nx*ny] -= 1.0 / dz
+
+    if DEBUG:
+        print(f"DEBUG [Step 2]: Divergence matrix built. Shape: {D.shape}, nnz: {D.nnz}")
 
     # --- 3. BUILD COMPOSITE LAPLACIAN (L = D * G) ---
-    # This ensures the Pressure Solve perfectly "undoes" the Divergence.
     state.operators.grad_x = Gx.tocsr()
     state.operators.grad_y = Gy.tocsr()
     state.operators.grad_z = Gz.tocsr()
     state.operators.divergence = D.tocsr()
 
-    # Create the global gradient vector operator
     G_total = sp.vstack([state.operators.grad_x, state.operators.grad_y, state.operators.grad_z])
     
-    # Fundamental Projection Identity: L = D @ G
+    if DEBUG:
+        print(f"DEBUG [Step 2]: Global Gradient V-Stack shape: {G_total.shape}")
+
     state.operators.laplacian = state.operators.divergence @ G_total
     
-    # Handshake: The PPE solver A-matrix is the Laplacian
+    if DEBUG:
+        nnz_L = state.operators.laplacian.nnz
+        print(f"DEBUG [Step 2]: Laplacian (D@G) nnz: {nnz_L}")
+        if nnz_L == 0:
+            print("!!! CRITICAL: Laplacian is empty. Check DOF mapping !!!")
+
     state.ppe._A = state.operators.laplacian
