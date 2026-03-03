@@ -54,7 +54,7 @@ def test_scientific_audit_firewall():
     """Verify the _final_audit catches non-physical values."""
     inp = create_scientific_input()
     # Reach into the hydrated object to inject a physical error
-    inp.fluid_properties.density = -10.0 
+    inp.initial_conditions.velocity = [np.nan, 0.0, 0.0] 
     
-    with pytest.raises(ValueError, match="Audit Failed: Non-physical density"):
+    with pytest.raises(ValueError, match="Audit Failed: Non-finite values"):
         orchestrate_step1(inp)
