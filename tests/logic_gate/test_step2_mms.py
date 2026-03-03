@@ -13,6 +13,10 @@ def test_logic_gate_2_quadratic_laplacian():
     """
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
+    
+    # CRITICAL: Ensure the pressure mask is fluid (1) so Laplacian isn't zeroed
+    state.masks.p_mask[:] = 1
+    
     state = orchestrate_step2(state)
     
     L = state.operators.laplacian
@@ -30,7 +34,8 @@ def test_logic_gate_2_quadratic_laplacian():
     res_vec = L.dot(p_analytic.flatten(order='F'))
     res_3d = res_vec.reshape((nx, ny, nz), order='F')
     
-    # Success Metric: 6.0 on internal nodes (full stencil)
+    # Success Metric: 6.0 on internal nodes (full 7-point stencil)
+    # We check the 2x2x2 core of our 4x4x4 grid
     internal_res = res_3d[1:-1, 1:-1, 1:-1]
     np.testing.assert_allclose(internal_res, 6.0, rtol=1e-10, 
                                err_msg="Logic Gate 2 Failure: Laplacian failed to recover 6.0")
