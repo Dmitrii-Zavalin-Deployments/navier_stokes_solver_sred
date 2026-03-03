@@ -80,3 +80,36 @@ def test_scientific_ppe_state_transfer(state_3d_small):
     assert state_3d_small.ppe._A.shape == (27, 27)
     # Ensure it is a CSR matrix for performance
     assert isinstance(state_3d_small.ppe._A, sp.csr_matrix)
+# --- FINAL SCIENTIFIC AUDIT: SPARSITY & STACKING ---
+
+def test_scientific_operators_format_and_stack(state_3d_small, capsys):
+    """Rule 2.6: Verify Matrix formats (CSR) and Global Gradient Stacking."""
+    build_numerical_operators(state_3d_small)
+    captured = capsys.readouterr().out
+    
+    # 1. Verify CSR Conversion (Crucial for solver performance)
+    assert isinstance(state_3d_small.operators.grad_x, sp.csr_matrix)
+    assert isinstance(state_3d_small.operators.divergence, sp.csr_matrix)
+    
+    # 2. Verify V-Stack Shape in Debug
+    # Total Vel DOFs = 36+36+36 = 108. P DOFs = 27.
+    assert "Global Gradient V-Stack shape: (108, 27)" in captured
+    
+    # 3. Verify the 'Critical' firewall was NOT triggered
+    assert "!!! CRITICAL" not in captured
+
+def test_scientific_operator_orthogonality(state_3d_small):
+    """Rule 2.7: Verify Gy and Gz coefficients (Dimensional separation)."""
+    build_numerical_operators(state_3d_small)
+    Gy = state_3d_small.operators.Gy if hasattr(state_3d_small.operators, 'Gy') else state_3d_small.operators.grad_y
+    Gz = state_3d_small.operators.Gz if hasattr(state_3d_small.operators, 'Gz') else state_3d_small.operators.grad_z
+    
+    # Check Gy for v-face at center (i=1, j=1, k=1) 
+    # idx_v = i + j*nx + k*nx*(ny+1) = 1 + 1*3 + 1*3*4 = 16
+    assert Gy[16, 13] == pytest.approx(10.0) # P(1,1,1)
+    assert Gy[16, 10] == pytest.approx(-10.0) # P(1,0,1)
+
+    # Check Gz for w-face at center (i=1, j=1, k=1)
+    # idx_w = i + j*nx + k*nx*ny = 1 + 1*3 + 1*9 = 13
+    assert Gz[13, 13] == pytest.approx(10.0) # P(1,1,1)
+    assert Gz[13, 4] == pytest.approx(-10.0) # P(1,1,0)
