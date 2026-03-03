@@ -15,20 +15,22 @@ def state_corrector():
     state.config._fluid_properties = FluidInput()
     from src.solver_input import SimParamsInput
     state.config._simulation_parameters = SimParamsInput()
-     import numpy as np
-     from scipy import sparse
-     # Memory Allocation
-     state.fields._P = np.zeros((3, 3, 3))
-     state.fields._U = np.zeros((4, 3, 3))
-     state.fields._V = np.zeros((3, 4, 3))
-     state.fields._W = np.zeros((3, 3, 4))
-     state.fields._U_star = np.zeros((4, 3, 3))
-     state.fields._V_star = np.zeros((3, 4, 3))
-     state.fields._W_star = np.zeros((3, 3, 4))
-     # Mock Operators (Identity matrices to allow code flow)
-     state.operators._grad_x = sparse.eye(36, 27)
-     state.operators._grad_y = sparse.eye(36, 27)
-     state.operators._grad_z = sparse.eye(36, 27)
+
+    import numpy as np
+    from scipy import sparse
+    # Memory Allocation
+    state.fields._P = np.zeros((3, 3, 3))
+    state.fields._U = np.zeros((4, 3, 3))
+    state.fields._V = np.zeros((3, 4, 3))
+    state.fields._W = np.zeros((3, 3, 4))
+    state.fields._U_star = np.zeros((4, 3, 3))
+    state.fields._V_star = np.zeros((3, 4, 3))
+    state.fields._W_star = np.zeros((3, 3, 4))
+    # Mock Operators (Identity matrices to allow code flow)
+    state.operators._grad_x = sparse.eye(36, 27)
+    state.operators._grad_y = sparse.eye(36, 27)
+    state.operators._grad_z = sparse.eye(36, 27)
+    
     # 3x3x3 Grid
     state.grid.nx, state.grid.ny, state.grid.nz = 3, 3, 3
     state.grid.x_min, state.grid.x_max = 0.0, 0.3
