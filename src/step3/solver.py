@@ -8,12 +8,13 @@ def solve_pressure(state: SolverState) -> str:
     """
     Step 3.2: Pressure Poisson Solve.
     Enforces 'F' order to maintain staggered grid alignment.
+    Rule 5 Compliance: No defaults. Accesses config properties directly.
     """
     rho = state.density
     dt = state.dt
     
     # 1. Build RHS: b = (rho/dt) * Divergence(V_star)
-    # CRITICAL: Must use order='F' to match the MMS test and grid allocation
+    # Concatenate using Fortran order to match grid topology
     v_star_flat = np.concatenate([
         state.fields.U_star.flatten(order='F'), 
         state.fields.V_star.flatten(order='F'), 
@@ -25,14 +26,15 @@ def solve_pressure(state: SolverState) -> str:
     rhs = (rho / dt) * div_v_star
 
     # 2. Linear Solve: AP = b
-    # Note: Using state.ppe._A which is populated in Step 2 Orchestration
+    # Direct property access triggers _get_safe validation. 
+    # If these are None, the solver will raise a RuntimeError.
     p_flat, info = cg(
         state.ppe._A, 
         rhs.flatten(order='F'), 
         x0=state.fields.P.flatten(order='F'),
-        rtol=getattr(state.config, "ppe_tolerance", 1e-10),
-        atol=getattr(state.config, "ppe_atol", 1e-12),
-        maxiter=getattr(state.config, "ppe_max_iter", 1000)
+        rtol=state.config.ppe_tolerance,
+        atol=state.config.ppe_atol,
+        maxiter=state.config.ppe_max_iter
     )
     
     # Update pressure field in-place with correct memory layout
