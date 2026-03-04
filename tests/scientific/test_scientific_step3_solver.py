@@ -94,13 +94,18 @@ def test_solver_cg_failure(state_solver, capsys):
     """Tests the failure path when CG does not converge."""
     from src.step3.solver import solve_pressure
     
-    # Force CG failure by making A singular (all zeros)
-    state_solver.ppe._A = sparse.csr_matrix((27, 27))
+    # Instead of just zeroing A (which anchoring fixes), 
+    # we force a failure by setting max iterations to 0.
+    state_solver.config._ppe_max_iter = 0
+    
+    # We also need a non-zero RHS so it doesn't "accidentally" solve it
+    # We do this by giving divergence some values
+    state_solver.operators._divergence = sparse.csr_matrix(np.ones((27, 81)))
+    state_solver.fields.U_star += 1.0 
     
     status = solve_pressure(state_solver)
     
     assert status == "failed"
-    # The solver prints CG info on failure
     assert "CG status info" in capsys.readouterr().out
 
 def test_solver_debug_output(state_solver, capsys):
