@@ -65,9 +65,9 @@ def solve_pressure(state: SolverState) -> str:
         A_pinned, 
         rhs, 
         x0=state.fields.P.flatten(order='F'),
-        rtol=state.config.ppe_tolerance,
-        atol=state.config.ppe_atol,
-        maxiter=state.config.ppe_max_iter
+        rtol=ppe_tol,
+        atol=ppe_atol,
+        maxiter=ppe_max
     )
     
     if DEBUG:
