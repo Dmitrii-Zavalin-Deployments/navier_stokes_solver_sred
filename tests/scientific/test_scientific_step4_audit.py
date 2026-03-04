@@ -88,8 +88,8 @@ def test_audit_warning_trigger(state_audit, capsys):
     """Ensures the warning prints if configured dt exceeds stability limits."""
     from src.step4.audit_diagnostics import run_preflight_audit
     
-    # Modify state.dt to be dangerous
-    state._dt = 1.0 
+    # FIX: Change 'state' to 'state_audit'
+    state_audit._dt = 1.0 
     
     run_preflight_audit(state_audit)
     
