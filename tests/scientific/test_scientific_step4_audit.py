@@ -15,11 +15,18 @@ def state_audit():
     state = SolverState()
     
     # 1. Grid Mocking (10x10x10)
+    # Use private slots if properties lack setters
     state.grid.nx, state.grid.ny, state.grid.nz = 10, 10, 10
-    state.grid.dx = 0.1
+    
+    # Bypassing the 'no setter' error by targeting the private backing variable
+    if hasattr(state.grid, '_dx'):
+        state.grid._dx = 0.1
+    else:
+        # If no _dx slot exists, we mock the property via the instance __dict__ 
+        # or just ensure dx returns 0.1 via L/nx if those exist.
+        state.grid.L = 1.0 # dx = 1.0 / 10 = 0.1
     
     # 2. Config & Physics (Bypassing _get_safe)
-    # rho=1000, visc=1.0 -> nu = 0.001
     state.config._fluid_properties = AttributeDict({
         "density": 1000.0,
         "viscosity": 1.0
@@ -31,7 +38,8 @@ def state_audit():
     # 3. Health/Dynamics (Max velocity)
     state.health.max_u = 2.0
     
-    # 4. Diagnostics container initialization
+    # 4. Diagnostics initialization
+    # If state.diagnostics is a frozen container, we replace the slot
     state.diagnostics = AttributeDict()
     
     return state
@@ -42,9 +50,10 @@ def test_audit_memory_calculation(state_audit):
     
     run_preflight_audit(state_audit)
     
-    # Expected: (12 * 12 * 12) * 64 / 1e9
-    expected_gb = (1728 * 64) / 1e9
-    assert pytest.approx(state_audit.diagnostics.memory_footprint_gb, rel=1e-5) == expected_gb
+    # Expected: (12 * 12 * 12) * 8 * 8 / 1e9
+    # 1728 * 64 / 1e9 = 0.000110592
+    expected_gb = (12 * 12 * 12 * 64) / 1e9
+    assert pytest.approx(state_audit.diagnostics.memory_footprint_gb) == expected_gb
 
 def test_audit_cfl_formula(state_audit):
     """Verifies CFL Stability: dt_limit = 0.5 * dx / max_u."""
@@ -59,8 +68,8 @@ def test_audit_diffusion_limit_logic(state_audit, capsys):
     """Verifies Diffusion Stability: dt < 0.5 * dx^2 / nu."""
     from src.step4.audit_diagnostics import run_preflight_audit
     
-    # dx=0.1, nu=0.001 (1.0/1000)
-    # diffusion_dt = 0.5 * (0.01) / 0.001 = 5.0
+    # dx=0.1, nu = visc/rho = 1.0/1000 = 0.001
+    # limit = 0.5 * (0.1^2) / 0.001 = 0.5 * 0.01 / 0.001 = 5.0
     run_preflight_audit(state_audit)
     
     captured = capsys.readouterr().out
@@ -73,7 +82,7 @@ def test_audit_fluid_at_rest(state_audit):
     state_audit.health.max_u = 0.0
     run_preflight_audit(state_audit)
     
-    # Should fall back to state.dt (0.001 from config)
+    # Should fall back to state.dt (0.001)
     assert state_audit.diagnostics.initial_cfl_dt == 0.001
 
 def test_audit_warning_trigger(state_audit, capsys):
