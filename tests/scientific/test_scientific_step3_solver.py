@@ -13,15 +13,21 @@ class AttributeDict(dict):
 @pytest.fixture
 def state_solver():
     state = SolverState()
+    # Initialize missing private slots to bypass the _get_safe crash
+    state.config._fluid_properties = {"density": 1000.0, "viscosity": 1e-3}
+    state.config._simulation_parameters = {"initial_pressure": 0.0}
     state.config._ppe_tolerance = 1e-6
     state.config._ppe_atol = 1e-8
     state.config._ppe_max_iter = 1000
-    return state
-    pass
-    state = SolverState()
     
-    # 1. Config Setup (PPE Parameters)
-    state.config.fluid_properties = AttributeDict({"density": 1000.0, "viscosity": 1.0})
+    # Setup minimal fields for pressure solve
+    state.fields.U_star = np.zeros((3, 3, 3))
+    state.fields.V_star = np.zeros((3, 3, 3))
+    state.fields.W_star = np.zeros((3, 3, 3))
+    state.fields.P = np.zeros((3, 3, 3))
+    state._mask = np.ones((3, 3, 3)) # Default all fluid
+    
+    return state
     state.config.simulation_parameters = AttributeDict({
         "time_step": 0.1, 
         "initial_pressure": 0.0,
