@@ -23,7 +23,10 @@ def test_scientific_operators_dof_handshake(state_3d_small, capsys):
     assert state_3d_small.operators.grad_x.shape == (36, 27)
 
 def test_scientific_gradient_coefficients(state_3d_small):
+    # Ensure 0.3 / 3 = 0.1 spacing
     state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
+    state_3d_small.grid.x_max = state_3d_small.grid.y_max = state_3d_small.grid.z_max = 0.3
+    
     """Rule 2.2: Verify finite difference coefficients (1/dx) in Gradient."""
     build_numerical_operators(state_3d_small)
     Gx = state_3d_small.operators.grad_x
