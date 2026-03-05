@@ -7,7 +7,7 @@ from src.step1.orchestrate_step1 import orchestrate_step1
 def test_scientific_orchestration_mapping(base_input):
     base_input.grid.nx, base_input.grid.ny, base_input.grid.nz = 4, 4, 4
     # Manually update the mask to match the new volume
-    base_input.mask.data = [1] * 64
+    base_input.mask._data = [1] * 64
     state = orchestrate_step1(base_input)
     
     # Verify Geometry
@@ -53,6 +53,7 @@ def test_scientific_restart_metadata(base_input):
 def test_scientific_mask_integrity(base_input):
     """Verify that the topology masks are correctly derived and typed."""
     base_input.grid.nx, base_input.grid.ny, base_input.grid.nz = 4, 4, 4
+    base_input.mask._data = [1] * 64
     state = orchestrate_step1(base_input)
     
     # Shape check
