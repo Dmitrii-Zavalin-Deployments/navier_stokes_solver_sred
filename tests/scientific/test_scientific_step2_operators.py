@@ -4,20 +4,11 @@ import pytest
 import numpy as np
 import scipy.sparse as sp
 from src.step2.operators import build_numerical_operators
-from src.solver_state import SolverState
+# No local fixture needed; assumes conftest.py provides state_3d_small
 
-@pytest.fixture
-def state_3d_small():
-    """Setup a minimal 3x3x3 grid to allow for internal nodes and boundaries."""
-    state = SolverState()
-    state.grid.nx, state.grid.ny, state.grid.nz = 3, 3, 3
-    # Use non-unit spacing to verify dx/dy/dz scaling
-    state.grid.x_min, state.grid.x_max = 0.0, 0.3 # dx = 0.1
-    state.grid.y_min, state.grid.y_max = 0.0, 0.3 # dy = 0.1
-    state.grid.z_min, state.grid.z_max = 0.0, 0.3 # dz = 0.1
-    return state
 
 def test_scientific_operators_dof_handshake(state_3d_small, capsys):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.1: Verify DOF mapping and Debug Handshake prints."""
     # P: 3*3*3 = 27
     # U: 4*3*3 = 36
@@ -32,6 +23,7 @@ def test_scientific_operators_dof_handshake(state_3d_small, capsys):
     assert state_3d_small.operators.grad_x.shape == (36, 27)
 
 def test_scientific_gradient_coefficients(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.2: Verify finite difference coefficients (1/dx) in Gradient."""
     build_numerical_operators(state_3d_small)
     Gx = state_3d_small.operators.grad_x
@@ -44,6 +36,7 @@ def test_scientific_gradient_coefficients(state_3d_small):
     assert Gx[17, 12] == pytest.approx(-10.0)
 
 def test_scientific_divergence_nullspace(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.3: Divergence of a constant velocity field must be zero."""
     build_numerical_operators(state_3d_small)
     D = state_3d_small.operators.divergence
@@ -58,6 +51,7 @@ def test_scientific_divergence_nullspace(state_3d_small):
     assert div_v[13] == pytest.approx(0.0)
 
 def test_scientific_composite_laplacian(state_3d_small, capsys):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.4: Verify L = D @ G composition and non-emptiness."""
     build_numerical_operators(state_3d_small)
     captured = capsys.readouterr().out
@@ -74,6 +68,7 @@ def test_scientific_composite_laplacian(state_3d_small, capsys):
     assert L[center_idx, center_idx] == pytest.approx(-600.0)
 
 def test_scientific_ppe_state_transfer(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.5: Ensure Laplacian is correctly committed to PPE solver state."""
     build_numerical_operators(state_3d_small)
     assert state_3d_small.ppe._A is not None
@@ -83,6 +78,7 @@ def test_scientific_ppe_state_transfer(state_3d_small):
 # --- FINAL SCIENTIFIC AUDIT: SPARSITY & STACKING ---
 
 def test_scientific_operators_format_and_stack(state_3d_small, capsys):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.6: Verify Matrix formats (CSR) and Global Gradient Stacking."""
     build_numerical_operators(state_3d_small)
     captured = capsys.readouterr().out
@@ -99,6 +95,7 @@ def test_scientific_operators_format_and_stack(state_3d_small, capsys):
     assert "!!! CRITICAL" not in captured
 
 def test_scientific_operator_orthogonality(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.7: Verify Gy and Gz coefficients (Dimensional separation)."""
     build_numerical_operators(state_3d_small)
     Gy = state_3d_small.operators.Gy if hasattr(state_3d_small.operators, 'Gy') else state_3d_small.operators.grad_y
@@ -115,6 +112,7 @@ def test_scientific_operator_orthogonality(state_3d_small):
     assert Gz[13, 4] == pytest.approx(-10.0) # P(1,1,0)
 
 def test_scientific_laplacian_symmetry(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.8: Verify L is symmetric (essential for CG solvers)."""
     build_numerical_operators(state_3d_small)
     L = state_3d_small.operators.laplacian
@@ -128,6 +126,7 @@ def test_scientific_laplacian_symmetry(state_3d_small):
     assert diff.nnz == 0 or np.allclose(diff.data, 0, atol=1e-10), "Laplacian is not symmetric!"
 
 def test_scientific_laplacian_conservation(state_3d_small):
+    state_3d_small.grid.nx = state_3d_small.grid.ny = state_3d_small.grid.nz = 3
     """Rule 2.9: Every row of L must sum to 0 (Compatibility Condition)."""
     build_numerical_operators(state_3d_small)
     L = state_3d_small.operators.laplacian
