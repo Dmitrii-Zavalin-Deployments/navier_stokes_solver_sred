@@ -29,6 +29,7 @@ def solver_input_schema_dummy() -> dict:
             "time_step": 0.01,
             "total_time": 0.1,
             "output_interval": 1,
+            "advection_weight_base": 0.125,
         },
         "boundary_conditions": [
             {"location": "x_min", "type": "no-slip", "values": {"u": 0.0}, "comment": "wall"},

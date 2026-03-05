@@ -86,3 +86,13 @@ class TestSolverInputContract:
         # Check default comment preservation (hits line 183 in Item factory)
         bc_item = obj.boundary_conditions.items[0]
         assert isinstance(bc_item.comment, str)
+    
+    def test_advection_weight_bounds(self):
+        """Verifies the [0, 1] bounds for advection_weight_base."""
+        obj = SolverInput()
+        
+        with pytest.raises(ValueError, match="advection_weight_base must be >= 0"):
+            obj.simulation_parameters.advection_weight_base = -0.1
+            
+        with pytest.raises(ValueError, match="advection_weight_base must be <= 1"):
+            obj.simulation_parameters.advection_weight_base = 1.1
