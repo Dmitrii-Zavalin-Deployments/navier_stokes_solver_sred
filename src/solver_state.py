@@ -78,6 +78,11 @@ class SolverConfig(ValidatedContainer):
     def output_interval(self) -> int:
         return int(self.simulation_parameters["output_interval"] if isinstance(self.simulation_parameters, dict) else self.simulation_parameters.output_interval)
 
+    @property
+    def advection_weight_base(self) -> float:
+        """Facade: Retrieves advection_weight_base from the simulation_parameters dict."""
+        return float(self.simulation_parameters["advection_weight_base"])
+
     # --- Boundary Property Group ---
     @property
     def boundary_conditions(self) -> list:

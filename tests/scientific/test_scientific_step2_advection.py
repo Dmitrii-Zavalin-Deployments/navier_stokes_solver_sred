@@ -124,3 +124,25 @@ def test_scientific_advection_internal_stencil_uniqueness(state_3d_small):
         f"Internal stencil at index {internal_u_idx} has collapsed indices! "
         f"Found {len(unique_neighbors)} unique: {unique_neighbors}"
     )
+
+def test_scientific_advection_ssot_propagation(state_3d_small):
+    """
+    Rule 2.6: Verify exact propagation of the weight value from 
+    SolverState.config into AdvectionStructure weights.
+    """
+    # Define a specific non-default weight to avoid ambiguity
+    test_val = 0.0625
+    state_3d_small.config.advection_weight_base = test_val
+    
+    # Execute the build logic
+    build_advection_stencils(state_3d_small)
+    
+    # Assert that the weights buffer contains exactly the value 
+    # stored in the config facade
+    actual_weights = state_3d_small.advection.weights
+    
+    assert np.allclose(actual_weights, test_val), \
+        f"Weight mismatch! Expected {test_val}, got {actual_weights[0, 0]}"
+    
+    # Verify the handshake: the facade is indeed returning what we set
+    assert state_3d_small.config.advection_weight_base == test_val
