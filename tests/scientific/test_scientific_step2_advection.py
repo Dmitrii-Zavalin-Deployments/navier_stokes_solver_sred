@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 from src.step2.advection import build_advection_stencils
 from src.solver_state import SolverState
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
 @pytest.fixture
 def state_3d_small():
