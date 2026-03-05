@@ -41,10 +41,10 @@ def test_scientific_advection_clamping_boundary(state_3d_small):
     assert indices.min() == 0
 
 def test_scientific_advection_buffer_integrity():
-    """Rule 2.5: Zero-Debt Check - Buffers must be initialized to zero."""
     state = SolverState()
     state.grid.nx, state.grid.ny, state.grid.nz = 2, 2, 2
-    state.config.advection_weight_base = 0.0
+    # Initialize the internal dict to bypass the read-only property
+    state.config._simulation_parameters = {"advection_weight_base": 0.0}
     
     build_advection_stencils(state)
     np.testing.assert_array_equal(state.advection.weights, 0.0)

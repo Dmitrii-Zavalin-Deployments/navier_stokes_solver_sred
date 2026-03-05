@@ -5,10 +5,9 @@ import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1
 
 def test_scientific_orchestration_mapping(base_input):
-    """Verify the orchestrator correctly maps Input to State."""
-    # Use base_input and override specific test requirements
     base_input.grid.nx, base_input.grid.ny, base_input.grid.nz = 4, 4, 4
-    
+    # Manually update the mask to match the new volume
+    base_input.mask = [1] * 64 
     state = orchestrate_step1(base_input)
     
     # Verify Geometry
@@ -63,9 +62,7 @@ def test_scientific_mask_integrity(base_input):
     assert np.all(state.masks.is_fluid)
 
 def test_scientific_audit_rho_guard(base_input):
-    """Verify the firewall catches non-physical fluid properties."""
-    # Assuming internal access or public setter for validation tests
-    base_input.fluid_properties.density = -5.0
-    
+    # Bypass the setter to inject a bad value for testing the auditor
+    base_input.fluid_properties._density = -5.0 
     with pytest.raises(ValueError, match="Audit Failed: Non-physical density"):
         orchestrate_step1(base_input)
