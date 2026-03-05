@@ -55,24 +55,26 @@ def state_solver():
     return state
 
 def test_solver_pressure_convergence(state_solver):
-    """Verifies the formula: rhs = (rho/dt) * div(V*) and CG convergence."""
     from src.step3.solver import solve_pressure
     
-    # Setup: rho=1000, dt=0.1 -> multiplier = 10000
-    # Create a dummy divergence matrix that just picks the first U component
+    # We leave Cell 0 as the Anchor (it will be 0.0)
+    # We put the divergence in Cell 1 (the neighbor)
     div_data = np.zeros((27, 81))
-    div_data[0, 0] = 1.0 # Div(V*) = U_star[0]
+    div_data[1, 0] = 1.0  
     state_solver.operators._divergence = sparse.csr_matrix(div_data)
     
-    # Set U_star[0,0,0] = 1.0
     state_solver.fields.U_star[0, 0, 0] = 1.0
     
     status = solve_pressure(state_solver)
     
-    # Expected RHS[0] = 10000 * 1.0 = 10000
-    # Since A is Identity, P[0] should be 10000
     assert status == "converged"
-    assert state_solver.fields.P[0, 0, 0] == pytest.approx(10000.0)
+    
+    # Cell 1 should now show the calculated pressure (10,000)
+    # P[1, 0, 0] is the 3D coordinate for flat index 1 in Fortran order
+    assert state_solver.fields.P[1, 0, 0] == pytest.approx(10000.0)
+    
+    # Cell 0 should still be exactly 0.0 (the anchor)
+    assert state_solver.fields.P[0, 0, 0] == 0.0
 
 def test_solver_pressure_anchoring(state_solver):
     """Verifies Rule 5: Dynamic anchoring at the first fluid cell."""
