@@ -63,18 +63,19 @@ def test_scientific_orchestration_health_baseline(mock_config, fresh_state):
 
 def test_scientific_orchestration_missing_config(tmp_path, fresh_state):
     """Rule 2.3: Verify robust failure when config.json is absent."""
-    os.chdir(tmp_path) # Ensure we are in a directory without the file
+    os.chdir(tmp_path) 
     with pytest.raises(FileNotFoundError, match="Critical Error: 'config.json' not found"):
         orchestrate_step2(fresh_state)
 
 def test_scientific_orchestration_malformed_config(tmp_path, fresh_state):
-    """Rule 2.4: Verify JSONDecodeError handling."""
+    """Rule 2.4: Verify JSONDecodeError handling with detailed context."""
     config_path = tmp_path / "config.json"
     with open(config_path, "w") as f:
         f.write("NOT_JSON{!!}")
     
     os.chdir(tmp_path)
-    with pytest.raises(ValueError, match="is not a valid JSON file"):
+    # Match against the improved error logging in orchestrate_step2
+    with pytest.raises(ValueError, match="Critical Error: 'config.json' is not a valid JSON file"):
         orchestrate_step2(fresh_state)
 
 def test_scientific_orchestration_missing_triad_key(tmp_path, fresh_state):
@@ -85,13 +86,22 @@ def test_scientific_orchestration_missing_triad_key(tmp_path, fresh_state):
         json.dump(data, f)
     
     os.chdir(tmp_path)
-    with pytest.raises(KeyError, match="Missing required solver setting"):
+    with pytest.raises(KeyError, match="Critical Error: Missing required solver setting"):
         orchestrate_step2(fresh_state)
 
 def test_scientific_ppe_handshake(mock_config, fresh_state):
-    """Rule 2.6: Verify the critical L -> PPE._A pointer assignment."""
+    """Rule 2.6: Verify the critical L -> PPE._A pointer assignment and _preconditioner reset."""
     state = orchestrate_step2(fresh_state)
     
-    # Check that the PPE solver's matrix is the same as the numerical operator
+    # Verify pointers are synchronized
     assert state.ppe._A is state.operators.laplacian
     assert state.ppe._preconditioner is None
+
+def test_scientific_operator_integrity(mock_config, fresh_state):
+    """Rule 2.7: Ensure matrices are not just initialized, but populated with physics."""
+    state = orchestrate_step2(fresh_state)
+    
+    # 4x4x4 grid results in a 64x64 Laplacian
+    # Ensure it is populated (non-zero elements exist)
+    assert state.operators.laplacian.nnz > 0
+    assert state.operators.laplacian.shape == (64, 64)
