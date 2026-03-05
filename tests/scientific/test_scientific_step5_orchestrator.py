@@ -60,3 +60,19 @@ def test_orchestrator_completion_signal(state_for_orchestration, capsys):
         orchestrate_step5(state_for_orchestration)
         captured = capsys.readouterr().out
         assert "DEBUG [Step 5 Orchestrator]: >>> SIGNALING SIMULATION COMPLETION <<<" in captured
+
+def test_orchestrator_modulo_silence(state_for_orchestration, capsys):
+    """
+    Scientific check: Verifies that the orchestrator remains silent 
+    on non-interval iterations to preserve I/O performance.
+    """
+    state_for_orchestration.iteration = 23 # Not a multiple of 10
+    
+    with patch("src.step5.orchestrate_step5.record_snapshot"), \
+         patch("src.step5.orchestrate_step5.synchronize_terminal_state"):
+        
+        orchestrate_step5(state_for_orchestration)
+        captured = capsys.readouterr().out
+        
+        # Should NOT contain the sync message
+        assert "DEBUG [Step 5 Orchestrator]: Syncing Iteration" not in captured
