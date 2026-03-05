@@ -63,7 +63,7 @@ def test_scientific_composite_laplacian(state_3d_small, capsys):
     captured = capsys.readouterr().out
     
     L = state_3d_small.operators.laplacian
-    assert "Laplacian (D@G) nnz:" in captured
+    assert "Laplacian nnz:" in captured
     assert L.nnz > 0
     assert L.shape == (27, 27)
     
@@ -121,7 +121,9 @@ def test_scientific_laplacian_symmetry(state_3d_small):
     
     # Check a few off-diagonal elements
     # If L[i, j] exists, L[j, i] must be identical
-    diff = (L - L.T)
+    # Symmetry is broken at index 0 due to pinning. Check submatrix [1:, 1:]
+    L_sub = L[1:, 1:]
+    diff = (L_sub - L_sub.T)
     # Check the norm of the difference
     assert diff.nnz == 0 or np.allclose(diff.data, 0, atol=1e-10), "Laplacian is not symmetric!"
 
@@ -131,7 +133,7 @@ def test_scientific_laplacian_conservation(state_3d_small):
     L = state_3d_small.operators.laplacian
     
     # Sum across columns for each row
-    row_sums = np.array(L.sum(axis=1)).flatten()
+    row_sums = np.array(L.sum(axis=1)).flatten()[1:]
     
     # In a pure Neumann setup, all rows sum to 0.
     # Note: If you have a Dirichlet point for pressure, one row will be different.
