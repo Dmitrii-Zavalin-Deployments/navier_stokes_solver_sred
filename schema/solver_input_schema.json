@@ -100,7 +100,8 @@
       "required": [
         "time_step",
         "total_time",
-        "output_interval"
+        "output_interval",
+        "advection_weight_base"
       ],
       "properties": {
         "time_step": {
