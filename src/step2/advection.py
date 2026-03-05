@@ -35,42 +35,39 @@ def build_advection_stencils(state: SolverState) -> None:
 
     current_dof = 0
 
-    # 2. Map U-Components (Faces at i-1/2, j, k)
-    # Surrounding P-cells: (i-1,j,k) and (i,j,k)
+    # 2. Map U-Components (i-staggered)
     for k in range(nz):
         for j in range(ny):
             for i in range(nx + 1):
                 indices[current_dof, :] = [
                     get_p_idx(i, j, k),     get_p_idx(i-1, j, k),
-                    get_p_idx(i, j-1, k),   get_p_idx(i-1, j-1, k),
-                    get_p_idx(i, j, k-1),   get_p_idx(i-1, j, k-1),
-                    get_p_idx(i, j-1, k-1), get_p_idx(i-1, j-1, k-1)
+                    get_p_idx(i, j+1, k),   get_p_idx(i-1, j+1, k),
+                    get_p_idx(i, j, k+1),   get_p_idx(i-1, j, k+1),
+                    get_p_idx(i, j+1, k+1), get_p_idx(i-1, j+1, k+1)
                 ]
                 current_dof += 1
 
-    # 3. Map V-Components (Faces at i, j-1/2, k)
-    # Surrounding P-cells: (i,j-1,k) and (i,j,k)
+    # 3. Map V-Components (j-staggered)
     for k in range(nz):
         for j in range(ny + 1):
             for i in range(nx):
                 indices[current_dof, :] = [
                     get_p_idx(i, j, k),     get_p_idx(i, j-1, k),
-                    get_p_idx(i-1, j, k),   get_p_idx(i-1, j-1, k),
-                    get_p_idx(i, j, k-1),   get_p_idx(i, j-1, k-1),
-                    get_p_idx(i-1, j, k-1), get_p_idx(i-1, j-1, k-1)
+                    get_p_idx(i+1, j, k),   get_p_idx(i+1, j-1, k),
+                    get_p_idx(i, j, k+1),   get_p_idx(i, j-1, k+1),
+                    get_p_idx(i+1, j, k+1), get_p_idx(i+1, j-1, k+1)
                 ]
                 current_dof += 1
 
-    # 4. Map W-Components (Faces at i, j, k-1/2)
-    # Surrounding P-cells: (i,j,k-1) and (i,j,k)
+    # 4. Map W-Components (k-staggered)
     for k in range(nz + 1):
         for j in range(ny):
             for i in range(nx):
                 indices[current_dof, :] = [
                     get_p_idx(i, j, k),     get_p_idx(i, j, k-1),
-                    get_p_idx(i-1, j, k),   get_p_idx(i-1, j, k-1),
-                    get_p_idx(i, j-1, k),   get_p_idx(i, j-1, k-1),
-                    get_p_idx(i-1, j-1, k), get_p_idx(i-1, j-1, k-1)
+                    get_p_idx(i+1, j, k),   get_p_idx(i+1, j, k-1),
+                    get_p_idx(i, j+1, k),   get_p_idx(i, j+1, k-1),
+                    get_p_idx(i+1, j+1, k), get_p_idx(i+1, j+1, k-1)
                 ]
                 current_dof += 1
 

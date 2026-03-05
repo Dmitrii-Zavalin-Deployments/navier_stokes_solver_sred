@@ -101,13 +101,26 @@ def test_scientific_advection_internal_stencil_uniqueness(state_3d_small):
     Scientific check: For an internal node, the stencil must point to 
     8 distinct neighbors (no collapsed corners).
     """
-    # Use 3x3x3 to ensure we have a true "internal" cell at (1,1,1)
-    state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = 3, 3, 3
+    # Use 3x3x3 to ensure we have a true 'internal' region.
+    # U-grid shape: (nx+1, ny, nz) = (4, 3, 3)
+    nx, ny, nz = 3, 3, 3
+    state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = nx, ny, nz
     build_advection_stencils(state_3d_small)
     
-    # Locate a U-node that is far from boundaries
-    # Calculation: find an index in the middle of the U-range
     indices = state_3d_small.advection.indices
-    internal_u_stencil = indices[14] # Purely internal sample
     
-    assert len(np.unique(internal_u_stencil)) == 8, "Internal stencil has collapsed indices!"
+    # Calculation for a true internal U-node:
+    # Target (i=2, j=1, k=1)
+    # Index = i + j*(nx+1) + k*(nx+1)*ny
+    # Index = 2 + 1*(4) + 1*(4*3) = 2 + 4 + 12 = 18
+    internal_u_idx = 18
+    internal_u_stencil = indices[internal_u_idx]
+    
+    unique_neighbors = np.unique(internal_u_stencil)
+    
+    # Physics Validation: A trilinear stencil for advection must sample 
+    # the 8 surrounding pressure cells to conserve momentum correctly.
+    assert len(unique_neighbors) == 8, (
+        f"Internal stencil at index {internal_u_idx} has collapsed indices! "
+        f"Found {len(unique_neighbors)} unique: {unique_neighbors}"
+    )
