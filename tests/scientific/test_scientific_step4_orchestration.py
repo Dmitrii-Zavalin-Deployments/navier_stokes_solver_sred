@@ -12,41 +12,46 @@ class MockDiagnostics(dict):
 
 @pytest.fixture
 def state_pre_orchestration():
-    """Sets up a fully-dimensioned and physically-defined state."""
+    """Sets up a physically and numerically complete state for audit validation."""
     state = SolverState()
     
-    # 1. Initialize Grid (for dx/dy/dz)
+    # 1. Grid Definition (for spatial steps dx, dy, dz)
     state.grid._nx, state.grid._ny, state.grid._nz = 3, 3, 3
     state.grid._x_min, state.grid._x_max = 0.0, 1.0
     state.grid._y_min, state.grid._y_max = 0.0, 1.0
     state.grid._z_min, state.grid._z_max = 0.0, 1.0
     
-    # 2. Initialize Health (for max_u)
-    state.health._max_u = 1.0
-    state.health._is_stable = True
+    # 2. Simulation Parameters (The 'requested' time step)
+    # We set it to 0.01, which is safely below the 0.166 CFL limit seen in logs
+    state.config._simulation_parameters = {
+        "time_step": 0.01,
+        "max_iterations": 100
+    }
     
-    # 3. Initialize Fluid Properties (for Diffusion/Viscosity audit)
-    # This prevents the 'fluid_properties' Access Error
+    # 3. Fluid Properties (for Diffusion/Viscosity audit)
     state.config._fluid_properties = {
         "viscosity": 0.01,
         "density": 1.0
     }
     
+    # 4. Health & Fields (for CFL max_u audit)
+    state.health._max_u = 1.0
+    state.health._is_stable = True
     state.time = 0.5
     
-    # 4. Initialize interior fields
     state.fields.P = np.ones((3, 3, 3))
     state.fields.U = np.ones((4, 3, 3))
     state.fields.V = np.ones((3, 4, 3))
     state.fields.W = np.ones((3, 3, 4))
     
-    # 5. Setup BC Lookup
+    # 5. Boundary Conditions Lookup
     state.bc_lookup = {
         "x_min": {"type": "wall"}, "x_max": {"type": "wall"},
         "y_min": {"type": "wall"}, "y_max": {"type": "wall"},
         "z_min": {"type": "wall"}, "z_max": {"type": "wall"}
     }
     
+    # 6. Diagnostics Mock
     state.diagnostics = MockDiagnostics()
     state.diagnostics.bc_verification_passed = False
     state.diagnostics.initial_cfl_dt = 0.0
