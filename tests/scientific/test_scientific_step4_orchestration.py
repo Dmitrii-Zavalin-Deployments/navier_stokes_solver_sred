@@ -12,24 +12,29 @@ class MockDiagnostics(dict):
 
 @pytest.fixture
 def state_pre_orchestration():
-    """Sets up a state that is NOT yet ready for the time loop."""
+    """Sets up a fully-dimensioned state for orchestration testing."""
     state = SolverState()
     
-    # Initialize physical grid bounds (Required for audit calculations)
+    # 1. Initialize Grid (Required for dx/dy/dz calculations)
     state.grid._nx, state.grid._ny, state.grid._nz = 3, 3, 3
     state.grid._x_min, state.grid._x_max = 0.0, 1.0
     state.grid._y_min, state.grid._y_max = 0.0, 1.0
     state.grid._z_min, state.grid._z_max = 0.0, 1.0
     
+    # 2. Initialize Health (Required for CFL audit)
+    # We set a max_u of 1.0 so the CFL calculation is 1/3 (approx 0.33)
+    state.health._max_u = 1.0
+    state.health._is_stable = True
+    
     state.time = 0.5
     
-    # Initialize basic interior fields
+    # 3. Initialize interior fields (Required for Ghost Mapping)
     state.fields.P = np.ones((3, 3, 3))
     state.fields.U = np.ones((4, 3, 3))
     state.fields.V = np.ones((3, 4, 3))
     state.fields.W = np.ones((3, 3, 4))
     
-    # Setup BC Lookup (SSoT)
+    # 4. Setup BC Lookup
     state.bc_lookup = {
         "x_min": {"type": "wall"}, "x_max": {"type": "wall"},
         "y_min": {"type": "wall"}, "y_max": {"type": "wall"},
