@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
-
 from src.solver_input import SolverInput
 from src.solver_state import SolverState
 
