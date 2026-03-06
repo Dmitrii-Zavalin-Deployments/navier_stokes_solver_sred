@@ -1,8 +1,11 @@
 # src/step2/operators.py
 
 from __future__ import annotations
+
 import scipy.sparse as sp
+
 from src.solver_state import SolverState
+
 
 def get_idx(i: int, j: int, k: int, nx: int, ny: int) -> int:
     return i + j * nx + k * nx * ny

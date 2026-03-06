@@ -1,9 +1,10 @@
 # src/step2/diffusion.py
 
 from __future__ import annotations
-import scipy.sparse as sp
+
 from src.solver_state import SolverState
-from src.step2.operators import build_laplacian, build_gradient
+from src.step2.operators import build_laplacian
+
 
 def build_diffusion_operators(state: SolverState) -> None:
     """

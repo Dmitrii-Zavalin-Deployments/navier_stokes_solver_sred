@@ -1,7 +1,8 @@
 from __future__ import annotations
-import scipy.sparse as sp
+
 from src.solver_state import SolverState
 from src.step2.operators import build_gradient  # Centralized SSoT
+
 
 def build_advection_operators(state: SolverState) -> None:
     """
