@@ -23,34 +23,40 @@ logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
 def run_solver_from_file(input_path: str) -> str:
-    """Master Controller: Orchestrates the pipeline with strict logic separation."""
+    """Master Controller: Orchestrates the pipeline with strict contract enforcement."""
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file missing at {input_path}")
+
+    # Path to the single source of truth contract
+    SCHEMA_PATH = Path("schema/solver_input_schema.json")
 
     try:
         with open(input_path) as f:
             raw_data = json.load(f)
         
-        # 1. INITIALIZATION
+        # 1. INITIALIZATION & STATE ASSEMBLY
         input_container = SolverInput.from_dict(raw_data)
         state = orchestrate_step1(input_container)
         state = orchestrate_step2(state)
+
+        # FIREWALL: Ensure the fully initialized state matches the master contract
+        # before the simulation enters the physics loop.
+        state.validate_against_schema(str(SCHEMA_PATH))
 
         if DEBUG:
             logger.info(f"🚀 Starting Simulation: {state.config.case_name}")
         
         # 2. MAIN EXECUTION LOOP
         while state.ready_for_time_loop:
-            # A. Physics & Boundaries (Steps 3 & 4)
+            # A. Physics & Boundaries
             state = orchestrate_step3(state)
             state = orchestrate_step4(state)
             
-            # B. ODOMETER UPDATE (Authority check happens after this)
+            # B. ODOMETER UPDATE
             state.iteration += 1
             state.time += state.dt
             
-            # C. FINALIZATION & GUARD (Step 5)
-            # Step 5 now decides if state.ready_for_time_loop remains True
+            # C. FINALIZATION & GUARD
             state = orchestrate_step5(state)
             
             if DEBUG and state.iteration % 10 == 0:

@@ -1,11 +1,13 @@
 # src/common/base_container.py
+
 from typing import Any
-
+import json
 import numpy as np
-
+import jsonschema
 
 class ValidatedContainer:
-    """The 'Security Guard' logic. Zero dependencies on physics or state."""
+    """The 'Security Guard' logic. Now with runtime contract enforcement."""
+    
     def _get_safe(self, name: str) -> Any:
         attr_name = f"_{name}"
         if not hasattr(self, attr_name):
@@ -19,6 +21,17 @@ class ValidatedContainer:
         if value is not None and not isinstance(value, expected_type):
             raise TypeError(f"Validation Error: '{name}' must be {expected_type}, got {type(value)}.")
         setattr(self, f"_{name}", value)
+
+    def validate_against_schema(self, schema_path: str):
+        """
+        Final Firewall: Validates the current state (as a dict) 
+        against the master JSON schema file.
+        """
+        with open(schema_path, 'r') as f:
+            schema = json.load(f)
+        
+        # Validates current instance state against the contract
+        jsonschema.validate(instance=self.to_dict(), schema=schema)
 
     def to_dict(self) -> dict:
         out = {}
