@@ -23,7 +23,7 @@ def test_logic_gate_1_structural_unit_cube():
     })
     
     # 2. Execution
-    state = orchestrate_step1(SolverInput.from_dict(input_data))
+    state = orchestrate_step1(SolverInput.from_dict(input_data), iteration=0, time=0.0)
     
     # 3. Verification of Analytical Truth
     assert state.grid.dx == 0.5

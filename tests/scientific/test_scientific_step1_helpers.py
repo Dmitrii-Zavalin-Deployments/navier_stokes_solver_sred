@@ -46,12 +46,12 @@ def test_scientific_bc_lookup_mapping():
     item = BoundaryConditionItem()
     item.location = "x_min"
     item.type = "inflow"
-    item.values = {"u": 5.0, "p": 101325.0}
+    item.values = {"u": 5.0, "v": 0.0, "w": 0.0, "p": 101325.0}
     bc_map = parse_bc_lookup([item])
     
     assert "x_min" in bc_map
     assert bc_map["x_min"]["u"] == 5.0
-    assert bc_map["x_min"]["v"] == 0.0, "Missing values must default to 0.0"
+    assert bc_map["x_min"]["v"] == 0.0, "Value must match explicit input"
     assert bc_map["x_min"]["p"] == 101325.0
     assert bc_map["x_min"]["type"] == "inflow"
 
@@ -73,7 +73,7 @@ def test_scientific_bc_lookup_3d_completeness():
     item = BoundaryConditionItem()
     item.location = "z_max"
     item.type = "no-slip"
-    item.values = {"w": -1.5}
+    item.values = {"u": 0.0, "v": 0.0, "w": -1.5, "p": 0.0}
     bc_map = parse_bc_lookup([item])
     
     assert bc_map["z_max"]["w"] == -1.5

@@ -32,12 +32,12 @@ def solver_input_schema_dummy() -> dict:
             "advection_weight_base": 0.125,
         },
         "boundary_conditions": [
-            {"location": "x_min", "type": "no-slip", "values": {"u": 0.0}, "comment": "wall"},
+            {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
             {"location": "x_max", "type": "outflow", "values": {}, "comment": "exit"},
-            {"location": "y_min", "type": "no-slip", "values": {"v": 0.0}, "comment": "wall"},
-            {"location": "y_max", "type": "no-slip", "values": {"v": 0.0}, "comment": "wall"},
-            {"location": "z_min", "type": "no-slip", "values": {"w": 0.0}, "comment": "wall"},
-            {"location": "z_max", "type": "no-slip", "values": {"w": 0.0}, "comment": "wall"},
+            {"location": "y_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
+            {"location": "y_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
+            {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
+            {"location": "z_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
         ],
         "mask": mask_flat,
         "external_forces": {

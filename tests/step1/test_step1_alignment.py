@@ -1,3 +1,5 @@
+# tests/step1/test_step1_alignment.py
+
 import pytest
 import numpy as np
 from src.step1.orchestrate_step1 import orchestrate_step1
@@ -20,7 +22,7 @@ def test_step1_alignment_logic_to_frozen_truth():
     input_obj = SolverInput.from_dict(raw_json)
     
     # 2. Execution: Run the actual orchestration logic
-    result_state = orchestrate_step1(input_obj)
+    result_state = orchestrate_step1(input_obj, iteration=0, time=0.0)
     
     # 3. Reference: The 'Frozen Truth'
     expected_state = make_step1_output_dummy(nx=2, ny=2, nz=2)
