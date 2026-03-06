@@ -143,3 +143,31 @@ def test_scientific_mask_non_symmetric_order_f(base_input):
     # Check Y-axis progression
     assert mask_3d[0, 1, 0] == 2
     assert mask_3d[1, 2, 0] == 5
+
+def test_scientific_parse_bc_missing_key():
+    """Rule 5: Ensure direct access raises KeyError when required values are missing."""
+    item = BoundaryConditionItem()
+    item.location = "x_min"
+    item.type = "inflow"
+    # 'p' is missing
+    item.values = {"u": 0.0, "v": 0.0, "w": 0.0} 
+    
+    with pytest.raises(KeyError):
+        parse_bc_lookup([item])
+
+def test_scientific_mask_invalid_type_rejection():
+    """Rule 7: Ensure the mask helper handles non-integer types strictly."""
+    grid = base_input.grid
+    grid.nx, grid.ny, grid.nz = 1, 1, 1
+    # Passing a string in the list should raise a ValueError during conversion
+    with pytest.raises(ValueError):
+        generate_3d_masks(["a"], grid)
+
+def test_scientific_allocation_negative_grid():
+    """Rule 5: Ensure logic fails immediately on non-physical grid inputs."""
+    grid = base_input.grid
+    grid.nx, grid.ny, grid.nz = -1, 10, 10
+    # Current implementation might create empty arrays; 
+    # if you want to enforce physics, this should raise a ValueError
+    with pytest.raises(ValueError):
+        allocate_staggered_fields(grid)
