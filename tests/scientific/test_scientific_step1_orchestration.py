@@ -95,7 +95,8 @@ def test_scientific_boundary_lookup_integrity(base_input):
 
     print(f"DEBUG: Lookup contents for x_min: {lookup['x_min']}")
 
-    assert np.allclose(lookup["x_min"]["values"], [1,2,3])
+    lookup_x_min = lookup["x_min"]
+    assert np.allclose([lookup_x_min["u"], lookup_x_min["v"], lookup_x_min["w"]], [1.0, 0.0, 0.0])
 
 def test_scientific_boundary_condition_mapping(base_input):
     bc = base_input.boundary_conditions.items[0]
