@@ -1,9 +1,11 @@
 # src/common/base_container.py
 
-from typing import Any
 import json
-import numpy as np
+from typing import Any
+
 import jsonschema
+import numpy as np
+
 
 class ValidatedContainer:
     """The 'Security Guard' logic. Now with runtime contract enforcement."""
@@ -27,7 +29,7 @@ class ValidatedContainer:
         Final Firewall: Validates the current state (as a dict) 
         against the master JSON schema file.
         """
-        with open(schema_path, 'r') as f:
+        with open(schema_path) as f:
             schema = json.load(f)
         
         # Validates current instance state against the contract
