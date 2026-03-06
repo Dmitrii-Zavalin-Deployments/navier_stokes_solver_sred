@@ -57,6 +57,10 @@ jobs:
         run: |
           vulture src --min-confidence 70
 
+      - name: 🚀 Static Analysis & Lint (Ruff)
+        run: |
+          ruff check src --select E9,F63,F7,F82,F401,F841
+
       - name: 🧪 Run Unit Tests (Pytest + Coverage)
         run: |
           echo "🔍 Running unit tests..."
