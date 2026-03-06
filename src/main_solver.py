@@ -41,7 +41,15 @@ def run_solver_from_file(input_path: str) -> str:
 
         # FIREWALL: Ensure the fully initialized state matches the master contract
         # before the simulation enters the physics loop.
-        state.validate_against_schema(str(SCHEMA_PATH))
+        try:
+            state.validate_against_schema(str(SCHEMA_PATH))
+        except jsonschema.exceptions.ValidationError as e:
+            print("\n" + "!" * 60)
+            print("CONTRACT VIOLATION: Solver State does not match Schema")
+            print(f"Path to error: {'.'.join([str(p) for p in e.path])}")
+            print(f"Error message: {e.message}")
+            print("!" * 60 + "\n")
+            raise  # Re-raise to stop the execution
 
         if DEBUG:
             logger.info(f"🚀 Starting Simulation: {state.config.case_name}")
