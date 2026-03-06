@@ -1,9 +1,10 @@
 # tests/logic_gate/test_step2_mms.py
 
-import pytest
 import numpy as np
+
 from src.step2.orchestrate_step2 import orchestrate_step2
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def test_logic_gate_2_quadratic_laplacian():
     """

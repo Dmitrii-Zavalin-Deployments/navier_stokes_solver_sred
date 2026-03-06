@@ -1,6 +1,7 @@
 # tests/step3/test_update_health.py
 
 import numpy as np
+
 from src.step3.update_health import update_health
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 

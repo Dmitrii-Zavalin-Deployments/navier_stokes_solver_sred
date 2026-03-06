@@ -1,7 +1,7 @@
 # tests/step5/test_step5_divergence_free_stability_over_time.py
 
 import types
-from unittest.mock import MagicMock
+
 from src.step5.orchestrate_step5_state import orchestrate_step5_state
 
 

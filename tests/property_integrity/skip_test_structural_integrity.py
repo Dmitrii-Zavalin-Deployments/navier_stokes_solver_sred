@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
-from src.solver_state import SolverState
+import pytest
+
 from src.solver_input import SolverInput
 
 # --- PIPELINE IMPORTS ---

@@ -2,9 +2,11 @@
 
 import numpy as np
 from scipy.sparse import issparse
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_schema import EXPECTED_STEP2_SCHEMA
+
 from src.step2.orchestrate_step2 import orchestrate_step2
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def test_step2_output_matches_schema():
     """

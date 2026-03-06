@@ -1,11 +1,12 @@
 # tests/step5/test_step5_full_pipeline_step4_to_step5_to_final_validation.py
 
 import types
-from unittest.mock import MagicMock
+
+import jsonschema
+from tests.helpers.final_output_schema import final_output_schema
+
 from src.step4.orchestrate_step4_state import orchestrate_step4_state
 from src.step5.orchestrate_step5_state import orchestrate_step5_state
-from tests.helpers.final_output_schema import final_output_schema
-import jsonschema
 
 
 def make_step3_stub(monkeypatch):

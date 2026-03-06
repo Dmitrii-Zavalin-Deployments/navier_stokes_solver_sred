@@ -1,10 +1,11 @@
 # tests/step3/test_step3_boundary_integration.py
 
 import numpy as np
-import pytest
-from src.step3.correct_velocity import correct_velocity
+
 from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_post
+from src.step3.correct_velocity import correct_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def setup_mock_operators(state):
     """Inject mock gradient operators with staggered output shapes."""

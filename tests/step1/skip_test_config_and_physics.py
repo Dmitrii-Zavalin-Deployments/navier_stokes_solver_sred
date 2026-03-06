@@ -1,14 +1,15 @@
 # tests/step1/test_config_and_physics.py
 
-import pytest
+
 import numpy as np
-import math
-from src.step1.parse_config import parse_config
+import pytest
+
 from src.step1.compute_derived_constants import compute_derived_constants
-from src.step1.validate_physical_constraints import validate_physical_constraints
 from src.step1.orchestrate_step1 import orchestrate_step1_state
-from src.solver_state import SolverState
+from src.step1.parse_config import parse_config
+from src.step1.validate_physical_constraints import validate_physical_constraints
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def valid_state():

@@ -1,7 +1,7 @@
 # src/solver_input.py
 
 from dataclasses import dataclass, field
-from typing import List
+
 from src.common.base_container import ValidatedContainer
 
 # =========================================================
@@ -194,10 +194,10 @@ class BoundaryConditionItem(ValidatedContainer):
 
 @dataclass
 class BoundaryConditionsInput(ValidatedContainer):
-    _items: List[BoundaryConditionItem] = field(default_factory=list)
+    _items: list[BoundaryConditionItem] = field(default_factory=list)
 
     @property
-    def items(self) -> List[BoundaryConditionItem]: return self._get_safe("items")
+    def items(self) -> list[BoundaryConditionItem]: return self._get_safe("items")
     @items.setter
     def items(self, v: list):
         processed = []

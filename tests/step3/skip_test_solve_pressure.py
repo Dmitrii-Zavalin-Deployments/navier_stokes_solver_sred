@@ -1,10 +1,11 @@
 # tests/step3/test_solve_pressure.py
 
 import numpy as np
-import pytest
 from scipy.sparse import eye
+
 from src.step3.solve_pressure import solve_pressure
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_config_key_mapping_and_logic():
     """Verify solver correctly utilizes tolerance and atol from config."""

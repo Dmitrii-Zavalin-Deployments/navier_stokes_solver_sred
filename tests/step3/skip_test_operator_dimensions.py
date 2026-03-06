@@ -1,6 +1,5 @@
-import pytest
-import numpy as np
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_staggered_operator_contract():
     """

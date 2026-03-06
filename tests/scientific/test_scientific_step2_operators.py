@@ -1,9 +1,11 @@
 # tests/scientific/test_scientific_step2_operators.py
 
-import pytest
 import numpy as np
+import pytest
 import scipy.sparse as sp
+
 from src.step2.operators import build_numerical_operators
+
 
 def test_scientific_operators_dof_handshake(state_3d_small, capsys):
     """Rule 2.1: Verify DOF mapping and Debug Handshake prints."""

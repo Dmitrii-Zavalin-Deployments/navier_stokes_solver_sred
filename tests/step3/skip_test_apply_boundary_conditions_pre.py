@@ -1,8 +1,10 @@
 # tests/step3/test_apply_boundary_conditions_pre.py
 
 import numpy as np
+
 from src.step3.apply_boundary_conditions_pre import apply_boundary_conditions_pre
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_solid_zeroing():
     """Faces adjacent to internal solid cells must be zeroed."""

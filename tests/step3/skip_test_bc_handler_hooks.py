@@ -1,7 +1,7 @@
 # tests/step3/test_bc_handler_hooks_called.py
 
-from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from src.step3.orchestrate_step3 import orchestrate_step3_state
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
 
 def test_bc_handler_hooks_called():

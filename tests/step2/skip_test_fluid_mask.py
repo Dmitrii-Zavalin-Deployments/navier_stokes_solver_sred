@@ -6,6 +6,7 @@ import pytest
 from src.step2.create_fluid_mask import create_fluid_mask
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
+
 def make_state_with_mask(mask: np.ndarray):
     nx, ny, nz = mask.shape
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)

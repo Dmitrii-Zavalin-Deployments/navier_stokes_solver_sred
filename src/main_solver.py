@@ -1,14 +1,14 @@
 # src/main_solver.py
 
-import shutil
 import json
-import os
-import sys
 import logging
+import os
+import shutil
+import sys
 from pathlib import Path
 
-from src.solver_state import SolverState
 from src.solver_input import SolverInput
+from src.solver_state import SolverState
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
@@ -28,7 +28,7 @@ def run_solver_from_file(input_path: str) -> str:
         raise FileNotFoundError(f"Input file missing at {input_path}")
 
     try:
-        with open(input_path, 'r') as f:
+        with open(input_path) as f:
             raw_data = json.load(f)
         
         # 1. INITIALIZATION

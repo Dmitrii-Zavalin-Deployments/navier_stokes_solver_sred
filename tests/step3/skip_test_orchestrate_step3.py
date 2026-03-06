@@ -1,10 +1,11 @@
 # tests/step3/test_orchestrate_step3.py
 
 import numpy as np
-import pytest
 from scipy.sparse import csr_matrix, eye
+
 from src.step3.orchestrate_step3 import orchestrate_step3
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def _prepare_mock_state(nx):
     """

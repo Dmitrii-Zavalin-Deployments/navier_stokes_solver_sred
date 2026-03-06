@@ -1,9 +1,11 @@
 # tests/step2/test_laplacian_coverage_edge_cases.py
 
-import pytest
 import numpy as np
-from src.step2.build_laplacian_operators import build_laplacian_operators
+import pytest
+
 from src.solver_state import SolverState
+from src.step2.build_laplacian_operators import build_laplacian_operators
+
 
 def test_laplacian_handles_none_boundary_conditions():
     """

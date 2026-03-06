@@ -1,12 +1,15 @@
 # tests/scientific/test_scientific_step5_archivist.py
 
 import os
-import pytest
 import shutil
 import tempfile
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
+
+import pytest
+
 from src.solver_state import SolverState
 from src.step5.archivist import record_snapshot
+
 
 @pytest.fixture
 def state_for_archiving():
@@ -58,7 +61,7 @@ def test_archivist_vtk_header_formula(state_for_archiving):
         
         snap_path = state.manifest.saved_snapshots[0]
         
-        with open(snap_path, "r") as f:
+        with open(snap_path) as f:
             content = f.read()
             
         # Formula Check: DIMENSIONS nx ny nz

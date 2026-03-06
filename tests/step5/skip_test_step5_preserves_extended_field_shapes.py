@@ -1,8 +1,10 @@
 # tests/step5/test_step5_preserves_extended_field_shapes.py
 
-import numpy as np
 import types
 from unittest.mock import MagicMock
+
+import numpy as np
+
 from src.step5.orchestrate_step5_state import orchestrate_step5_state
 
 

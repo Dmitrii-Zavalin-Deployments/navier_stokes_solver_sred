@@ -1,6 +1,7 @@
 # tests/step4/test_initialize_extended_fields_copy.py
 
 import numpy as np
+
 from src.step4.initialize_extended_fields import initialize_extended_fields
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 

@@ -1,16 +1,16 @@
 # tests/step1/test_step1_orchestration.py
 
-import pytest
 import copy
-import numpy as np
 
+import numpy as np
+import pytest
+
+from src.step1.allocate_fields import allocate_fields
+from src.step1.apply_initial_conditions import apply_initial_conditions
 from src.step1.orchestrate_step1 import orchestrate_step1_state
 from src.step1.parse_config import parse_config
-from src.step1.apply_initial_conditions import apply_initial_conditions
-from src.step1.compute_derived_constants import compute_derived_constants
-from src.step1.allocate_fields import allocate_fields
-from src.step1.assemble_simulation_state import assemble_simulation_state
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def base_input():

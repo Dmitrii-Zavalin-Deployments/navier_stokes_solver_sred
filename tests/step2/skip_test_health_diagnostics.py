@@ -3,10 +3,13 @@
 import numpy as np
 import pytest
 
-from src.step2.compute_initial_health import compute_initial_health
 from src.step2.build_divergence_operator import build_divergence_operator
+from src.step2.compute_initial_health import compute_initial_health
 from src.step2.create_fluid_mask import create_fluid_mask
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy as make_step1_dummy_state
+from tests.helpers.solver_step1_output_dummy import (
+    make_step1_output_dummy as make_step1_dummy_state,
+)
+
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0, dt=0.1):
     """
@@ -78,7 +81,7 @@ def test_health_divergent_field_l2_norm():
     nx, ny, nz = state.grid['nx'], state.grid['ny'], state.grid['nz']
 
     # Create a dummy divergence vector
-    divergence = np.ones((nx * ny * nz))
+    divergence = np.ones(nx * ny * nz)
     expected_norm = np.sqrt(np.sum(divergence**2))
 
     # Test the override path specifically

@@ -1,9 +1,10 @@
 # tests/step2/test_laplacian_coverage_boost.py
 
-import pytest
 import numpy as np
-from src.step2.build_laplacian_operators import build_laplacian_operators
+
 from src.solver_state import SolverState
+from src.step2.build_laplacian_operators import build_laplacian_operators
+
 
 def test_laplacian_fallback_coverage():
     """

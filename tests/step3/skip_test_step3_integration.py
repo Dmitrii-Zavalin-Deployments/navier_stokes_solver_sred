@@ -1,9 +1,8 @@
 # tests/step3/test_step3_integration.py
 
-import numpy as np
+from src.solver_state import SolverState
 from src.step3.orchestrate_step3 import orchestrate_step3_state
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
-from src.solver_state import SolverState
 
 
 def test_step3_integration_minimal():

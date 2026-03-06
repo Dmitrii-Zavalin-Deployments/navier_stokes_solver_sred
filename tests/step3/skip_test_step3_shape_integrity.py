@@ -1,13 +1,15 @@
 # tests/step3/test_step3_shape_integrity.py
 
-import pytest
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix, eye
-from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
-from src.step3.build_ppe_rhs import build_ppe_rhs
-from src.step3.solve_pressure import solve_pressure
-from src.step3.correct_velocity import correct_velocity
+
 from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_post
+from src.step3.build_ppe_rhs import build_ppe_rhs
+from src.step3.correct_velocity import correct_velocity
+from src.step3.solve_pressure import solve_pressure
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_step3_pipeline_shape_integrity():
     """

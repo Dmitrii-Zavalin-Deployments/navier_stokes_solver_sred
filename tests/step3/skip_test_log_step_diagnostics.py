@@ -1,6 +1,7 @@
 # tests/step3/test_log_step_diagnostics.py
 
 import numpy as np
+
 from src.step3.log_step_diagnostics import log_step_diagnostics
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 

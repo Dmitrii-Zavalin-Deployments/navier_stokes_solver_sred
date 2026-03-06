@@ -1,6 +1,7 @@
 # tests/step3/test_external_forces.py
 
 import numpy as np
+
 from src.step3.predict_velocity import predict_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 

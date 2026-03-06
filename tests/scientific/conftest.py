@@ -1,10 +1,13 @@
 # tests/scientific/conftest.py
 
-import pytest
-import numpy as np
 import os
+
+import numpy as np
+import pytest
+
 from tests.helpers.solver_input_schema_dummy import make_solver_input_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def setup_grid_3d(state, n=3, length=0.3):
     """

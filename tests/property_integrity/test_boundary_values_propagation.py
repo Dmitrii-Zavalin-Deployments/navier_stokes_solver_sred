@@ -1,10 +1,12 @@
 # tests/property_integrity/test_boundary_values_propagation.py
 
 import pytest
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
+
 
 @pytest.mark.parametrize("stage_name, factory", [
     ("Step 2", make_step2_output_dummy),

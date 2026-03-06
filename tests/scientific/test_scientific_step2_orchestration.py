@@ -1,12 +1,13 @@
 # tests/scientific/test_scientific_step2_orchestration.py
 
-import pytest
 import json
 import os
-import numpy as np
+
+import pytest
+
 from src.step2.orchestrate_step2 import orchestrate_step2
-from src.solver_state import SolverState
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 @pytest.fixture
 def mock_config(tmp_path):

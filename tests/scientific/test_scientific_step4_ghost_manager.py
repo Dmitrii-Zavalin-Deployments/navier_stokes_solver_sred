@@ -1,8 +1,10 @@
 # tests/scientific/test_scientific_step4_ghost_manager.py
 
-import pytest
 import numpy as np
+import pytest
+
 from src.solver_state import SolverState
+
 
 class AttributeDict(dict):
     """Allows dot notation for mock diagnostics."""

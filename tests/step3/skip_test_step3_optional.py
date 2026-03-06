@@ -3,10 +3,10 @@
 import numpy as np
 import pytest
 
+from src.solver_state import SolverState
 from src.step3.orchestrate_step3 import orchestrate_step3_state
 from src.step3.update_health import update_health
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
-from src.solver_state import SolverState
 
 
 def test_missing_mask_and_fields_raises_runtimeerror():

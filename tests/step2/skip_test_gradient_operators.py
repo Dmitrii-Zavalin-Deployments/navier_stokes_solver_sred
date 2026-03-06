@@ -1,11 +1,14 @@
 # tests/step2/test_gradient_operators.py
 
 import numpy as np
-import pytest
 from scipy.sparse import issparse
+
 from src.step2.build_gradient_operators import build_gradient_operators
 from src.step2.create_fluid_mask import create_fluid_mask
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy as make_step1_dummy_state
+from tests.helpers.solver_step1_output_dummy import (
+    make_step1_output_dummy as make_step1_dummy_state,
+)
+
 
 def make_state(nx=4, ny=4, nz=4, dx=1.0):
     state = make_step1_dummy_state(nx=nx, ny=ny, nz=nz)

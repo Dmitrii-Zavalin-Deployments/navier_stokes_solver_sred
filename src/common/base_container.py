@@ -1,6 +1,8 @@
 # src/common/base_container.py
 from typing import Any
+
 import numpy as np
+
 
 class ValidatedContainer:
     """The 'Security Guard' logic. Zero dependencies on physics or state."""

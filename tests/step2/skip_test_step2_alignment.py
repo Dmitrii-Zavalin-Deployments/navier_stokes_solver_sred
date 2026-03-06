@@ -1,12 +1,14 @@
 # tests/step2/test_step2_alignment.py
 
-import pytest
-import numpy as np
 import json
 import os
+
+import pytest
+
 from src.step2.orchestrate_step2 import orchestrate_step2
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 @pytest.fixture
 def mock_config(tmp_path):

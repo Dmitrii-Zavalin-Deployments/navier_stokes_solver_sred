@@ -1,11 +1,11 @@
 # tests/step3/test_pressure_and_bc_integrity.py
 
 import numpy as np
-import pytest
 from scipy.sparse import eye
-from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_post
+
 from src.step3.solve_pressure import solve_pressure
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_ppe_solid_pressure_zeroing():
     """

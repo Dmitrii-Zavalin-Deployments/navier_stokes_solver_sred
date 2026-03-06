@@ -1,9 +1,11 @@
 # tests/scientific/test_scientific_step3_solver.py
 
-import pytest
 import numpy as np
+import pytest
 from scipy import sparse
+
 from src.solver_state import SolverState
+
 
 class AttributeDict(dict):
     """A dict that allows dot notation access, satisfying the frozen dict type-check."""

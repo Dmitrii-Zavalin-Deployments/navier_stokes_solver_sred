@@ -1,9 +1,12 @@
 # src/io/upload_to_dropbox.py
 
-import dropbox
 import os
 import sys
-from src.io.dropbox_utils import refresh_access_token 
+
+import dropbox
+
+from src.io.dropbox_utils import refresh_access_token
+
 
 def upload_file_to_dropbox(local_file_path, dropbox_folder, refresh_token, client_id, client_secret):
     """Uploads a local file to a specified path on Dropbox."""

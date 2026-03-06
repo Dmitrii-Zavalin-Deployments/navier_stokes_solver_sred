@@ -1,9 +1,11 @@
 # tests/scientific/test_scientific_step4_orchestration.py
 
-import pytest
 import numpy as np
+import pytest
+
 from src.solver_state import SolverState
 from src.step4.orchestrate_step4 import orchestrate_step4
+
 
 class MockDiagnostics(dict):
     """Allows dot notation access for diagnostics."""

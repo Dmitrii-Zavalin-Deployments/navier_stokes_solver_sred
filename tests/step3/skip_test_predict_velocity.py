@@ -2,8 +2,10 @@
 
 import numpy as np
 from scipy.sparse import eye
+
 from src.step3.predict_velocity import predict_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_predict_velocity_viscous_diffusion():
     """Test if velocity increases correctly via diffusion."""

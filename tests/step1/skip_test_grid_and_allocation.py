@@ -1,13 +1,15 @@
 # tests/step1/test_grid_and_allocation.py
 
-import pytest
 import numpy as np
-from src.step1.initialize_grid import initialize_grid
+import pytest
+
+from src.solver_state import SolverState
 from src.step1.allocate_fields import allocate_fields
 from src.step1.assemble_simulation_state import assemble_simulation_state
+from src.step1.initialize_grid import initialize_grid
 from src.step1.verify_cell_centered_shapes import verify_cell_centered_shapes
-from src.solver_state import SolverState
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def dummy_input():

@@ -1,10 +1,11 @@
 # tests/logic_gate/test_step3_mms.py
 
-import pytest
 import numpy as np
+
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def test_logic_gate_3_divergence_pulse():
     """

@@ -2,10 +2,13 @@
 
 # tests/scientific/test_scientific_step5_chronos.py
 
+from unittest.mock import PropertyMock, patch
+
 import pytest
-from unittest.mock import patch, PropertyMock
+
 from src.solver_state import SolverState
 from src.step5.chronos_guard import synchronize_terminal_state
+
 
 @pytest.fixture
 def state_for_chronos():

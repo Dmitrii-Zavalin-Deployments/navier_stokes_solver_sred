@@ -1,7 +1,8 @@
-import pytest
 import numpy as np
-from src.step2.advection import build_advection_stencils
+
 from src.solver_state import SolverState
+from src.step2.advection import build_advection_stencils
+
 
 def test_scientific_advection_dof_handshake(state_3d_small, capsys):
     """Rule 2.1: Verify total DOF count and Debug Handshake prints."""

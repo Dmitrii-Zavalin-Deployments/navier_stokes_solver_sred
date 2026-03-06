@@ -2,6 +2,7 @@
 
 from src.solver_input import SolverInput
 
+
 def solver_input_schema_dummy() -> dict:
     """
     Returns a raw dictionary representing valid JSON input.

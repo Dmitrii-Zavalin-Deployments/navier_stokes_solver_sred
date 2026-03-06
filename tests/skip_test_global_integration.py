@@ -1,12 +1,15 @@
 # tests/test_global_integration.py
 
-import pytest
+import json
 import os
 import shutil
-import json
 from pathlib import Path
+
+import pytest
+
 from src.main_solver import run_solver_from_file
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def setup_integration_env():
@@ -55,7 +58,7 @@ def test_full_pipeline_execution(setup_integration_env):
     snapshot_path = extract_dir / "final_state_snapshot.json"
     assert snapshot_path.exists(), "CRITICAL: Final state snapshot missing from archive."
     
-    with open(snapshot_path, "r") as f:
+    with open(snapshot_path) as f:
         final_state = json.load(f)
         
     # Verify iteration count (3 steps)

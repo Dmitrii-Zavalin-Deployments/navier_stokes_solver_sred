@@ -1,6 +1,7 @@
 # tests/step4/test_apply_bc_velocity_outlet.py
 
 import numpy as np
+
 from src.step4.apply_boundary_conditions import apply_boundary_conditions
 from src.step4.initialize_extended_fields import initialize_extended_fields
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy

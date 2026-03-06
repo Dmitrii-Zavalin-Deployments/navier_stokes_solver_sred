@@ -1,6 +1,8 @@
 import pytest
+
 from src.step1.orchestrate_step1 import orchestrate_step1
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 def test_six_face_mandate_violation():
     """

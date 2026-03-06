@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.sparse.linalg import cg
+
 from src.solver_state import SolverState
 
 # Global Debug Toggle

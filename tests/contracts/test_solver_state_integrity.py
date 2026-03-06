@@ -1,8 +1,10 @@
 # tests/contracts/test_solver_state_integrity.py
 
-import pytest
 import numpy as np
-from src.solver_state import SolverState, FieldData, Diagnostics, SimulationHistory
+import pytest
+
+from src.solver_state import Diagnostics, FieldData, SolverState
+
 
 class TestSolverStateIntegrity:
     """

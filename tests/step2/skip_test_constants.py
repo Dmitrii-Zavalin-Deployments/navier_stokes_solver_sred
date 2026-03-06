@@ -4,7 +4,9 @@ import numpy as np
 import pytest
 
 from src.step2.orchestrate_step2 import orchestrate_step2
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy as make_step1_dummy_state
+from tests.helpers.solver_step1_output_dummy import (
+    make_step1_output_dummy as make_step1_dummy_state,
+)
 
 
 def make_state(*, dx=1.0, dy=1.0, dz=1.0, dt=0.1, rho=1.0):

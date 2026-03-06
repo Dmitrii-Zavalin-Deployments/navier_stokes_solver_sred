@@ -2,6 +2,7 @@
 
 import requests
 
+
 def refresh_access_token(refresh_token, client_id, client_secret):
     url = "https://api.dropbox.com/oauth2/token"
     data = {

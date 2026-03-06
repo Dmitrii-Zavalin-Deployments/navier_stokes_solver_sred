@@ -1,9 +1,11 @@
 # src/io/download_from_dropbox.py
 
-import dropbox
 import os
 import sys
-from src.io.dropbox_utils import refresh_access_token 
+
+import dropbox
+
+from src.io.dropbox_utils import refresh_access_token
 
 # Contract: Only ingest files that the Navier-Stokes solver can process
 ALLOWED_EXTENSIONS = [".step", ".stp", ".json", ".zip"]

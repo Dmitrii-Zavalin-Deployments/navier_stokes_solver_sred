@@ -1,8 +1,10 @@
 # tests/contracts/test_solver_input_contract.py
 
 import pytest
-from src.solver_input import SolverInput, BoundaryConditionItem
+
+from src.solver_input import BoundaryConditionItem, SolverInput
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 class TestSolverInputContract:
     """

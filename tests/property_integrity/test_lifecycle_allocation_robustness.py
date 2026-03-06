@@ -1,14 +1,14 @@
 # tests/property_integrity/test_lifecycle_allocation_robustness.py
 
 import pytest
-import numpy as np
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Import the full factory suite
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Define the lifecycle stages for parametrization
 LIFECYCLE_STAGES = [

@@ -2,7 +2,9 @@
 
 import numpy as np
 from scipy.sparse import csr_matrix, eye
+
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def make_step2_output_dummy(nx=4, ny=4, nz=4):
     """

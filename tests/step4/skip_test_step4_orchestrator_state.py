@@ -1,8 +1,8 @@
 # tests/step4/test_step4_orchestrator_state.py
 
-from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
-from src.step4.orchestrate_step4 import orchestrate_step4_state
 from src.solver_state import SolverState
+from src.step4.orchestrate_step4 import orchestrate_step4_state
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 
 
 def test_orchestrate_step4_state_minimal():

@@ -1,9 +1,10 @@
 # tests/step3/test_correct_velocity.py
 
 import numpy as np
-import pytest
+
 from src.step3.correct_velocity import correct_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_correction_math():
     """Verify projection math with correct staggered shapes."""

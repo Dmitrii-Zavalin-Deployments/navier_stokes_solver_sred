@@ -1,10 +1,11 @@
 # tests/step2/test_laplacian_bc_compliance.py
 
-import pytest
 import numpy as np
-import scipy.sparse as sp
-from src.step2.build_laplacian_operators import build_laplacian_operators
+import pytest
+
 from src.solver_state import SolverState
+from src.step2.build_laplacian_operators import build_laplacian_operators
+
 
 @pytest.fixture
 def state_with_bcs():

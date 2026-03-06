@@ -1,9 +1,12 @@
 # src/step2/orchestrate_step2.py
 
 import json
+
 from src.solver_state import SolverState
-from .operators import build_numerical_operators
+
 from .advection import build_advection_stencils
+from .operators import build_numerical_operators
+
 
 def orchestrate_step2(state: SolverState) -> SolverState:
     """
@@ -13,7 +16,7 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     
     # --- 1. CONFIG HYDRATION ---
     try:
-        with open("config.json", "r") as f:
+        with open("config.json") as f:
             external_config = json.load(f)
         
         settings = external_config["solver_settings"]

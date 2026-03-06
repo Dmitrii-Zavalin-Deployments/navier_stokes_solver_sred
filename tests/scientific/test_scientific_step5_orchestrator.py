@@ -2,10 +2,13 @@
 
 # tests/scientific/test_scientific_step5_orchestrator.py
 
+from unittest.mock import PropertyMock, patch
+
 import pytest
-from unittest.mock import patch, PropertyMock, MagicMock
+
 from src.solver_state import SolverState
 from src.step5.orchestrate_step5 import orchestrate_step5
+
 
 @pytest.fixture
 def state_for_orchestration():

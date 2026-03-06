@@ -1,10 +1,9 @@
 # tests/step3/test_step3_alignment.py
 
-import pytest
-import numpy as np
 from src.step3.orchestrate_step3 import orchestrate_step3
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+
 
 def test_step3_orchestration_alignment():
     """

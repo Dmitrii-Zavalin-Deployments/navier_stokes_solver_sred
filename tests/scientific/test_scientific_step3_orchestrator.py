@@ -1,9 +1,11 @@
 # tests/scientific/test_orchestrate_step3.py
 
+from unittest.mock import patch
+
 import pytest
-import numpy as np
-from unittest.mock import MagicMock, patch
+
 from src.solver_state import SolverState
+
 
 @pytest.fixture
 def state_orchestrator():

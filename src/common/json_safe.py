@@ -12,7 +12,9 @@ It is used by orchestrators (Steps 1–4) and by schema validation.
 """
 
 from __future__ import annotations
+
 from typing import Any
+
 import numpy as np
 
 

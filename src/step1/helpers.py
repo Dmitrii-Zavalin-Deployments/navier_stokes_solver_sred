@@ -1,13 +1,14 @@
 # src/step1/helpers.py
 
+
 import numpy as np
-from typing import Dict, List, Tuple
-from src.solver_input import GridInput, BoundaryConditionItem
+
+from src.solver_input import BoundaryConditionItem, GridInput
 
 # Global Debug Toggle - Rule 7: Granular Traceability
 DEBUG = True
 
-def allocate_staggered_fields(grid: GridInput) -> Dict[str, np.ndarray]:
+def allocate_staggered_fields(grid: GridInput) -> dict[str, np.ndarray]:
     """Allocates memory for the Harlow-Welch staggered grid."""
     nx, ny, nz = grid.nx, grid.ny, grid.nz
 
@@ -28,7 +29,7 @@ def allocate_staggered_fields(grid: GridInput) -> Dict[str, np.ndarray]:
 
     return fields
 
-def generate_3d_masks(mask_data: List[int], grid: GridInput) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_3d_masks(mask_data: list[int], grid: GridInput) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Transforms the flat JSON mask into 3D topology arrays."""
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     
@@ -50,7 +51,7 @@ def generate_3d_masks(mask_data: List[int], grid: GridInput) -> Tuple[np.ndarray
         
     return mask_3d, is_fluid, is_boundary
 
-def parse_bc_lookup(items: List[BoundaryConditionItem]) -> Dict[str, Dict]:
+def parse_bc_lookup(items: list[BoundaryConditionItem]) -> dict[str, dict]:
     """
     Converts BC list into a high-speed lookup table.
     Rule 5 Violation Fixed: Removed .get() defaults.

@@ -1,10 +1,9 @@
 # tests/logic_gate/test_step1_mms.py
 
-import pytest
-import numpy as np
-from src.step1.orchestrate_step1 import orchestrate_step1
 from src.solver_input import SolverInput
+from src.step1.orchestrate_step1 import orchestrate_step1
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 def test_logic_gate_1_structural_unit_cube():
     """

@@ -1,8 +1,10 @@
 # tests/contracts/test_base_container.py
 
-import pytest
 import numpy as np
+import pytest
+
 from src.common.base_container import ValidatedContainer
+
 
 class MockContainer(ValidatedContainer):
     """A minimal implementation to stress-test the Security Guard."""

@@ -1,7 +1,8 @@
 # tests/step4/test_step4_output_dummy_schema.py
 
-from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_step4_output_schema import step4_output_schema
+
+from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
 
 def test_step4_dummy_matches_schema():

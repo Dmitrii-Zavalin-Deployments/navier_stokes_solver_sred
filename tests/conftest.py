@@ -1,11 +1,13 @@
 # tests/conftest.py
 
-import pytest
-import os
-import shutil
 import json
+import shutil
 from pathlib import Path
+
+import pytest
+
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture(scope="session")
 def test_env_root():

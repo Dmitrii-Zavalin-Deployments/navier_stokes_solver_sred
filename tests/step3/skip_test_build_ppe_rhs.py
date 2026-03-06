@@ -3,8 +3,10 @@
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
+
 from src.step3.build_ppe_rhs import build_ppe_rhs
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def _get_total_vel_dof(state):
     """Helper to calculate the total velocity vector length."""

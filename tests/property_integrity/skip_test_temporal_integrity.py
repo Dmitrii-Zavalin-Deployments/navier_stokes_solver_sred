@@ -1,10 +1,10 @@
 # tests/property_integrity/test_temporal_integrity.py
 
 import pytest
-import numpy as np
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Per Property Tracking Matrix: dt is the "Active Operator" from Step 3 onwards
 TEMPORAL_ACTIVE_STAGES = [

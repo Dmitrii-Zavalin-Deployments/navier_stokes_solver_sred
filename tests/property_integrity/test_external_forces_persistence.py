@@ -1,11 +1,12 @@
 # tests/property_integrity/test_external_forces_persistence.py
 
 import pytest
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # The Heavyweight must survive the entire journey
 LIFECYCLE_STAGES = [

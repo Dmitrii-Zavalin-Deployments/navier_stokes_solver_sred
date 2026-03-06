@@ -1,9 +1,15 @@
 # tests/scientific/test_scientific_step1_helpers.py
 
-import pytest
 import numpy as np
-from src.step1.helpers import allocate_staggered_fields, generate_3d_masks, parse_bc_lookup
+import pytest
+
 from src.solver_input import BoundaryConditionItem
+from src.step1.helpers import (
+    allocate_staggered_fields,
+    generate_3d_masks,
+    parse_bc_lookup,
+)
+
 
 def test_scientific_harlow_welch_allocation(base_input):
     """Rule 1.1: Harlow-Welch Staggering must follow the N+1 face requirement."""

@@ -1,6 +1,7 @@
 # src/step4/ghost_manager.py
 
 import numpy as np
+
 from src.solver_state import SolverState
 
 # Global Debug Toggle

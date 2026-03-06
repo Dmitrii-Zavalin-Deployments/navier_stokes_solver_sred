@@ -1,14 +1,15 @@
 # tests/property_integrity/test_theory_of_grid_lifecycle.py
 
-import pytest
 import numpy as np
+import pytest
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Explicitly importing the factories to ensure direct initialization
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Define the lifecycle stages for parametrization to ensure recursive coverage
 LIFECYCLE_STAGES = [

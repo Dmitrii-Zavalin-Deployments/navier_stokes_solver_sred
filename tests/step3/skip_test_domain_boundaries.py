@@ -1,9 +1,10 @@
 # tests/step3/test_domain_boundaries.py
 
 import numpy as np
-import pytest
+
 from src.step3.apply_domain_boundaries import apply_domain_boundaries
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_enum_inflow_x_min():
     """Verify 'inflow' at x_min correctly sets the U-velocity component."""

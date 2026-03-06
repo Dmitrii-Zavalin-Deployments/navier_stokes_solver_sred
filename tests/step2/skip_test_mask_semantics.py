@@ -4,7 +4,9 @@ import numpy as np
 import pytest
 
 from src.step2.enforce_mask_semantics import enforce_mask_semantics
-from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy as make_step1_dummy_state
+from tests.helpers.solver_step1_output_dummy import (
+    make_step1_output_dummy as make_step1_dummy_state,
+)
 
 
 def make_state_with_mask(mask: np.ndarray):

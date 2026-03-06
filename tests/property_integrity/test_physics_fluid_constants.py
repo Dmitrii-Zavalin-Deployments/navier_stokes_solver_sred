@@ -1,10 +1,11 @@
 # tests/property_integrity/test_physics_fluid_constants.py
 
-import pytest
 import numpy as np
+import pytest
+
+from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
 # Density and Viscosity are required starting from Step 3 (Projection & Diffusion)
 PHYSICS_ACTIVE_STAGES = [

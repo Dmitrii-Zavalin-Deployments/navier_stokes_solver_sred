@@ -1,8 +1,10 @@
 # src/solver_state.py
 
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Any
+
 import numpy as np
+
 from src.common.base_container import ValidatedContainer
 
 # =========================================================
@@ -372,27 +374,27 @@ class OperatorStorage(ValidatedContainer):
     @property
     def divergence(self) -> Any: return self._get_safe("divergence")
     @divergence.setter
-    def divergence(self, v: Any): setattr(self, "_divergence", v)
+    def divergence(self, v: Any): self._divergence = v
 
     @property
     def grad_x(self) -> Any: return self._get_safe("grad_x")
     @grad_x.setter
-    def grad_x(self, v: Any): setattr(self, "_grad_x", v)
+    def grad_x(self, v: Any): self._grad_x = v
 
     @property
     def grad_y(self) -> Any: return self._get_safe("grad_y")
     @grad_y.setter
-    def grad_y(self, v: Any): setattr(self, "_grad_y", v)
+    def grad_y(self, v: Any): self._grad_y = v
 
     @property
     def grad_z(self) -> Any: return self._get_safe("grad_z")
     @grad_z.setter
-    def grad_z(self, v: Any): setattr(self, "_grad_z", v)
+    def grad_z(self, v: Any): self._grad_z = v
 
     @property
     def laplacian(self) -> Any: return self._get_safe("laplacian")
     @laplacian.setter
-    def laplacian(self, v: Any): setattr(self, "_laplacian", v)
+    def laplacian(self, v: Any): self._laplacian = v
 
 @dataclass
 class AdvectionStructure(ValidatedContainer):
@@ -789,7 +791,7 @@ class SolverState:
     def step4_diagnostics(self) -> Diagnostics:
         return self.diagnostics
 
-    def to_legacy_dict(self) -> Dict[str, Any]:
+    def to_legacy_dict(self) -> dict[str, Any]:
         return {
             "U_ext": self.U_ext,
             "V_ext": self.V_ext,

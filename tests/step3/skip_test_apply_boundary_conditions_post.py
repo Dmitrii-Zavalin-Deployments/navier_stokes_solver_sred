@@ -1,9 +1,10 @@
 # tests/step3/test_apply_boundary_conditions_post.py
 
 import numpy as np
-import pytest
+
 from src.step3.apply_boundary_conditions_post import apply_boundary_conditions_post
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_domain_boundary_enforcement_post():
     """Verify that domain enums (like free-slip) are enforced after pressure correction."""

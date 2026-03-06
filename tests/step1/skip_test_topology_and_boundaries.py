@@ -1,14 +1,17 @@
 # tests/step1/test_topology_and_boundaries.py
 
-import pytest
 import numpy as np
-from src.step1.parse_boundary_conditions import parse_boundary_conditions
-from src.step1.map_geometry_mask import map_geometry_mask
-from src.step1.assemble_simulation_state import assemble_simulation_state
+import pytest
+
 from src.solver_state import SolverState
+from src.step1.assemble_simulation_state import assemble_simulation_state
+from src.step1.map_geometry_mask import map_geometry_mask
+
 # Updated import to match actual source function name
-from src.step1.orchestrate_step1 import orchestrate_step1, debug_state_step1
+from src.step1.orchestrate_step1 import debug_state_step1, orchestrate_step1
+from src.step1.parse_boundary_conditions import parse_boundary_conditions
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def dummy_grid():

@@ -1,12 +1,14 @@
 # tests/step3/test_staggered_integration.py
 
 import pytest
-import numpy as np
-from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
-from src.step3.predict_velocity import predict_velocity
-from src.step3.build_ppe_rhs import build_ppe_rhs
+
 # FIX: Use absolute import to ensure pytest discovers the mock generator
 from tests.step3.test_step3_shape_integrity import inject_staggered_operators
+
+from src.step3.build_ppe_rhs import build_ppe_rhs
+from src.step3.predict_velocity import predict_velocity
+from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_full_step3_data_flow():
     """Ensures predict_velocity output is compatible with build_ppe_rhs."""

@@ -1,8 +1,9 @@
 # tests/scientific/test_scientific_step4_audit.py
 
 import pytest
-import numpy as np
+
 from src.solver_state import SolverState
+
 
 class AttributeDict(dict):
     """A dict that allows dot notation access for mocking frozen configs."""

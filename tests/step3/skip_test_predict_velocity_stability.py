@@ -2,8 +2,10 @@
 
 import numpy as np
 import pytest
+
 from src.step3.predict_velocity import predict_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def test_predict_velocity_numerical_stability():
     """Verify finite results and respect staggered grid boundaries."""

@@ -1,9 +1,10 @@
 # tests/step1/test_step1_alignment.py
 
-import pytest
 import numpy as np
-from src.step1.orchestrate_step1 import orchestrate_step1
+import pytest
+
 from src.solver_input import SolverInput
+from src.step1.orchestrate_step1 import orchestrate_step1
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 

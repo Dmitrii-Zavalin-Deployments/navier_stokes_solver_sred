@@ -1,10 +1,12 @@
 # tests/scientific/test_scientific_step3_corrector.py
 
-import pytest
 import numpy as np
-from src.step3.corrector import correct_velocity
-from src.step2.operators import build_numerical_operators
+import pytest
+
 from src.solver_state import SolverState
+from src.step2.operators import build_numerical_operators
+from src.step3.corrector import correct_velocity
+
 
 @pytest.fixture
 def state_corrector():

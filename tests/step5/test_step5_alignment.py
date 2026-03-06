@@ -1,11 +1,11 @@
 # tests/step5/test_step5_alignment.py
 
-import pytest
 import os
 import shutil
+
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
+
 
 def test_step5_orchestration_alignment():
     """

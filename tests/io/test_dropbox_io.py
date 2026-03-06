@@ -1,8 +1,11 @@
 # tests/io/test_dropbox_io.py
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.io.download_from_dropbox import download_files_from_dropbox
+
 
 @patch('dropbox.Dropbox')
 @patch('src.io.download_from_dropbox.refresh_access_token')

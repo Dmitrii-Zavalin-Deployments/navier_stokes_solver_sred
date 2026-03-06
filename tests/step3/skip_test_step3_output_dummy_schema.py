@@ -1,8 +1,9 @@
 # tests/step3/test_step3_output_dummy_schema.py
 
 import numpy as np
-from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step3_output_schema import EXPECTED_STEP3_SCHEMA
+
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 
 
 def test_step3_dummy_matches_schema():

@@ -1,9 +1,10 @@
 # src/step3/orchestrate_step3.py
 
 from src.solver_state import SolverState
+
+from .corrector import correct_velocity
 from .predictor import predict_velocity
 from .solver import solve_pressure
-from .corrector import correct_velocity
 
 # Global Debug Toggle
 DEBUG = True

@@ -1,11 +1,12 @@
 # tests/physics_gate/test_operators.py
 
-import pytest
 import numpy as np
-from scipy import sparse
-from src.step2.build_laplacian_operators import build_laplacian_operators
+import pytest
+
 from src.solver_state import SolverState
+from src.step2.build_laplacian_operators import build_laplacian_operators
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
+
 
 @pytest.fixture
 def laplacian_matrix():

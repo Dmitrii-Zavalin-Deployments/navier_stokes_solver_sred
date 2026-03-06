@@ -14,9 +14,10 @@ Robustness Strategy:
 """
 
 import json
-import pytest
-import jsonschema
 from pathlib import Path
+
+import jsonschema
+import pytest
 
 # Helpers and Dummies
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
@@ -36,7 +37,7 @@ def validate_contract(data: dict, schema_filename: str):
     if not schema_path.exists():
         pytest.fail(f"CRITICAL: Schema file '{schema_filename}' missing at {schema_path}")
 
-    with open(schema_path, "r", encoding="utf-8") as f:
+    with open(schema_path, encoding="utf-8") as f:
         schema = json.load(f)
 
     # 100% Robustness: Auto-select the correct validator (Draft 2020-12)

@@ -1,11 +1,11 @@
 # tests/step3/test_ppe_rhs_shape.py
 
-import numpy as np
-import pytest
 from scipy.sparse import csr_matrix
+
 from src.step3.build_ppe_rhs import build_ppe_rhs
 from src.step3.predict_velocity import predict_velocity
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+
 
 def _wire_mock_operators(state):
     nx, ny, nz = state.grid["nx"], state.grid["ny"], state.grid["nz"]
