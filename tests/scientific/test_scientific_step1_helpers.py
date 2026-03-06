@@ -95,3 +95,38 @@ def test_scientific_step1_debug_handshake(base_input, capsys):
     allocate_staggered_fields(grid)
     captured = capsys.readouterr().out
     assert "U-Face (East-West):   (3, 3, 4)" in captured
+
+def test_scientific_bc_lookup_type_safety():
+    """Rule 5/7: Ensure the parser enforces numeric types and fails on garbage."""
+    item = BoundaryConditionItem()
+    item.location = "x_min"
+    item.values = {"u": "invalid", "v": 0.0, "w": 0.0, "p": 0.0}
+    with pytest.raises(ValueError):
+        parse_bc_lookup([item])
+
+def test_scientific_mask_boolean_logic(base_input):
+    """Rule 1.2: Explicitly verify the boolean extraction of fluid and boundaries."""
+    grid = base_input.grid
+    grid.nx, grid.ny, grid.nz = 3, 1, 1
+    # 1=Fluid, -1=Boundary, 0=Void
+    data = [1, -1, 0]
+    _, is_fluid, is_boundary = generate_3d_masks(data, grid)
+    
+    assert is_fluid[0, 0, 0] == True
+    assert is_fluid[1, 0, 0] == False
+    assert is_boundary[1, 0, 0] == True
+    assert is_boundary[2, 0, 0] == False
+
+def test_scientific_mask_non_symmetric_order_f(base_input):
+    """Rule 1.2: Verify Fortran order on a non-symmetric grid to catch index swaps."""
+    grid = base_input.grid
+    grid.nx, grid.ny, grid.nz = 2, 3, 1  # 6 cells total
+    # Order F: X moves fastest, then Y
+    # Linear: [0, 1, 2, 3, 4, 5] 
+    # Grid: Y0:[0,1], Y1:[2,3], Y2:[4,5]
+    data = [0, 1, 2, 3, 4, 5]
+    mask_3d, _, _ = generate_3d_masks(data, grid)
+    
+    # Check Y-axis progression
+    assert mask_3d[0, 1, 0] == 2
+    assert mask_3d[1, 2, 0] == 5
