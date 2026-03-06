@@ -8,10 +8,10 @@ def test_scientific_advection_dof_handshake(state_3d_small, capsys):
     build_advection_stencils(state_3d_small)
     captured = capsys.readouterr().out
     
-    assert "Mapping 36 DOFs" in captured
-    assert "Handshake check - processed 36/36 DOFs" in captured
-    assert state_3d_small.advection.indices.shape == (36, 8)
-    assert state_3d_small.advection.weights.shape == (36, 8)
+    assert "Mapping 108 DOFs" in captured
+    assert "Handshake check - processed 108/108 DOFs" in captured
+    assert state_3d_small.advection.indices.shape == (108, 8)
+    assert state_3d_small.advection.weights.shape == (108, 8)
 
 def test_scientific_advection_trilinear_indices(state_3d_small):
     """Rule 2.2: Verify 8-point stencil mapping for an internal U-node."""
@@ -20,7 +20,7 @@ def test_scientific_advection_trilinear_indices(state_3d_small):
     
     first_u_stencil = indices[0]
     assert len(np.unique(first_u_stencil)) <= 8
-    assert indices.max() < 8, "Indices must not exceed total P-cells"
+    assert indices.max() < 27, "Indices must not exceed total P-cells (27)"
 
 def test_scientific_advection_weight_consistency(state_3d_small):
     """Rule 2.3: Ensure weights follow the SSoT config and are double precision."""
@@ -28,12 +28,16 @@ def test_scientific_advection_weight_consistency(state_3d_small):
     weights = state_3d_small.advection.weights
     
     assert weights.dtype == np.float64
-    np.testing.assert_allclose(np.sum(weights[0]), 1.0)
+    np.testing.assert_allclose(np.sum(weights, axis=1), 1.0)
     assert np.all(weights == 0.125)
 
 def test_scientific_advection_clamping_boundary(state_3d_small):
     """Rule 2.4: Boundary faces must clamp to valid P-indices."""
-    state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = 10, 10, 10
+    # Custom 10x10x10 grid
+    n = 10
+    state_3d_small.grid._set_safe("nx", n, int)
+    state_3d_small.grid._set_safe("ny", n, int)
+    state_3d_small.grid._set_safe("nz", n, int)
     build_advection_stencils(state_3d_small)
     
     indices = state_3d_small.advection.indices
@@ -42,8 +46,10 @@ def test_scientific_advection_clamping_boundary(state_3d_small):
 
 def test_scientific_advection_buffer_integrity():
     state = SolverState()
-    state.grid.nx, state.grid.ny, state.grid.nz = 2, 2, 2
-    # Initialize the internal dict to bypass the read-only property
+    # Manual setup since this bypasses the conftest fixture
+    state.grid._set_safe("nx", 2, int)
+    state.grid._set_safe("ny", 2, int)
+    state.grid._set_safe("nz", 2, int)
     state.config._simulation_parameters = {"advection_weight_base": 0.0}
     
     build_advection_stencils(state)
@@ -54,13 +60,12 @@ def test_scientific_advection_full_debug_cycle(state_3d_small, capsys):
     build_advection_stencils(state_3d_small)
     captured = capsys.readouterr().out
     
-    assert "Mapping 36 DOFs (U:12, V:12, W:12)" in captured
-    assert "Indices Min/Max: 0/7" in captured
+    assert "Mapping 108 DOFs (U:36, V:36, W:36)" in captured
+    assert "Indices Min/Max: 0/26" in captured
     assert "Weights check sum: 1.0000" in captured
 
 def test_scientific_advection_high_precision_ssot(state_3d_small):
     high_precision_val = 0.123456789012345
-    # Bypass the property setter by accessing the backing dictionary directly
     state_3d_small.config._simulation_parameters["advection_weight_base"] = high_precision_val
     
     build_advection_stencils(state_3d_small)
@@ -68,31 +73,23 @@ def test_scientific_advection_high_precision_ssot(state_3d_small):
 
 def test_scientific_advection_internal_stencil_uniqueness(state_3d_small):
     """Scientific check: Internal stencil must point to 8 distinct neighbors."""
-    nx, ny, nz = 3, 3, 3
-    state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = nx, ny, nz
     build_advection_stencils(state_3d_small)
-    
-    # Internal U-node at target index
     internal_u_idx = 18
     unique_neighbors = np.unique(state_3d_small.advection.indices[internal_u_idx])
     
     assert len(unique_neighbors) == 8, f"Stencil collapsed! Unique neighbors: {unique_neighbors}"
 
 def test_scientific_advection_ssot_propagation(state_3d_small):
-    """Rule 2.6: Verify exact weight propagation from Config to AdvectionStructure."""
+    """Rule 2.6: Verify exact weight propagation."""
     test_val = 0.0625
-    # FIX: Use the internal dictionary
     state_3d_small.config._simulation_parameters["advection_weight_base"] = test_val
-    
     build_advection_stencils(state_3d_small)
     
     assert np.allclose(state_3d_small.advection.weights, test_val)
-    # FIX: Compare against dictionary value, not property
     assert state_3d_small.config._simulation_parameters["advection_weight_base"] == test_val
 
 def test_scientific_advection_weights_sum(state_3d_small):
-    """Rule 7: Interpolation weights must sum to 1.0 (Unity Property)."""
-    # FIX: Access the dictionary directly to bypass read-only property
+    """Rule 7: Interpolation weights must sum to 1.0."""
     state_3d_small.config._simulation_parameters["advection_weight_base"] = 0.125
     build_advection_stencils(state_3d_small)
     
@@ -101,18 +98,9 @@ def test_scientific_advection_weights_sum(state_3d_small):
 
 def test_scientific_advection_index_bounds(state_3d_small):
     """Rule 7: Stencil indices must never exceed the pressure grid boundaries."""
-    nx, ny, nz = 3, 3, 3
-    state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = nx, ny, nz
-
-    print(dir(state_3d_small.grid))
-    
-    # The method name may vary based on your ValidatedContainer base class
-    state_3d_small.grid._set_safe("dx", 1.0 / nx, float)
-    state_3d_small.grid._set_safe("dy", 1.0 / ny, float)
-    state_3d_small.grid._set_safe("dz", 1.0 / nz, float)
-    
+    # Already set to 3x3x3 via conftest fixture
     build_advection_stencils(state_3d_small)
     
     indices = state_3d_small.advection.indices
-    assert indices.max() < (nx * ny * nz)
+    assert indices.max() < 27
     assert indices.min() >= 0
