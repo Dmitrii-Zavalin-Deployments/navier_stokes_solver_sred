@@ -1,18 +1,18 @@
 # tests/test_main_solver.py
 
 import json
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.main_solver import archive_simulation_artifacts, run_solver_from_file
-from src.solver_input import SolverInput
 from tests.helpers.solver_input_schema_dummy import solver_input_schema_dummy
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
+
 
 class TestMainSolverOrchestration:
 
