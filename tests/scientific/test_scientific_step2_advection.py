@@ -103,11 +103,13 @@ def test_scientific_advection_index_bounds(state_3d_small):
     """Rule 7: Stencil indices must never exceed the pressure grid boundaries."""
     nx, ny, nz = 3, 3, 3
     state_3d_small.grid.nx, state_3d_small.grid.ny, state_3d_small.grid.nz = nx, ny, nz
+
+    print(dir(state_3d_small.grid))
     
-    # ADD THIS: Explicitly initialize grid spacing to prevent defaults
-    state_3d_small.grid.dx = 1.0 / nx
-    state_3d_small.grid.dy = 1.0 / ny
-    state_3d_small.grid.dz = 1.0 / nz
+    # The method name may vary based on your ValidatedContainer base class
+    state_3d_small.grid._set_safe("dx", 1.0 / nx, float)
+    state_3d_small.grid._set_safe("dy", 1.0 / ny, float)
+    state_3d_small.grid._set_safe("dz", 1.0 / nz, float)
     
     build_advection_stencils(state_3d_small)
     
