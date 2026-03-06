@@ -34,10 +34,10 @@ def test_step5_zero_output_interval_produces_no_snapshots(monkeypatch):
     state = make_state()
 
     monkeypatch.setattr("src.step3.orchestrate_step3_state", MagicMock())
-    monkeypatch.setattr("src.step5.write_output_snapshot", MagicMock())
+    monkeypatch.setattr("step5.write_output_snapshot", MagicMock())
 
     orchestrate_step5_state(state)
 
     # No snapshots should be written
-    write_mock = src.step5.write_output_snapshot
+    write_mock = step5.write_output_snapshot
     assert write_mock.call_count == 0

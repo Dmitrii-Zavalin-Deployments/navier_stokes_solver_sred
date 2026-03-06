@@ -39,11 +39,11 @@ def test_step5_output_interval_five_writes_correct_steps(monkeypatch):
     state = make_state()
 
     monkeypatch.setattr("src.step3.orchestrate_step3_state", MagicMock())
-    monkeypatch.setattr("src.step5.write_output_snapshot", MagicMock())
+    monkeypatch.setattr("step5.write_output_snapshot", MagicMock())
 
     orchestrate_step5_state(state)
 
-    write_mock = src.step5.write_output_snapshot
+    write_mock = step5.write_output_snapshot
 
     # Steps: 0, 5, 10, 15
     assert write_mock.call_count == 4
