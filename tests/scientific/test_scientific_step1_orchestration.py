@@ -76,7 +76,7 @@ def test_scientific_audit_rho_guard(base_input):
 def test_scientific_boundary_lookup_integrity(base_input):
     bc1 = BoundaryConditionItem()
     bc1.location = "x_min"
-    bc1.type = "dirichlet"
+    bc1.type = "inflow"
     bc1.values = {"u": 1.0, "v": 0.0, "w": 0.0, "p": 0.0}
 
     bc2 = BoundaryConditionItem()
@@ -113,7 +113,7 @@ def test_scientific_external_forces_mapping(base_input):
 def test_scientific_boundary_mask_integrity(base_input):
     nx, ny, nz = 4, 4, 4
     base_input.grid.nx, base_input.grid.ny, base_input.grid.nz = nx, ny, nz
-    base_input.mask._data = [0] * (nx * ny * nz)
+    base_input.mask._data = [-1] * (nx * ny * nz)
     state = orchestrate_step1(base_input, iteration=0, time=0.0)
 
     assert np.all(state.masks.is_boundary)
