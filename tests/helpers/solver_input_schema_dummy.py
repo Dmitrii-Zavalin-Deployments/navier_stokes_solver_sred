@@ -33,7 +33,7 @@ def solver_input_schema_dummy() -> dict:
         },
         "boundary_conditions": [
             {"location": "x_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
-            {"location": "x_max", "type": "outflow", "values": {}, "comment": "exit"},
+            {"location": "x_max", "type": "outflow", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "exit"},
             {"location": "y_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
             {"location": "y_max", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
             {"location": "z_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}, "comment": "wall"},
