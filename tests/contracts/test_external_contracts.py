@@ -71,12 +71,13 @@ def test_solver_output_dummy_matches_schema():
     Robustness Check: Transforms SolverState -> JSON-safe dict to catch
     NumPy leakage or illegal additionalProperties before validation.
     """
-    # 1. Generate the high-fidelity state object
     state_obj = make_output_schema_dummy()
-    
-    # 2. Bridge the gap: Scale-Safe serialization to plain Python types
-    # This is where we catch np.ndarray or np.float64 types that JSON hates.
     json_safe_data = state_obj.to_json_safe()
     
-    # 3. Perform the contract check
+    # DEBUG: Check if the required keys are present
+    required_keys = ["time", "iteration", "ready_for_time_loop", "config", "grid", "fields", "masks", "fluid", "operators", "advection", "ppe", "health", "history", "diagnostics", "manifest"]
+    for key in required_keys:
+        if key not in json_safe_data:
+            print(f"DEBUG: Missing key: {key}")
+    
     validate_contract(json_safe_data, "solver_output_schema.json")
