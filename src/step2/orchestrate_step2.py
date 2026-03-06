@@ -30,10 +30,10 @@ def orchestrate_step2(state: SolverState) -> SolverState:
         raise FileNotFoundError("Critical Error: 'config.json' not found.")
     except KeyError as e:
         # Improved logging to show specifically which key is missing
-        raise KeyError(f"Critical Error: Missing required solver setting {e} in 'config.json'.")
+        raise KeyError(f"Critical Error: Missing required solver setting {e} in 'config.json'.") from e
     except json.JSONDecodeError as e:
         # Improved logging to capture the JSON syntax error details
-        raise ValueError(f"Critical Error: 'config.json' is not a valid JSON file. Details: {e}")
+        raise ValueError(f"Critical Error: 'config.json' is not a valid JSON file. Details: {e}") from e
 
     # --- 2. OPERATOR GENERATION ---
     # Delegate math to specialized worker modules

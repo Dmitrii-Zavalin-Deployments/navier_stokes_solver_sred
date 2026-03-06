@@ -24,7 +24,6 @@ def test_staggered_operator_contract():
     mismatches = []
     
     for field_key, op_keys in checks:
-        field_shape = state.fields[field_key].shape
         field_size = state.fields[field_key].size # Flattened count
         
         for op_key in op_keys:

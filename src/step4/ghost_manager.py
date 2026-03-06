@@ -38,7 +38,7 @@ def initialize_ghost_fields(state: SolverState) -> None:
     except ValueError as e:
         if DEBUG:
             print(f"!!! CRITICAL: Shape mismatch during ghost mapping: {e} !!!")
-        raise RuntimeError(f"Ghost Initialization Failed: Interior/Exterior field dimension mismatch.")
+        raise RuntimeError(f"Ghost Initialization Failed: Interior/Exterior field dimension mismatch.") from e
 
     if DEBUG:
         # Verify a sample interior value made it into the extended field

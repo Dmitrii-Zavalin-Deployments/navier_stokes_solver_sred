@@ -69,7 +69,7 @@ def run_solver_from_file(input_path: str) -> str:
 
     except Exception as e:
         logger.error(f"FATAL PIPELINE ERROR: {str(e)}")
-        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}")
+        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}") from e
 
 def archive_simulation_artifacts(state: SolverState) -> str:
     """Rule 4: SSoT Archiving. Moves manifest snapshots into a single ZIP."""

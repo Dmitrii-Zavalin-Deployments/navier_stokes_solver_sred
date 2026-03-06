@@ -85,7 +85,7 @@ class TestMainSolverOrchestration:
         with patch.object(Path, "exists", side_effect=exists_side_effect):
             with patch.object(Path, "mkdir"):
                 with patch("builtins.open", MagicMock()):
-                    result = archive_simulation_artifacts(state)
+                    archive_simulation_artifacts(state)
                     mock_zip.assert_called_once()
                     
     @patch("src.main_solver.orchestrate_step1")

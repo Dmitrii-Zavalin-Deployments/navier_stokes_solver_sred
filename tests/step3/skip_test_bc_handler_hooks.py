@@ -21,7 +21,7 @@ def test_bc_handler_hooks_called():
     state.boundary_conditions = bc_handler
 
     # Run Step‑3
-    new_state = orchestrate_step3_state(
+    orchestrate_step3_state(
         state=state,
         current_time=0.0,
         step_index=0,

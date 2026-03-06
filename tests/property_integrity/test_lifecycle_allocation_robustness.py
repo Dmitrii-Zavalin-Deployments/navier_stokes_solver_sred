@@ -62,7 +62,6 @@ def test_lifecycle_ppe_dimension_intent(stage_name, factory):
     state = factory(nx=nx, ny=ny, nz=nz)
     expected_dim = nx * ny * nz
     
-    ppe = state["ppe"] if isinstance(state, dict) else state.ppe
     
     # Validates that the PPE department 'plan' survives every orchestrator
     assert (state.grid.nx * state.grid.ny * state.grid.nz) == expected_dim, f"PPE 'dimension' key missing at {stage_name}"

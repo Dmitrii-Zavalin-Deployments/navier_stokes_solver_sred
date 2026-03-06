@@ -30,8 +30,6 @@ def test_theory_grid_spacing_derivation_integrity(stage_name, factory):
     
     # Expected derived metrics based on the domain [0, 1]^3
     exp_dx = 1.0 / nx
-    exp_dy = 1.0 / ny
-    exp_dz = 1.0 / nz
 
     state = factory(nx=nx, ny=ny, nz=nz)
 
