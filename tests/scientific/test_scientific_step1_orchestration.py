@@ -92,6 +92,9 @@ def test_scientific_boundary_lookup_integrity(base_input):
 
     assert "x_min" in lookup
     assert lookup["x_min"]["type"] == "inflow"
+
+    print(f"DEBUG: Lookup contents for x_min: {lookup['x_min']}")
+
     assert np.allclose(lookup["x_min"]["values"], [1,2,3])
 
 def test_scientific_boundary_condition_mapping(base_input):
