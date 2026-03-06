@@ -44,6 +44,7 @@ jobs:
           ruff check src tests --fix
 
       - name: 🚀 Commit & Push Auto-Clean Changes
+        if: always() # This ensures the cleanup is saved even if linter steps fail
         env:
           GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
           GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
@@ -53,7 +54,7 @@ jobs:
           git add .
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "🧹 Auto-clean: autoflake and ruff cleanup"
-            git push
+            git push || echo "Push skipped: likely branch protection."
           else
             echo "No cleaning required."
           fi
