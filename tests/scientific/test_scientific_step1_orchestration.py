@@ -81,7 +81,7 @@ def test_scientific_boundary_lookup_integrity(base_input):
 
     bc2 = BoundaryConditionItem()
     bc2.location = "x_max"
-    bc2.type = "neumann"
+    bc2.type = "outflow"
     bc2.values = {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
 
     base_input.boundary_conditions.items = [bc1, bc2]
