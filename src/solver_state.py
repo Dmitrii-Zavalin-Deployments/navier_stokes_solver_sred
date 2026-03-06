@@ -814,10 +814,11 @@ class SolverState(ValidatedContainer):
     # ---------------------------------------------------------
     def to_json_safe(self) -> dict:
         """
-        Contract-compliant serialization. 
-        Delegates to component to_dict() methods for uniform recursion.
+        Contract-compliant serialization.
+        Promotes config keys to root to satisfy schema validation.
         """
-        return {
+        # 1. Get the dictionary structure using your existing logic
+        data = {
             "time": self.time,
             "iteration": self.iteration,
             "ready_for_time_loop": self.ready_for_time_loop,
@@ -834,3 +835,26 @@ class SolverState(ValidatedContainer):
             "diagnostics": self.diagnostics.to_dict(),
             "manifest": self.manifest.to_dict()
         }
+        
+        # 2. Extract and promote keys from 'config' to the root
+        # This aligns the dictionary with the schema's 'required' fields
+        config = data.pop("config", {})
+        keys_to_promote = [
+            "fluid_properties", "initial_conditions", 
+            "simulation_parameters", "boundary_conditions", 
+            "external_forces"
+        ]
+        
+        for key in keys_to_promote:
+            if key in config:
+                data[key] = config[key]
+                
+        # 3. Handle the 'mask' field, which the schema expects at the root
+        # Based on your state, 'mask' is inside 'masks'. Let's promote it.
+        masks_data = data.pop("masks", {})
+        if "mask" in masks_data:
+            data["mask"] = masks_data["mask"]
+        elif hasattr(self.masks, "mask"):
+            data["mask"] = self.masks.mask
+
+        return data
