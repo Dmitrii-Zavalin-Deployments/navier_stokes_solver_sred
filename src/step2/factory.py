@@ -1,5 +1,7 @@
-from .cell import Cell
 from src.solver_input import SolverInput
+
+from .cell import Cell
+
 
 class CellBuilder:
     def __init__(self, input_data: SolverInput):
