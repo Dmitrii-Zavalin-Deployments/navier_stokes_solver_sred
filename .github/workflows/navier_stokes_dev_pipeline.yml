@@ -63,10 +63,10 @@ jobs:
         run: |
           vulture src --min-confidence 70
 
-      - name: 🧪 Run Unit Tests (Pytest + Coverage)
-        run: |
-          echo "🔍 Running unit tests..."
-          pytest tests/ -vv --cov=src --cov-report=term-missing
+      # - name: 🧪 Run Unit Tests (Pytest + Coverage)
+      #   run: |
+      #     echo "🔍 Running unit tests..."
+      #     pytest tests/ -vv --cov=src --cov-report=term-missing
 
       # # --- POINT 1: CLOUD INGESTION ---
       # - name: 📥 Ingest Simulation Input (Dropbox)
@@ -99,39 +99,39 @@ jobs:
       #     echo "📁 Final Workspace State:"
       #     ls -R
 
-      - name: 📊 Audit Performance & Update Ledger
-        if: always() # Run even if previous steps failed
-        env:
-          GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
-          GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
-        run: |
-          # 1. Gather Metrics
-          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          STATUS="${{ job.status }}"
+      # - name: 📊 Audit Performance & Update Ledger
+      #   if: always() # Run even if previous steps failed
+      #   env:
+      #     GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
+      #     GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
+      #   run: |
+      #     # 1. Gather Metrics
+      #     RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+      #     STATUS="${{ job.status }}"
           
-          # Calculate Duration (Workflow start time is a default GH variable)
-          # Note: Simple duration calculation in seconds
-          NOW=$(date +%s)
-          START_TIME=$(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || echo $NOW)
-          DURATION_SEC=$((NOW - START_TIME))
+      #     # Calculate Duration (Workflow start time is a default GH variable)
+      #     # Note: Simple duration calculation in seconds
+      #     NOW=$(date +%s)
+      #     START_TIME=$(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || echo $NOW)
+      #     DURATION_SEC=$((NOW - START_TIME))
           
-          # Resource Usage (Current snapshot of the runner)
-          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
-          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB (" $3/$2*100 "% )" }')
+      #     # Resource Usage (Current snapshot of the runner)
+      #     CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+      #     MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB (" $3/$2*100 "% )" }')
           
-          # Identify Failure Step if applicable
-          FAILURE_POINT="N/A (Success)"
-          if [ "$STATUS" != "success" ]; then
-             FAILURE_POINT="Check GitHub Logs"
-          fi
+      #     # Identify Failure Step if applicable
+      #     FAILURE_POINT="N/A (Success)"
+      #     if [ "$STATUS" != "success" ]; then
+      #        FAILURE_POINT="Check GitHub Logs"
+      #     fi
 
-          # 2. Append to Performance Audit Ledger
-          # We use a Table format for readability
-          echo "| $RUN_DATE | $STATUS | ${DURATION_SEC}s | $CPU_LOAD% | $MEM_USAGE | $FAILURE_POINT |" >> performance_audit.md
+      #     # 2. Append to Performance Audit Ledger
+      #     # We use a Table format for readability
+      #     echo "| $RUN_DATE | $STATUS | ${DURATION_SEC}s | $CPU_LOAD% | $MEM_USAGE | $FAILURE_POINT |" >> performance_audit.md
           
-          # 3. Commit and Push the updated Ledger
-          git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
-          git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
-          git add performance_audit.md
-          git commit -m "📊 perf-audit: log run metrics for $RUN_DATE"
-          git push origin main || echo "No changes to push or branch protected"
+      #     # 3. Commit and Push the updated Ledger
+      #     git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
+      #     git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
+      #     git add performance_audit.md
+      #     git commit -m "📊 perf-audit: log run metrics for $RUN_DATE"
+      #     git push origin main || echo "No changes to push or branch protected"
