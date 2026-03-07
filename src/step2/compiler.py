@@ -1,6 +1,9 @@
 import numpy as np
-from .cell import Cell
+
 from src.solver_state import SolverState
+
+from .cell import Cell
+
 
 class TopologyCompiler:
     def __init__(self, shape: tuple[int, int, int]):
