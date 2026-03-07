@@ -1,7 +1,9 @@
 from src.solver_input import SolverInput
 from src.solver_state import SolverState
-from .factory import CellBuilder
+
 from .compiler import TopologyCompiler
+from .factory import CellBuilder
+
 
 def orchestrate_step2(state: SolverState, input_data: SolverInput) -> SolverState:
     # 1. Initialize Builder and Compiler
