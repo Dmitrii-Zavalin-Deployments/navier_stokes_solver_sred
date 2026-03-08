@@ -1,55 +1,46 @@
 # src/step2/orchestrate_step2.py
 
-import numpy as np
-
 from src.core.solver_state import SolverState
-
-from .compiler import GET_CELL_ATTRIBUTES, cell_to_numpy_row
-from .factory import build_core_cell, build_ghost_cell, get_initialization_context
-
+from .factory import get_initialization_context
+from .stencil_assembler import assemble_stencil_matrix
 
 def orchestrate_step2(state: SolverState) -> SolverState:
-    # 1. Dynamic Attribute Mapping
-    attributes = GET_CELL_ATTRIBUTES()
-    num_attributes = len(attributes)
+    """
+    Orchestrates the construction of the Stencil Matrix.
     
-    # Grid dimensions (Core)
-    nx, ny, nz = state.grid.nx, state.grid.ny, state.grid.nz
+    This function initializes the physical context and coordinates the 
+    assembly of StencilBlock objects, which serve as the primary 
+    units for the numerical solver in subsequent steps.
+    """
     
-    # Total cells including the ghost layer (-1, nx; -1, ny; -1, nz)
-    total_cells = (nx + 2) * (ny + 2) * (nz + 2)
-    
-    # 2. Pre-allocate local buffer
-    local_cell_matrix = np.zeros((total_cells, num_attributes), dtype=np.float64)
-    
-    # 3. Hoist constants
+    # 1. Hoist context and physical parameters
+    # This prepares the constants needed by all stencil blocks in the grid
     ctx = get_initialization_context(state)
-
-    # 4. Main Processing Loop
-    cursor = 0
-    # Loop range: -1 to nx (inclusive of indices)
-    for i in range(-1, nx + 1):
-        for j in range(-1, ny + 1):
-            for k in range(-1, nz + 1):
-                
-                # Check if we are inside the core domain
-                is_core = (0 <= i < nx) and (0 <= j < ny) and (0 <= k < nz)
-                
-                if is_core:
-                    # Cell needs the full state to read the masks
-                    cell = build_core_cell(i, j, k, state, ctx)
-                else:
-                    # Ghost cell needs only coordinates and context
-                    cell = build_ghost_cell(i, j, k, ctx)
-                
-                # Compiler writes to row
-                local_cell_matrix[cursor] = cell_to_numpy_row(cell)
-                cursor += 1
-
-    # 5. Final Commit
-    state.cell_matrix = local_cell_matrix
     
-    # Set ready_for_time_loop to True now that topography is defined
+    physics_params = {
+        "dx": state.grid.dx,
+        "dy": state.grid.dy,
+        "dz": state.grid.dz,
+        "dt": state.config.simulation_parameters["time_step"],
+        "rho": state.config.fluid_properties["density"],
+        "mu": state.config.fluid_properties["viscosity"],
+        "f_vals": tuple(state.config.external_forces["force_vector"])
+    }
+    
+    # 2. Assemble the Stencil Matrix
+    # The assembler handles grid traversal (including ghost layers) 
+    # and populates the matrix with StencilBlock objects.
+    state.stencil_matrix = assemble_stencil_matrix(
+        state, 
+        state.grid.nx, 
+        state.grid.ny, 
+        state.grid.nz, 
+        ctx, 
+        physics_params
+    )
+    
+    # 3. Final Commit
+    # Signal that topography and stencil connectivity are ready for time iteration
     state.ready_for_time_loop = True
     
     return state
