@@ -1,7 +1,9 @@
 # tests/core/test_fields.py
 
 import numpy as np
-from src.step3.core.fields import create_velocity_field, create_pressure_field
+
+from src.step3.core.fields import create_pressure_field, create_velocity_field
+
 
 def test_field_initialization():
     nx, ny, nz = 10, 10, 10

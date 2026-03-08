@@ -2,6 +2,7 @@
 
 import numpy as np
 
+
 def create_velocity_field(nx, ny, nz, initial_value):
     """
     Mandatory initialization of a velocity field.
