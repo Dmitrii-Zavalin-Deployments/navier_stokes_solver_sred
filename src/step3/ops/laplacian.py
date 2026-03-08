@@ -1,5 +1,4 @@
 # src/step3/ops/laplacian.py
-import numpy as np
 
 def laplacian_v_n(v_n, dx, dy, dz):
     """

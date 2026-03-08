@@ -1,6 +1,8 @@
 # tests/operators/test_laplacian.py
 import numpy as np
-from src.step3.ops.laplacian import laplacian_v_n, laplacian_p_n_plus_1
+
+from src.step3.ops.laplacian import laplacian_p_n_plus_1, laplacian_v_n
+
 
 def test_laplacian_equivalence():
     nx, ny, nz = 5, 5, 5
