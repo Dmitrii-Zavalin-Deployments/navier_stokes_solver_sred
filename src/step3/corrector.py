@@ -3,6 +3,7 @@
 from .ops.gradient import gradient_p_n_plus_1
 from .ops.scaling import get_dt_over_rho
 
+
 def apply_velocity_correction(v_star, p_next, dx, dy, dz, dt, rho):
     """
     Projects the intermediate velocity field v* onto a divergence-free space.

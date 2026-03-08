@@ -5,6 +5,7 @@ from src.step3.corrector import apply_velocity_correction
 from src.step3.ppe_solver import solve_pressure_poisson
 from src.step3.predictor import compute_predictor_step
 
+
 def orchestrate_step3(state):
     """
     Step 3 Orchestrator: Explicit Projection Method pipeline.
