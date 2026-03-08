@@ -3,11 +3,12 @@
 import numpy as np
 
 from .ppe import compute_ppe_rhs
+from .ops.sor_stencil import compute_sor_stencil
 
 
 def solve_pressure_poisson(state):
     """
-    Solves \nabla^2 p^{n+1} = RHS using SOR with config-based parameters.
+    Solves \nabla^2 p^{n+1} = RHS using Successive Over-Relaxation (SOR).
     """
     # 1. Hydrate configuration parameters
     cfg = state.config.solver_settings
@@ -28,20 +29,21 @@ def solve_pressure_poisson(state):
         state.config.simulation_parameters["time_step"]
     )
     
+    # 3. Initialize pressure field
     p = state.fields.P.copy()
     
-    # 3. SOR Iteration Loop
+    # 4. SOR Iteration Loop
     for _ in range(max_iter):
         p_old = p.copy()
         
-        p[1:-1, 1:-1, 1:-1] = (1 - omega) * p[1:-1, 1:-1, 1:-1] + (omega / stencil_denom) * (
-            (p[2:, 1:-1, 1:-1] + p[:-2, 1:-1, 1:-1]) / dx2 +
-            (p[1:-1, 2:, 1:-1] + p[1:-1, :-2, 1:-1]) / dy2 +
-            (p[1:-1, 1:-1, 2:] + p[1:-1, 1:-1, :-2]) / dz2 -
-            rhs
-        )
+        # Calculate Laplacian stencil residual using the modular operator
+        stencil_val = compute_sor_stencil(p, dx2, dy2, dz2, stencil_denom, rhs)
         
-        # Convergence Check: Using L2 norm of the change
+        # Apply the SOR update rule
+        p[1:-1, 1:-1, 1:-1] = (1 - omega) * p[1:-1, 1:-1, 1:-1] + \
+                              (omega / stencil_denom) * stencil_val
+        
+        # Convergence Check: L2 norm of the change
         if np.linalg.norm(p - p_old) < tol:
             break
             
