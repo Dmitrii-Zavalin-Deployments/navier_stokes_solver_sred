@@ -3,6 +3,7 @@
 from .factory import build_core_cell, build_ghost_cell
 from .stencil_block import StencilBlock
 
+
 def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
     """
     Assembles the 3D grid into a flattened matrix of StencilBlocks.
