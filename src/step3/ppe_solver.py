@@ -1,4 +1,5 @@
 # src/step3/ppe_solver.py
+
 import numpy as np
 from .ppe import compute_ppe_rhs
 from .ops.sor_stencil import compute_sor_stencil
