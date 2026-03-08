@@ -1,27 +1,34 @@
-from __future__ import annotations
+# src/step3/ops/advection.py
 
-from src.solver_state import SolverState
-from src.step2.operators import build_gradient  # Centralized SSoT
+import numpy as np
 
-
-def build_advection_operators(state: SolverState) -> None:
+def apply_advection_operator(v_n, field, dx, dy, dz):
     """
-    Step 2 Logic: Build the Advection convective term matrix (v · ∇).
+    Computes (v^n * nabla) * field.
     
-    Rule 8 Compliance: Advection does not define gradients; 
-    it consumes them from the operator library.
+    Formula:
+    u * df/dx + v * df/dy + w * df/dz
     """
-    g = state.grid
+    u, v, w = v_n[0], v_n[1], v_n[2]
     
-    # 1. Access or build the base gradient operators
-    # We use the centralized builder to maintain consistency across the solver
-    Gx = build_gradient(g.nx, g.ny, g.nz, g.dx, g.dy, g.dz)
+    # Central difference for gradients
+    df_dx = (field[2:, 1:-1, 1:-1] - field[:-2, 1:-1, 1:-1]) / (2 * dx)
+    df_dy = (field[1:-1, 2:, 1:-1] - field[1:-1, :-2, 1:-1]) / (2 * dy)
+    df_dz = (field[1:-1, 1:-1, 2:] - field[1:-1, 1:-1, :-2]) / (2 * dz)
     
-    # 2. Assemble the convective matrix: C = V_x * Gx + V_y * Gy + V_z * Gz
-    # Note: V_x, V_y, V_z here are sparse diagonal matrices of current velocity fields
-    # state.advection.C = (Vx @ Gx) + (Vy @ Gy) + (Vz @ Gz)
+    # Velocity at cell centers (simple average for consistency with cell-centered pressure)
+    u_c = (u[2:, 1:-1, 1:-1] + u[:-2, 1:-1, 1:-1]) / 2 # Simplified
+    v_c = (v[1:-1, 2:, 1:-1] + v[1:-1, :-2, 1:-1]) / 2
+    w_c = (w[1:-1, 1:-1, 2:] + w[1:-1, 1:-1, :-2]) / 2
     
-    state.advection.grad_x = Gx
-    
-    # Assertions for deterministic state (Rule 5)
-    assert state.advection.grad_x.shape == (g.nx * g.ny * g.nz, g.nx * g.ny * g.nz)
+    return u_c * df_dx + v_c * df_dy + w_c * df_dz
+
+def advective_term_v_n(v_n, dx, dy, dz):
+    """
+    Computes (v^n * nabla) * v^n (The Advective Term).
+    """
+    return (
+        apply_advection_operator(v_n, v_n[0], dx, dy, dz),
+        apply_advection_operator(v_n, v_n[1], dx, dy, dz),
+        apply_advection_operator(v_n, v_n[2], dx, dy, dz)
+    )
