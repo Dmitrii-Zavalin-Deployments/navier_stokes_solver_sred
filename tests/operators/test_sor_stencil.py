@@ -1,8 +1,9 @@
 # tests/operators/test_sor_stencil.py
 
 import numpy as np
-import pytest
+
 from src.step3.ops.sor_stencil import compute_sor_stencil
+
 
 def test_sor_stencil_on_quadratic_field():
     # 1. Setup a small 3D grid

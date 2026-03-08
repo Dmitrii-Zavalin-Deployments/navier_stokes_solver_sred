@@ -1,7 +1,9 @@
 # src/step3/ppe_solver.py
 
 import numpy as np
+
 from .ppe import compute_ppe_rhs
+
 
 def solve_pressure_poisson(state):
     """
