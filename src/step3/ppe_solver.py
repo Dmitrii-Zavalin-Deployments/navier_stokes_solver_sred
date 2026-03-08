@@ -1,10 +1,8 @@
 # src/step3/ppe_solver.py
-
 import numpy as np
-
-from .ops.sor_stencil import compute_sor_stencil
 from .ppe import compute_ppe_rhs
-
+from .ops.sor_stencil import compute_sor_stencil
+from .core.grid_utils import get_interior_slices
 
 def solve_pressure_poisson(state):
     """
@@ -29,8 +27,9 @@ def solve_pressure_poisson(state):
         state.config.simulation_parameters["time_step"]
     )
     
-    # 3. Initialize pressure field
+    # 3. Initialize pressure field and interior slice mask
     p = state.fields.P.copy()
+    interior = get_interior_slices()
     
     # 4. SOR Iteration Loop
     for _ in range(max_iter):
@@ -39,13 +38,12 @@ def solve_pressure_poisson(state):
         # Calculate Laplacian stencil residual using the modular operator
         stencil_val = compute_sor_stencil(p, dx2, dy2, dz2, stencil_denom, rhs)
         
-        # Apply the SOR update rule
-        p[1:-1, 1:-1, 1:-1] = (1 - omega) * p[1:-1, 1:-1, 1:-1] + \
-                              (omega / stencil_denom) * stencil_val
+        # Apply the SOR update rule using the interior slice utility
+        p[interior] = (1 - omega) * p[interior] + \
+                      (omega / stencil_denom) * stencil_val
         
         # Convergence Check: L2 norm of the change
         if np.linalg.norm(p - p_old) < tol:
             break
             
-    state.fields.P = p
     return p
