@@ -1,6 +1,7 @@
 # src/step2/factory.py
 
 from src.core.solver_state import SolverState
+
 from .cell import Cell
 
 
