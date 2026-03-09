@@ -33,12 +33,18 @@ def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state.config.initial_conditions["pressure"] = 0.0
     
     state.config._boundary_conditions = [
-        {'location': 'x_min', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
+        # INLET: Drives the flow into the domain
+        {'location': 'x_min', 'type': 'inflow', 'values': {'u': 1.0, 'v': 0.0, 'w': 0.0, 'p': 1.0}},
+        # OUTFLOW: Allows fluid to exit freely
         {'location': 'x_max', 'type': 'outflow', 'values': {'p': 0.0}},
+        # WALLS: Standard no-slip constraints
         {'location': 'y_min', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
         {'location': 'y_max', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
         {'location': 'z_min', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
-        {'location': 'z_max', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}}]
+        {'location': 'z_max', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
+        # Internal boundary:
+        {'location': 'internal_boundary', 'type': 'no-slip', 'values': {'u': 0.0, 'v': 0.0, 'w': 0.0}},
+        ]
 
     # Standard Grid/Field Setup
     state.grid.nx, state.grid.ny, state.grid.nz = nx, ny, nz
