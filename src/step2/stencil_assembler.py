@@ -1,6 +1,7 @@
 # src/step2/stencil_assembler.py
 
-# Updated import to point to the new common location
+from .factory import build_core_cell, build_ghost_cell
+# Import is already pointing to the new common location
 from src.common.stencil_block import StencilBlock
 
 from .factory import build_core_cell, build_ghost_cell
@@ -23,7 +24,8 @@ def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
         if coord in cell_cache:
             return cell_cache[coord]
             
-        # Otherwise, build it and cache it
+        # Otherwise, build it and cache it. 
+        # The factory now initializes all the new solver states in the Cell.
         if (0 <= ix < nx) and (0 <= iy < ny) and (0 <= iz < nz):
             cell = build_core_cell(ix, iy, iz, state, ctx)
         else:
@@ -37,7 +39,8 @@ def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
         for j in range(ny):
             for k in range(nz):
                 
-                # We assemble the block using the cached cell instances
+                # We assemble the block using the cached cell instances.
+                # These Cell objects now contain the fields needed for Step 3.
                 block = StencilBlock(
                     center=get_cell(i, j, k),
                     i_minus=get_cell(i-1, j, k), i_plus=get_cell(i+1, j, k),

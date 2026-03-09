@@ -1,33 +1,33 @@
-# src/step2/cell.py
+# src/common/cell.py
 
 from src.common.base_container import ValidatedContainer
 
 
 class Cell(ValidatedContainer):
     """
-    Transient Data Transfer Object (DTO) for Step 2.
+    Transient Data Transfer Object (DTO) for the Projection Method.
     Inherits runtime contract enforcement from ValidatedContainer.
     Optimized with __slots__ to eliminate dictionary overhead.
     """
 
-    # __slots__ reserves fixed memory locations for these attributes.
-    # Note: These names match the internal storage expected by _get_safe/_set_safe.
-    __slots__ = ['_x', '_y', '_z', '_vx', '_vy', '_vz', '_p', '_mask', '_is_ghost']
+    __slots__ = [
+        '_x', '_y', '_z', 
+        '_vx', '_vy', '_vz', 
+        '_vx_star', '_vy_star', '_vz_star', 
+        '_vx_next', '_vy_next', '_vz_next',
+        '_p', '_p_next', 
+        '_mask', '_is_ghost'
+    ]
 
     def __init__(self, x: int = None, y: int = None, z: int = None):
-        # Explicitly initialize slots to None to allow the _get_safe 
-        # uninitialized-access check to function correctly.
         for slot in self.__slots__:
             super().__setattr__(slot, None)
 
-        # Set coordinates if provided; these use the property setters, 
-        # which will perform the validation logic.
         if x is not None: self.x = x
         if y is not None: self.y = y
         if z is not None: self.z = z
 
-    # --- Setters and Getters using _set_safe and _get_safe ---
-
+    # --- Standard Properties ---
     @property
     def x(self) -> int: return self._get_safe("x")
     @x.setter
@@ -43,6 +43,7 @@ class Cell(ValidatedContainer):
     @z.setter
     def z(self, value: int): self._set_safe("z", value, int)
 
+    # --- Velocity Fields (n) ---
     @property
     def vx(self) -> float: return self._get_safe("vx")
     @vx.setter
@@ -58,11 +59,50 @@ class Cell(ValidatedContainer):
     @vz.setter
     def vz(self, value: float): self._set_safe("vz", value, (float, int))
 
+    # --- Intermediate Velocity Fields (star) ---
+    @property
+    def vx_star(self) -> float: return self._get_safe("vx_star")
+    @vx_star.setter
+    def vx_star(self, value: float): self._set_safe("vx_star", value, (float, int))
+
+    @property
+    def vy_star(self) -> float: return self._get_safe("vy_star")
+    @vy_star.setter
+    def vy_star(self, value: float): self._set_safe("vy_star", value, (float, int))
+
+    @property
+    def vz_star(self) -> float: return self._get_safe("vz_star")
+    @vz_star.setter
+    def vz_star(self, value: float): self._set_safe("vz_star", value, (float, int))
+
+    # --- Next Velocity Fields (n+1) ---
+    @property
+    def vx_next(self) -> float: return self._get_safe("vx_next")
+    @vx_next.setter
+    def vx_next(self, value: float): self._set_safe("vx_next", value, (float, int))
+
+    @property
+    def vy_next(self) -> float: return self._get_safe("vy_next")
+    @vy_next.setter
+    def vy_next(self, value: float): self._set_safe("vy_next", value, (float, int))
+
+    @property
+    def vz_next(self) -> float: return self._get_safe("vz_next")
+    @vz_next.setter
+    def vz_next(self, value: float): self._set_safe("vz_next", value, (float, int))
+
+    # --- Pressure Fields ---
     @property
     def p(self) -> float: return self._get_safe("p")
     @p.setter
     def p(self, value: float): self._set_safe("p", value, (float, int))
 
+    @property
+    def p_next(self) -> float: return self._get_safe("p_next")
+    @p_next.setter
+    def p_next(self, value: float): self._set_safe("p_next", value, (float, int))
+
+    # --- Topology ---
     @property
     def mask(self) -> int: return self._get_safe("mask")
     @mask.setter

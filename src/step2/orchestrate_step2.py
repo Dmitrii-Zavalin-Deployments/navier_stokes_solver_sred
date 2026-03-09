@@ -3,6 +3,8 @@
 from src.core.solver_state import SolverState
 
 from .factory import get_initialization_context
+from .stencil_assembler import assemble_stencil_matrix
+
 
 
 def orchestrate_step2(state: SolverState) -> SolverState:

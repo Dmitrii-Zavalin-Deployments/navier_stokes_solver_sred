@@ -1,37 +1,27 @@
 # src/step3/orchestrate_step3.py
-import numpy as np
 
-from src.step3.corrector import apply_velocity_correction
-from src.step3.ppe_solver import solve_pressure_poisson
-from src.step3.predictor import compute_predictor_step
+from src.common.stencil_block import StencilBlock
+from src.step3.predictor import compute_local_predictor_step
+from src.step3.ppe_solver import solve_local_ppe
+from src.step3.corrector import apply_local_velocity_correction
 
 
-def orchestrate_step3(state):
+def orchestrate_step3(block: StencilBlock):
     """
     Step 3 Orchestrator: Explicit Projection Method pipeline.
+    Processes a single StencilBlock, updating the 'center' cell properties directly.
     """
-    # 1. Hydration
-    dx, dy, dz = state.grid.dx, state.grid.dy, state.grid.dz
-    dt = state.config.simulation_parameters["time_step"]
-    rho = state.config.fluid_properties["density"]
-    mu = state.config.fluid_properties["viscosity"]
-    F_vals = tuple(state.config.external_forces["force_vector"])
     
-    v_n = np.stack([state.fields.U, state.fields.V, state.fields.W])
+    # 1. PREDICT: Calculate intermediate velocity (v*) for the center cell
+    # The block object provides all necessary neighbor references and physical constants.
+    v_star = compute_local_predictor_step(block)
     
-    # 2. PREDICT: Calculate intermediate V*
-    state.fields.v_star = compute_predictor_step(v_n, state.fields.P, dx, dy, dz, dt, rho, mu, F_vals)
+    # 2. SOLVE: Solve local PPE contribution for p^{n+1}
+    # Operates on the neighborhood gradient to find the pressure adjustment for this cell.
+    p_next = solve_local_ppe(block)
     
-    # 3. SOLVE: Solve PPE for p^{n+1}
-    # Update the state object directly with the solver output
-    state.fields.P = solve_pressure_poisson(state)
+    # 3. CORRECT: Project local velocity v* to v^{n+1}
+    # Directly updates block.center.vx, vy, vz using the pressure gradient.
+    apply_local_velocity_correction(block, v_star, p_next)
     
-    # 4. CORRECT: Project v* onto divergence-free space
-    # Pass the updated state pressure field to the corrector
-    state.fields.v_next = apply_velocity_correction(
-        state.fields.v_star, 
-        state.fields.P, 
-        dx, dy, dz, dt, rho
-    )
-    
-    return state
+    return block
