@@ -1,52 +1,47 @@
 # src/step3/ppe_solver.py
 
-import numpy as np
+import json
+from pathlib import Path
+from src.common.stencil_block import StencilBlock
+from src.step3.ops.divergence import compute_local_divergence_v_star
+from src.step3.ops.laplacian import compute_local_laplacian_p_next
+from src.step3.ops.scaling import get_rho_over_dt
 
-from .core.grid_utils import get_interior_slices
-from .ops.sor_stencil import compute_sor_stencil
-from .ppe import compute_ppe_rhs
+def _load_ppe_config() -> dict:
+    config_path = Path(__file__).resolve().parents[2] / "config.json"
+    with open(config_path, "r") as f:
+        return json.load(f)["solver_settings"]
 
-
-def solve_pressure_poisson(state):
+def solve_pressure_poisson_step(block: StencilBlock) -> float:
     """
-    Solves \nabla^2 p^{n+1} = RHS using Successive Over-Relaxation (SOR).
+    Consolidated PPE Solver.
+    Uses the 7-point Laplacian stencil to perform an in-place SOR update.
     """
-    # 1. Hydrate configuration parameters
-    cfg = state.config.solver_settings
-    omega = cfg.get("ppe_omega", 1.5)
-    max_iter = cfg.get("ppe_max_iter", 1000)
-    tol = cfg.get("ppe_tolerance", 1e-6)
+    cfg = _load_ppe_config()
+    omega = cfg["ppe_omega"]
     
-    # 2. Setup grid and RHS
-    dx, dy, dz = state.grid.dx, state.grid.dy, state.grid.dz
-    dx2, dy2, dz2 = dx**2, dy**2, dz**2
-    stencil_denom = 2.0 * (1/dx2 + 1/dy2 + 1/dz2)
+    # 1. Geometry Setup (The 7-point Stencil denominator)
+    dx2, dy2, dz2 = block.dx**2, block.dy**2, block.dz**2
+    stencil_denom = 2.0 * (1.0/dx2 + 1.0/dy2 + 1.0/dz2)
     
-    rhs = compute_ppe_rhs(
-        state.fields.v_star, 
-        state.fields.P, 
-        dx, dy, dz, 
-        state.config.fluid_properties["density"], 
-        state.config.simulation_parameters["time_step"]
+    # 2. Compute RHS (Stabilized via Rhie-Chow)
+    # RHS = (rho/dt) * (div(v*) - dt * lap(p_n))
+    rho_over_dt = get_rho_over_dt(block)
+    div_v_star = compute_local_divergence_v_star(block)
+    lap_p_n = compute_local_laplacian_p_next(block)
+    rhs = rho_over_dt * (div_v_star - block.dt * lap_p_n)
+    
+    # 3. Sum of Neighbors
+    sum_neighbors = (
+        (block.i_plus.p_next + block.i_minus.p_next) / dx2 +
+        (block.j_plus.p_next + block.j_minus.p_next) / dy2 +
+        (block.k_plus.p_next + block.k_minus.p_next) / dz2
     )
     
-    # 3. Initialize pressure field and interior slice mask
-    p = state.fields.P.copy()
-    interior = get_interior_slices()
+    # 4. SOR Update (In-place mutation)
+    p_old = block.center.p_next
+    p_new = (1.0 - omega) * p_old + (omega / stencil_denom) * (sum_neighbors - rhs)
     
-    # 4. SOR Iteration Loop
-    for _ in range(max_iter):
-        p_old = p.copy()
-        
-        # Calculate Laplacian stencil residual using the modular operator
-        stencil_val = compute_sor_stencil(p, dx2, dy2, dz2, stencil_denom, rhs)
-        
-        # Apply the SOR update rule using the interior slice utility
-        p[interior] = (1 - omega) * p[interior] + \
-                      (omega / stencil_denom) * stencil_val
-        
-        # Convergence Check: L2 norm of the change
-        if np.linalg.norm(p - p_old) < tol:
-            break
-            
-    return p
+    block.center.p_next = p_new
+    
+    return abs(p_new - p_old)
