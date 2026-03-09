@@ -1,19 +1,17 @@
-def orchestrate_step4(state: SolverState, dt: float) -> SolverState:
-    # 1. Predictor: Solve for intermediate velocity v*
-    v_star = predictor.compute(state, dt)
+# src/step4/orchestrate_step4.py
+
+from src.step4.boundary_dispatcher import get_applicable_boundary_configs
+from src.step4.boundary_applier import apply_boundary_values
+
+def orchestrate_step4(block, boundary_cfg: list) -> StencilBlock:
+    if block.center.is_ghost:
+        return block
+
+    # 1. Identify which boundaries apply to this block
+    rules = get_applicable_boundary_configs(block, boundary_cfg)
     
-    # 2. Rhie-Chow Corrected PPE: Solve for p^{n+1}
-    p_next = ppe_solver.solve(state, v_star, dt)
-    
-    # 3. Corrector: Project onto divergence-free space to get v^{n+1}
-    v_next = corrector.compute(state, v_star, p_next, dt)
-    
-    # 4. State Update: Commit the new physical state to the Active Working Set
-    # This overwrites the buffers, keeping memory footprint constant.
-    state.fields.U, state.fields.V, state.fields.W = v_next
-    state.fields.P = p_next
-    
-    # Note: No archive trigger here. We defer archival to Step 5 
-    # to ensure the snapshot is physically bounded (BCs applied).
-    
-    return state
+    # 2. Apply updates for each rule found
+    for rule in rules:
+        apply_boundary_values(block, rule)
+        
+    return block

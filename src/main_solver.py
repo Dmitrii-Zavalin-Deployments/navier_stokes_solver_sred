@@ -71,7 +71,7 @@ def run_solver_from_file(input_path: str) -> str:
                 # Calculate v*
                 block, delta = orchestrate_step3(block, omega, is_first_pass=True)
                 # Enforce BCs on the predicted velocity v*
-                block = orchestrate_step4(block)
+                block = orchestrate_step4(processed_block, state.config.boundary_conditions)
             
             # B. ITERATIVE SOLVER & BOUNDARY PASS
             for _ in range(max_iter):
@@ -81,7 +81,7 @@ def run_solver_from_file(input_path: str) -> str:
                     block, delta = orchestrate_step3(block, omega, is_first_pass=False)
                     
                     # Enforce BCs on the newly corrected velocity v^{n+1}
-                    block = orchestrate_step4(block)
+                    block = orchestrate_step4(processed_block, state.config.boundary_conditions)
                     
                     max_delta = max(max_delta, delta)
                 
