@@ -1,7 +1,6 @@
 # src/step2/factory.py
 
 from src.core.solver_state import SolverState
-
 from .cell import Cell
 
 
@@ -11,19 +10,15 @@ def get_initialization_context(state: SolverState) -> dict:
     Hoists physical constants and initial conditions out of the 3D loop.
     This prevents O(N^3) dictionary lookups.
     """
-    # 1. Extract Initial Conditions using strict property access
-    # These call _get_safe internally via the SolverState/Config facades.
     init_cond = state.config.initial_conditions 
     init_v = init_cond["velocity"]
     init_p = init_cond["pressure"]
 
-    # 2. Return the pre-calculated context
     return {
         "vx": float(init_v[0]),
         "vy": float(init_v[1]),
         "vz": float(init_v[2]),
         "p": float(init_p),
-        # Using the facades defined in SolverState for spacing
         "dx": state.grid.dx,
         "dy": state.grid.dy,
         "dz": state.grid.dz,
@@ -37,9 +32,11 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState, ctx: dict) -> Ce
     Creates a real cell inside the nx * ny * nz domain.
     Maps physical coordinates and topology from the input MaskData.
     """
-    cell = Cell(x=i, y=j, z=k)
+    # Instantiate with no args to minimize __init__ logic; 
+    # validation occurs via property assignment.
+    cell = Cell()
     
-    # 1. Physical Center Coordinates: x_min + (i + 0.5) * dx
+    # 1. Physical Center Coordinates
     cell.x = ctx["x_min"] + (i + 0.5) * ctx["dx"]
     cell.y = ctx["y_min"] + (j + 0.5) * ctx["dy"]
     cell.z = ctx["z_min"] + (k + 0.5) * ctx["dz"]
@@ -48,26 +45,24 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState, ctx: dict) -> Ce
     cell.vx, cell.vy, cell.vz, cell.p = ctx["vx"], ctx["vy"], ctx["vz"], ctx["p"]
     
     # 3. Topology from Step 1 Mask
-    # Accessing the mask directly as a 3D numpy array
-    mask_val = int(state.masks.mask[i, j, k])
-    cell.mask = mask_val
+    cell.mask = int(state.masks.mask[i, j, k])
     cell.is_ghost = False 
     
     return cell
 
 def build_ghost_cell(i: int, j: int, k: int, ctx: dict) -> Cell:
     """
-    Creates a virtual cell on the perimeter (-1 or n indices).
+    Creates a virtual cell on the perimeter.
     Uses -1 mask to signify boundary conditions.
     """
-    cell = Cell(x=i, y=j, z=k)
+    cell = Cell()
     
-    # 1. Physical coordinates for the ghost layer
+    # 1. Physical coordinates
     cell.x = ctx["x_min"] + (i + 0.5) * ctx["dx"]
     cell.y = ctx["y_min"] + (j + 0.5) * ctx["dy"]
     cell.z = ctx["z_min"] + (k + 0.5) * ctx["dz"]
 
-    # 2. Initial Physics (refined by BCs in Step 4)
+    # 2. Initial Physics
     cell.vx, cell.vy, cell.vz, cell.p = ctx["vx"], ctx["vy"], ctx["vz"], ctx["p"]
     
     # 3. Compliance: Using -1 as the boundary/ghost indicator

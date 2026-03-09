@@ -6,28 +6,36 @@ from .stencil_block import StencilBlock
 
 def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
     """
-    Assembles a flattened list of StencilBlocks containing only Core cells.
-    Neighbors (including ghost cells) are resolved via a shared helper.
+    Assembles a flattened list of StencilBlocks. 
+    Uses a cache to ensure shared cells are instantiated only once.
     """
-    # 1. Initialize a standard Python list
-    # For object iteration, lists are slightly more efficient than NumPy object arrays.
     local_stencil_list = []
+    
+    # Cache for Cell objects to prevent redundant object creation
+    # Mapping (i, j, k) -> Cell object
+    cell_cache = {}
 
-    # 2. Define the cell-fetcher ONCE outside the loops
-    # This prevents thousands of function redefinitions during execution.
     def get_cell(ix, iy, iz):
+        # Check if we already created this cell
+        coord = (ix, iy, iz)
+        if coord in cell_cache:
+            return cell_cache[coord]
+            
+        # Otherwise, build it and cache it
         if (0 <= ix < nx) and (0 <= iy < ny) and (0 <= iz < nz):
-            return build_core_cell(ix, iy, iz, state, ctx)
-        return build_ghost_cell(ix, iy, iz, ctx)
+            cell = build_core_cell(ix, iy, iz, state, ctx)
+        else:
+            cell = build_ghost_cell(ix, iy, iz, ctx)
+            
+        cell_cache[coord] = cell
+        return cell
 
-    # 3. Iterate through the Core domain only
-    # Note: range(nx) corresponds to core cells 0 to nx-1.
+    # 3. Iterate through the Core domain
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
                 
-                # Assemble the 7-point stencil for the current core cell
-                # Neighbors automatically fall into ghost zones via get_cell logic
+                # We assemble the block using the cached cell instances
                 block = StencilBlock(
                     center=get_cell(i, j, k),
                     i_minus=get_cell(i-1, j, k), i_plus=get_cell(i+1, j, k),
