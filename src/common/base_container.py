@@ -9,8 +9,11 @@ import numpy as np
 
 
 class ValidatedContainer:
-    """The 'Security Guard' logic. Now with memory-efficient slots."""
+    """The 'Security Guard' logic. Now with memory-efficient slots and O(1) attribute validation."""
     __slots__ = []  # Empty slots for the base; children will populate theirs
+    
+    # Cache for allowed attribute names to avoid re-calculating MRO at runtime
+    _ALLOWED_ATTRS = None
 
     def __iter__(self) -> Iterator[str]:
         """Helper to iterate over attributes defined in slots across the hierarchy."""
@@ -50,10 +53,25 @@ class ValidatedContainer:
 
         jsonschema.validate(instance=instance_data, schema=schema)
 
+    def __setattr__(self, name: str, value: Any):
+        """Prevents dynamic creation of attributes via O(1) cached lookup."""
+        # Lazily initialize cache for this specific subclass
+        if self._ALLOWED_ATTRS is None:
+            allowed = set()
+            for cls in self.__class__.__mro__:
+                allowed.update(getattr(cls, '__slots__', []))
+            self.__class__._ALLOWED_ATTRS = frozenset(allowed)
+        
+        # Enforce strict attribute access (excluding the underscore prefix for validation)
+        # Note: If adding internal attributes like _x, they must be in __slots__
+        if name not in self._ALLOWED_ATTRS:
+            raise AttributeError(f"Memory Leak Prevention: Attribute '{name}' not in __slots__ for {self.__class__.__name__}")
+        
+        super().__setattr__(name, value)
+    
     def to_dict(self) -> dict:
         """Serializes the container using the slots hierarchy."""
         out = {}
-        # Iterate over all slots defined in the hierarchy
         for attr in self:
             val = getattr(self, attr, None)
             clean_key = attr.lstrip('_')
