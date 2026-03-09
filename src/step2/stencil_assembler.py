@@ -1,8 +1,9 @@
 # src/step2/stencil_assembler.py
 
-from .factory import build_core_cell, build_ghost_cell
 # Updated import to point to the new common location
 from src.common.stencil_block import StencilBlock
+
+from .factory import build_core_cell, build_ghost_cell
 
 
 def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
