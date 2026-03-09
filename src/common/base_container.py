@@ -1,10 +1,12 @@
 # src/common/base_container.py
 
 import json
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import jsonschema
 import numpy as np
+
 
 class ValidatedContainer:
     """The 'Security Guard' logic. Now with memory-efficient slots."""
