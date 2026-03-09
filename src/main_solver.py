@@ -69,9 +69,9 @@ def run_solver_from_file(input_path: str) -> str:
             # A. PREDICTOR PASS (Once per time step)
             for block in state.stencil_matrix:
                 # Calculate v*
-                orchestrate_step3(block, omega, is_first_pass=True)
+                block, delta = orchestrate_step3(block, omega, is_first_pass=True)
                 # Enforce BCs on the predicted velocity v*
-                orchestrate_step4(block)
+                block = orchestrate_step4(block)
             
             # B. ITERATIVE SOLVER & BOUNDARY PASS
             for _ in range(max_iter):
