@@ -2,6 +2,7 @@
 
 from src.common.stencil_block import StencilBlock
 
+
 def perform_sor_iteration_step(block: StencilBlock, rhs: float, omega: float) -> float:
     """
     Performs one SOR iteration step for a single StencilBlock.
