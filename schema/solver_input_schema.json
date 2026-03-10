@@ -9,9 +9,30 @@
     "simulation_parameters",
     "boundary_conditions",
     "mask",
-    "external_forces"
+    "external_forces",
+    "domain_configuration"
   ],
   "properties": {
+    "domain_configuration": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "INTERNAL",
+            "EXTERNAL"
+          ],
+          "description": "INTERNAL: Pressure-driven pipe flow. EXTERNAL: Far-field aerodynamics."
+        },
+        "reference_velocity": {
+          "type": "number",
+          "description": "Optional reference velocity for far-field calculations."
+        }
+      }
+    },
     "grid": {
       "type": "object",
       "required": [
@@ -27,34 +48,43 @@
       ],
       "properties": {
         "x_min": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain start in X."
         },
         "x_max": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain end in X."
         },
         "y_min": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain start in Y."
         },
         "y_max": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain end in Y."
         },
         "z_min": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain start in Z."
         },
         "z_max": {
-          "type": "number"
+          "type": "number",
+          "description": "Physical coordinate of the domain end in Z."
         },
         "nx": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of discrete computational cells along the X-axis."
         },
         "ny": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of discrete computational cells along the Y-axis."
         },
         "nz": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of discrete computational cells along the Z-axis."
         }
       }
     },
@@ -100,8 +130,7 @@
       "required": [
         "time_step",
         "total_time",
-        "output_interval",
-        "advection_weight_base"
+        "output_interval"
       ],
       "properties": {
         "time_step": {
@@ -115,12 +144,6 @@
         "output_interval": {
           "type": "integer",
           "minimum": 1
-        },
-        "advection_weight_base": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Interpolation bias: 0.125 = Standard Central Differencing (2nd order, oscillatory); 1.0 = Pure Upwind/Node-injection (1st order, highly diffusive/stable); 0.0 = Nullified advection (used for pure diffusion or static field tests)."
         }
       }
     },
@@ -171,9 +194,6 @@
                 "type": "number"
               }
             }
-          },
-          "comment": {
-            "type": "string"
           }
         }
       }
@@ -203,9 +223,6 @@
           },
           "minItems": 3,
           "maxItems": 3
-        },
-        "comment": {
-          "type": "string"
         }
       }
     }
