@@ -98,9 +98,17 @@ def run_solver_from_file(input_path: str) -> str:
                         )
                     break
             
-            # C. FINALIZATION, LOGGING & TEMPORAL GUARD
-            # Step 5 handles the odometer (iteration/time) and convergence/termination checks
+            # C. ODOMETER UPDATE
+            state.iteration += 1
+            state.time += state.state.config.time_step
+            
+            # D. FINALIZATION & ARCHIVING
+            # Step 5 now only decides IF and HOW to save the snapshot
             state = orchestrate_step5(state)
+            
+            # E. TEMPORAL GUARD
+            if state.time >= state.config.total_time:
+                state.ready_for_time_loop = False
             
             if DEBUG and state.iteration % 10 == 0:
                 # We use the max_delta from the final SOR iteration
