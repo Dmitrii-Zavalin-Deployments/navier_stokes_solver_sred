@@ -137,7 +137,6 @@ class SimParamsInput(ValidatedContainer):
     _time_step: float = None
     _total_time: float = None
     _output_interval: int = None
-    _advection_weight_base: float = None
 
     @property
     def time_step(self) -> float: return self._get_safe("time_step")
@@ -159,14 +158,6 @@ class SimParamsInput(ValidatedContainer):
     def output_interval(self, v: int):
         if v is not None and v < 1: raise ValueError("output_interval must be >= 1")
         self._set_safe("output_interval", v, int)
-
-    @property
-    def advection_weight_base(self) -> float: return self._get_safe("advection_weight_base")
-    @advection_weight_base.setter
-    def advection_weight_base(self, v: float):
-        if v is not None:
-            if v < 0 or v > 1: raise ValueError(f"advection_weight_base must be in [0, 1], got {v}")
-        self._set_safe("advection_weight_base", v, float)
 
 @dataclass
 class BoundaryConditionItem(ValidatedContainer):
@@ -291,7 +282,6 @@ class SolverInput(ValidatedContainer):
         if "time_step" in sp: obj.simulation_parameters.time_step = sp["time_step"]
         if "total_time" in sp: obj.simulation_parameters.total_time = sp["total_time"]
         if "output_interval" in sp: obj.simulation_parameters.output_interval = sp["output_interval"]
-        if "advection_weight_base" in sp: obj.simulation_parameters.advection_weight_base = sp["advection_weight_base"]
         
         ef = data.get("external_forces", {})
         if "force_vector" in ef: obj.external_forces.force_vector = ef["force_vector"]
@@ -317,7 +307,7 @@ class SolverInput(ValidatedContainer):
             "initial_conditions": {k: get_val(self.initial_conditions, k) for k in ["velocity", "pressure"]},
             "simulation_parameters": {
                 k: get_val(self.simulation_parameters, k) 
-                for k in ["time_step", "total_time", "output_interval", "advection_weight_base"]
+                for k in ["time_step", "total_time", "output_interval"]
             },
             "boundary_conditions": [
                 {k: get_val(bc, k) for k in ["location", "type", "values", "comment"]}
