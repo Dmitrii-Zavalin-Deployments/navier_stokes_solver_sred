@@ -1,15 +1,12 @@
 # src/common/stencil_block.py
 
 from src.common.base_container import ValidatedContainer
-
 from .cell import Cell
-
 
 class StencilBlock(ValidatedContainer):
     """
-    Logical container representing a 7-point stencil + physical context.
-    Inherits runtime contract enforcement from ValidatedContainer.
-    Optimized with __slots__ to eliminate dictionary overhead.
+    Logical Wiring: Represents the 7-point stencil topology.
+    Acts as the graph node connecting neighboring Cells.
     """
 
     __slots__ = [
@@ -22,26 +19,20 @@ class StencilBlock(ValidatedContainer):
                  dx: float, dy: float, dz: float, dt: float, 
                  rho: float, mu: float, f_vals: tuple):
         
-        # Initialize all slots to None to allow _get_safe to detect uninitialized states.
+        # Initialize slots (Zero-Debt Policy)
         for slot in self.__slots__:
             super().__setattr__(slot, None)
         
-        # Assign values through the validated setters to ensure contract enforcement
-        self.center = center
-        self.i_minus = i_minus
-        self.i_plus = i_plus
-        self.j_minus = j_minus
-        self.j_plus = j_plus
-        self.k_minus = k_minus
-        self.k_plus = k_plus
+        # Assign validated values
+        self.center, self.i_minus, self.i_plus = center, i_minus, i_plus
+        self.j_minus, self.j_plus = j_minus, j_plus
+        self.k_minus, self.k_plus = k_plus, k_plus
         
         self.dx, self.dy, self.dz = dx, dy, dz
-        self.dt = dt
-        self.rho = rho
-        self.mu = mu
+        self.dt, self.rho, self.mu = dt, rho, mu
         self.f_vals = f_vals
 
-    # --- Cell Accessors ---
+    # --- Topological Accessors (The Wiring) ---
     @property
     def center(self) -> Cell: return self._get_safe("center")
     @center.setter
@@ -77,7 +68,7 @@ class StencilBlock(ValidatedContainer):
     @k_plus.setter
     def k_plus(self, val: Cell): self._set_safe("k_plus", val, Cell)
 
-    # --- Physics Parameters Accessors ---
+    # --- Physics Parameters ---
     @property
     def dx(self) -> float: return self._get_safe("dx")
     @dx.setter
