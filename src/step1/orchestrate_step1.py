@@ -1,74 +1,69 @@
 # src/step1/orchestrate_step1.py
 
 from __future__ import annotations
+import numpy as np
 
 from src.solver_input import SolverInput
-from src.solver_state import SolverState
+from src.common.solver_state import (
+    SolverState, DomainManager, GridManager, FluidPropertiesManager,
+    InitialConditionManager, SimulationParameterManager, BoundaryCondition,
+    BoundaryConditionManager, MaskManager, ExternalForceManager
+)
+from .helpers import generate_3d_masks
 
-from .helpers import allocate_fields, generate_3d_masks, parse_bc_lookup
-
-
-def orchestrate_step1(input_data: SolverInput, **kwargs) -> SolverState:
+def orchestrate_step1(input_data: SolverInput) -> SolverState:
     """
-    Direct Ingestion Orchestrator.
-    Maps SolverInput (Contract) to SolverState (Truth) with Zero-Debt logic.
-    
-    Theory Alignment:
-    - Uses Collocated Grid (Section 3).
-    - Uses Mask-Based Geometry (Section 6).
+    Direct Ingestion Orchestrator (Phase C Compliant).
+    Zero-Debt Policy: State is initialized to the defaults defined in SolverState.
     """
     state = SolverState()
 
     # --- 1. Geometric Context (Grid) ---
-    # Rule 5: Accessing properties directly. 
-    # If GridInput is missing these, it will raise AttributeError (Strict Failure).
     g = input_data.grid
-    state.grid.nx, state.grid.ny, state.grid.nz = g.nx, g.ny, g.nz
-    state.grid.x_min, state.grid.x_max = g.x_min, g.x_max
-    state.grid.y_min, state.grid.y_max = g.y_min, g.y_max
-    state.grid.z_min, state.grid.z_max = g.z_min, g.z_max
-
-    # --- 2. Physical Context (Fluid & Forces) ---
-    # Rule 5: No defaults. Fluid properties must exist in input.
-    state.fluid.rho = input_data.fluid_properties.density
-    state.fluid.mu = input_data.fluid_properties.viscosity
+    state.grid = GridManager(
+        _x_min=float(g.x_min), _x_max=float(g.x_max),
+        _y_min=float(g.y_min), _y_max=float(g.y_max),
+        _z_min=float(g.z_min), _z_max=float(g.z_max),
+        _nx=int(g.nx), _ny=int(g.ny), _nz=int(g.nz)
+    )
     
-    state.config.external_forces = {"force_vector": input_data.external_forces.force_vector}
-    
-    # --- 3. Memory Allocation (Collocated Fields) ---
-    # Aligned with Section 3: All fields share (nx, ny, nz)
-    raw_fields = allocate_fields(g)
-    state.fields.P = raw_fields["P"]
-    state.fields.U = raw_fields["U"]
-    state.fields.V = raw_fields["V"]
-    state.fields.W = raw_fields["W"]
+    # --- 2. Domain & Physical Context ---
+    state.domain = DomainManager(
+        type=str(input_data.domain.type), 
+        reference_velocity=np.array(input_data.domain.reference_velocity, dtype=np.float64)
+    )
 
-    # Explicit Initialization (Strict adherence to Rule 5)
-    # Removing 'is not None' checks; if they are not in the contract, the input is invalid.
-    state.fields.P.fill(input_data.initial_conditions.pressure)
-    u0, v0, w0 = input_data.initial_conditions.velocity
-    state.fields.U.fill(u0)
-    state.fields.V.fill(v0)
-    state.fields.W.fill(w0)
-
-    # --- 4. Topology (Masks) ---
-    # Aligned with Section 6: Mask-Based Geometry
-    mask_3d, is_fluid, is_boundary = generate_3d_masks(input_data.mask.data, g)
-    state.masks.mask = mask_3d
-    state.masks.is_fluid = is_fluid 
-    state.masks.is_boundary = is_boundary
-
-    # --- 5. Global Metadata (Deterministic Policy) ---
-    # Explicitly derived from kwargs to prevent silent defaults
-    state.iteration = int(kwargs["iteration"])
-    state.time = float(kwargs["time"])
-    state.ready_for_time_loop = False
+    state.fluid = FluidPropertiesManager(
+        density=float(input_data.fluid_properties.density),
+        viscosity=float(input_data.fluid_properties.viscosity)
+    )
     
-    # Internal Lookup Tables
-    state.boundary_lookup = parse_bc_lookup(input_data.boundary_conditions.items)
-    
-    # --- 6. Config Hydration ---
-    state.config._simulation_parameters = input_data.simulation_parameters
-    state.config._fluid_properties = input_data.fluid_properties
+    state.external_forces = ExternalForceManager(
+        force_vector=np.array(input_data.external_forces.force_vector, dtype=np.float64)
+    )
+
+    # --- 3. Initial Conditions ---
+    state.initial_conditions = InitialConditionManager(
+        velocity=np.array(input_data.initial_conditions.velocity, dtype=np.float64),
+        pressure=float(input_data.initial_conditions.pressure)
+    )
+
+    # --- 4. Simulation Parameters ---
+    state.sim_params = SimulationParameterManager(
+        time_step=float(input_data.simulation_parameters.time_step),
+        total_time=float(input_data.simulation_parameters.total_time),
+        output_interval=int(input_data.simulation_parameters.output_interval)
+    )
+
+    # --- 5. Topology & Geometry ---
+    mask_3d, _, _ = generate_3d_masks(input_data.mask.data, g)
+    state.masks = MaskManager(_mask=mask_3d)
+
+    # --- 6. Boundary Conditions ---
+    bc_objs = [
+        BoundaryCondition(_location=str(item.location), _type=str(item.type), _values=dict(item.values))
+        for item in input_data.boundary_conditions.items
+    ]
+    state.boundary_conditions = BoundaryConditionManager(conditions=bc_objs)
 
     return state
