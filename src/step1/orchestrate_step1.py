@@ -1,15 +1,25 @@
 # src/step1/orchestrate_step1.py
 
 from __future__ import annotations
+
 import numpy as np
 
-from src.solver_input import SolverInput
 from src.common.solver_state import (
-    SolverState, DomainManager, GridManager, FluidPropertiesManager,
-    InitialConditionManager, SimulationParameterManager, BoundaryCondition,
-    BoundaryConditionManager, MaskManager, ExternalForceManager
+    BoundaryCondition,
+    BoundaryConditionManager,
+    DomainManager,
+    ExternalForceManager,
+    FluidPropertiesManager,
+    GridManager,
+    InitialConditionManager,
+    MaskManager,
+    SimulationParameterManager,
+    SolverState,
 )
+from src.solver_input import SolverInput
+
 from .helpers import generate_3d_masks
+
 
 def orchestrate_step1(input_data: SolverInput) -> SolverState:
     """
