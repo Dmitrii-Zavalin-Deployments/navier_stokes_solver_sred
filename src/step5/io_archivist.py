@@ -1,7 +1,9 @@
 # src/step5/io_archivist.py
+from pathlib import Path
+
 import h5py
 import numpy as np
-from pathlib import Path
+
 
 def save_snapshot(state):
     """
