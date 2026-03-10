@@ -1,7 +1,9 @@
 # src/common/cell.py
 
-from src.common.base_container import ValidatedContainer
 import numpy as np
+
+from src.common.base_container import ValidatedContainer
+
 
 class Cell(ValidatedContainer):
     """
