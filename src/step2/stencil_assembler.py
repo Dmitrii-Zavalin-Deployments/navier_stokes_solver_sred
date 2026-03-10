@@ -1,6 +1,7 @@
 # src/step2/stencil_assembler.py
 
 from src.common.stencil_block import StencilBlock
+
 from .factory import build_core_cell, build_ghost_cell
 
 # Rule 7: Granular Traceability
