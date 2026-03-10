@@ -1,22 +1,21 @@
 # src/step2/orchestrate_step2.py
 
 from src.core.solver_state import SolverState
-
 from .factory import get_initialization_context
 from .stencil_assembler import assemble_stencil_matrix
 
-
 def orchestrate_step2(state: SolverState) -> SolverState:
     """
-    Orchestrates the construction of the Stencil Matrix.
+    Orchestrates the construction of the Stencil Matrix (The Wiring).
     
-    This function initializes the physical context and coordinates the 
-    assembly of StencilBlock objects, which serve as the primary 
-    units for the numerical solver in subsequent steps.
+    Adheres to the Hybrid Memory Foundation:
+    1. Extracts the Foundation (NumPy buffer) from SolverState.
+    2. Wires the Topology (StencilBlocks) via the Assembler.
+    3. Commits the state to ensure the time-loop operates on existing memory.
     """
     
     # 1. Hoist context and physical parameters
-    # This prepares the constants needed by all stencil blocks in the grid
+    # Rule 5: Deterministic Initialization (No defaults here)
     ctx = get_initialization_context(state)
     
     physics_params = {
@@ -29,9 +28,9 @@ def orchestrate_step2(state: SolverState) -> SolverState:
         "f_vals": tuple(state.config.external_forces["force_vector"])
     }
     
-    # 2. Assemble the Stencil Matrix
-    # The assembler handles grid traversal (including ghost layers) 
-    # and populates the matrix with StencilBlock objects.
+    # 2. Assemble the Stencil Matrix (Wiring)
+    # The assembler now manages the injection of the fields_buffer (Foundation)
+    # into the Cell objects, effectively bridging Logic and Math.
     state.stencil_matrix = assemble_stencil_matrix(
         state, 
         state.grid.nx, 
@@ -42,7 +41,7 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     )
     
     # 3. Final Commit
-    # Signal that topography and stencil connectivity are ready for time iteration
+    # Rule 9: Structural Persistence - The wiring is now set and persistent.
     state.ready_for_time_loop = True
     
     return state

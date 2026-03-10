@@ -1,8 +1,8 @@
 # src/step2/factory.py
 
+import numpy as np
 from src.common.cell import Cell
 from src.core.solver_state import SolverState
-
 
 def get_initialization_context(state: SolverState) -> dict:
     """
@@ -26,51 +26,51 @@ def get_initialization_context(state: SolverState) -> dict:
         "z_min": state.grid.z_min
     }
 
-def build_core_cell(i: int, j: int, k: int, state: SolverState, ctx: dict) -> Cell:
+def build_core_cell(i: int, j: int, k: int, state: SolverState, ctx: dict, fields_buffer: np.ndarray) -> Cell:
     """
-    Creates a real cell inside the nx * ny * nz domain.
+    Creates a View-based Cell inside the nx * ny * nz domain.
     """
-    cell = Cell()
+    # 1. Calculate linear index for buffer mapping
+    nx, ny = state.grid.nx, state.grid.ny
+    index = i + nx * (j + ny * k)
     
-    # 1. Physical Center Coordinates
-    cell.x = ctx["x_min"] + (i + 0.5) * ctx["dx"]
-    cell.y = ctx["y_min"] + (j + 0.5) * ctx["dy"]
-    cell.z = ctx["z_min"] + (k + 0.5) * ctx["dz"]
-
-    # 2. Map Physics
+    # 2. Topology
+    mask = int(state.masks.mask[i, j, k])
+    
+    # 3. Instantiate Cell (The Viewer)
+    cell = Cell(
+        index=index,
+        fields_buffer=fields_buffer,
+        x=ctx["x_min"] + (i + 0.5) * ctx["dx"],
+        y=ctx["y_min"] + (j + 0.5) * ctx["dy"],
+        z=ctx["z_min"] + (k + 0.5) * ctx["dz"],
+        mask=mask,
+        is_ghost=False
+    )
+    
+    # 4. Map Physics (Writing to the Foundation buffer via property setters)
     cell.vx, cell.vy, cell.vz, cell.p = ctx["vx"], ctx["vy"], ctx["vz"], ctx["p"]
-    
-    # 3. Initialize transient solver states to 0.0
     cell.vx_star, cell.vy_star, cell.vz_star = 0.0, 0.0, 0.0
     cell.p_next = 0.0
-    
-    # 4. Topology from Step 1 Mask
-    cell.mask = int(state.masks.mask[i, j, k])
-    cell.is_ghost = False 
     
     return cell
 
-def build_ghost_cell(i: int, j: int, k: int, ctx: dict) -> Cell:
+def build_ghost_cell(i: int, j: int, k: int, ctx: dict, fields_buffer: np.ndarray) -> Cell:
     """
-    Creates a virtual cell on the perimeter.
-    Uses -1 mask to signify boundary conditions.
+    Creates a View-based virtual cell on the perimeter.
     """
-    cell = Cell()
+    # Ghost cells utilize a sentinel index
+    cell = Cell(
+        index=-1, 
+        fields_buffer=fields_buffer,
+        x=ctx["x_min"] + (i + 0.5) * ctx["dx"],
+        y=ctx["y_min"] + (j + 0.5) * ctx["dy"],
+        z=ctx["z_min"] + (k + 0.5) * ctx["dz"],
+        mask=-1,
+        is_ghost=True
+    )
     
-    # 1. Physical coordinates
-    cell.x = ctx["x_min"] + (i + 0.5) * ctx["dx"]
-    cell.y = ctx["y_min"] + (j + 0.5) * ctx["dy"]
-    cell.z = ctx["z_min"] + (k + 0.5) * ctx["dz"]
-
-    # 2. Initial Physics
     cell.vx, cell.vy, cell.vz, cell.p = ctx["vx"], ctx["vy"], ctx["vz"], ctx["p"]
-    
-    # 3. Initialize transient solver states to 0.0
-    cell.vx_star, cell.vy_star, cell.vz_star = 0.0, 0.0, 0.0
-    cell.p_next = 0.0
-    
-    # 4. Boundary indicator
-    cell.mask = -1  
-    cell.is_ghost = True
+    cell.vx_star, cell.vy_star, cell.vz_star, cell.p_next = 0.0, 0.0, 0.0, 0.0
     
     return cell
