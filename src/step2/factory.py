@@ -1,10 +1,11 @@
 # src/step2/factory.py
 
 import numpy as np
-
 from src.common.cell import Cell
 from src.core.solver_state import SolverState
 
+# Rule 7: Granular Traceability
+DEBUG = True
 
 def get_initialization_context(state: SolverState) -> dict:
     """
@@ -39,6 +40,9 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState, ctx: dict, field
     # 2. Topology
     mask = int(state.masks.mask[i, j, k])
     
+    if DEBUG:
+        print(f"DEBUG [Step 2.1]: Core Cell Created -> Index: {index} at ({i}, {j}, {k}), Mask: {mask}")
+    
     # 3. Instantiate Cell (The Viewer)
     cell = Cell(
         index=index,
@@ -61,6 +65,9 @@ def build_ghost_cell(i: int, j: int, k: int, ctx: dict, fields_buffer: np.ndarra
     """
     Creates a View-based virtual cell on the perimeter.
     """
+    if DEBUG:
+        print(f"DEBUG [Step 2.1]: Ghost Cell Created -> ({i}, {j}, {k}) mapped to sentinel index -1")
+    
     # Ghost cells utilize a sentinel index
     cell = Cell(
         index=-1, 

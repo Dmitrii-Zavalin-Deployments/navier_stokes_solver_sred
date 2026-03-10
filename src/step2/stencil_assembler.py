@@ -1,9 +1,10 @@
 # src/step2/stencil_assembler.py
 
 from src.common.stencil_block import StencilBlock
-
 from .factory import build_core_cell, build_ghost_cell
 
+# Rule 7: Granular Traceability
+DEBUG = True
 
 def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
     """
@@ -35,6 +36,9 @@ def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
         cell_cache[coord] = cell
         return cell
 
+    if DEBUG:
+        print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Domain")
+
     # Iterate through the Core domain to build the wiring
     for i in range(nx):
         for j in range(ny):
@@ -50,5 +54,10 @@ def assemble_stencil_matrix(state, nx, ny, nz, ctx, physics_params):
                 )
                 
                 local_stencil_list.append(block)
+    
+    if DEBUG:
+        print(f"DEBUG [Step 2.2]: Assembly Complete")
+        print(f"  > Total StencilBlocks: {len(local_stencil_list)}")
+        print(f"  > Unique Cell Cache Size: {len(cell_cache)}")
                 
     return local_stencil_list
