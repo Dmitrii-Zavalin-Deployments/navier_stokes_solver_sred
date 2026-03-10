@@ -78,11 +78,12 @@ jobs:
       # - name: 🚀 Run Navier-Stokes Solver
       #   id: solver_run
       #   run: |
-      #     # We execute the solver and capture its STDOUT (the path to the ZIP)
-      #     # Note: Errors and logs are sent to STDERR so they don't corrupt the variable
-      #     ZIP_PATH=$(python3 src/main_solver.py data/testing-input-output/fluid_simulation_input.json)
+      #     # Execute the solver and capture stdout into a temporary variable
+      #     # tail -n 1 ensures we get the printed ZIP path, ignoring debug/log prints
+      #     RAW_OUTPUT=$(python3 src/main_solver.py data/testing-input-output/fluid_simulation_input.json)
+      #     ZIP_PATH=$(echo "$RAW_OUTPUT" | tail -n 1)
           
-      #     # Pass the dynamic path to the GitHub Environment for the next step
+      #     # Pass the dynamic path to the GitHub Environment
       #     echo "SOLVER_ZIP_RESULT=$ZIP_PATH" >> $GITHUB_ENV
       #     echo "✅ Solver completed. Output Path: $ZIP_PATH"
 
@@ -91,7 +92,7 @@ jobs:
       #   if: success()
       #   run: |
       #     chmod +x src/upload_to_dropbox.sh
-      #     # Pass the captured ZIP path as the first argument
+      #     # Pass the captured ZIP path from the Environment variable
       #     bash src/upload_to_dropbox.sh "${{ env.SOLVER_ZIP_RESULT }}"
 
       # - name: 📦 Final Structure Audit
