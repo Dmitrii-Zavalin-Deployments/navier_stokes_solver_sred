@@ -1,9 +1,7 @@
 # src/common/solver_state.py
 
 from dataclasses import dataclass
-
 import numpy as np
-
 from src.common.base_container import ValidatedContainer
 
 # =========================================================
@@ -340,6 +338,32 @@ class ExternalForceManager(ValidatedContainer):
         
         self._set_safe("force_vector", value, np.ndarray)
 
+@dataclass
+class FieldManager(ValidatedContainer):
+    """
+    The Foundation: Holds the monolithic NumPy buffer for all numerical fields.
+    Each row corresponds to a Cell index, columns correspond to physical variables.
+    """
+    __slots__ = ['_data']
+    _data: np.ndarray = None
+
+    @property
+    def data(self) -> np.ndarray:
+        return self._get_safe("data")
+
+    @data.setter
+    def data(self, value: np.ndarray):
+        if not isinstance(value, np.ndarray):
+            raise TypeError("Field data must be a NumPy array.")
+        self._set_safe("data", value, np.ndarray)
+
+    def allocate(self, n_cells: int):
+        """
+        Pre-allocate memory for all fields:
+        [vx, vy, vz, vx_star, vy_star, vz_star, p, p_next]
+        """
+        self.data = np.zeros((n_cells, 8), dtype=np.float64)
+
 # =========================================================
 # THE UNIVERSAL CONTAINER (The Constitution)
 # =========================================================
@@ -349,10 +373,10 @@ class SolverState(ValidatedContainer):
     __slots__ = [
         '_domain', '_grid', '_fluid', '_initial_conditions', 
         '_boundary_conditions', '_external_forces', '_sim_params', 
-        '_masks', '_iteration', '_time', '_ready_for_time_loop'
+        '_masks', '_fields', '_stencil_matrix', 
+        '_iteration', '_time', '_ready_for_time_loop'
     ]
 
-    # Internal state initialized to None (Zero-Debt Policy)
     _domain: DomainManager = None
     _grid: GridManager = None
     _fluid: FluidPropertiesManager = None
@@ -361,6 +385,10 @@ class SolverState(ValidatedContainer):
     _external_forces: ExternalForceManager = None
     _sim_params: SimulationParameterManager = None
     _masks: MaskManager = None
+    
+    # --- Rule 9 Foundation ---
+    _fields: FieldManager = None
+    _stencil_matrix: list = None # The "Wiring" (Graph of StencilBlocks)
     
     _iteration: int = 0
     _time: float = 0.0
@@ -408,7 +436,17 @@ class SolverState(ValidatedContainer):
     @masks.setter
     def masks(self, value: MaskManager): self._set_safe("masks", value, MaskManager)
 
-    # Simple types can use direct access, or getters if you want strict initialization checks
+    # --- Rule 9 Accessors ---
+    @property
+    def fields(self) -> FieldManager: return self._get_safe("fields")
+    @fields.setter
+    def fields(self, value: FieldManager): self._set_safe("fields", value, FieldManager)
+
+    @property
+    def stencil_matrix(self) -> list: return self._get_safe("stencil_matrix")
+    @stencil_matrix.setter
+    def stencil_matrix(self, value: list): self._set_safe("stencil_matrix", value, list)
+
     @property
     def iteration(self) -> int: return self._iteration
     @iteration.setter
@@ -418,3 +456,18 @@ class SolverState(ValidatedContainer):
     def time(self) -> float: return self._time
     @time.setter
     def time(self, value: float): self._time = value
+
+    @property
+    def ready_for_time_loop(self) -> bool:
+        return self._ready_for_time_loop
+
+    @ready_for_time_loop.setter
+    def ready_for_time_loop(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError(f"ready_for_time_loop must be a boolean, got {type(value)}")
+        
+        # Optional: Add a safety check to enforce Rule 5 (Deterministic Init)
+        if value is True and (self.fields is None or self.stencil_matrix is None):
+            raise RuntimeError("Cannot set ready_for_time_loop to True: Foundation or Wiring is missing.")
+            
+        self._ready_for_time_loop = value
