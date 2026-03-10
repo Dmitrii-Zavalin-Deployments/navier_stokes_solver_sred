@@ -23,8 +23,8 @@ def _load_solver_config() -> dict:
     with open(config_path) as f:
         return json.load(f)["solver_settings"]
 
-def run_solver_from_file(input_path: str) -> str:
-    """Master Controller: Orchestrates the pipeline with iterative PPE-Boundary coupling."""
+def run_solver(input_path: str):
+    """Orchestrates the physics pipeline: Initialization through Time-Loop."""
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file missing at {input_path}")
 
@@ -36,71 +36,63 @@ def run_solver_from_file(input_path: str) -> str:
 
     SCHEMA_PATH = Path("schema/solver_input_schema.json")
 
+    with open(input_path) as f:
+        raw_data = json.load(f)
+    
+    # 1. INITIALIZATION & STATE ASSEMBLY
+    input_container = SolverInput.from_dict(raw_data)
+    state = orchestrate_step1(input_container)
+    state = orchestrate_step2(state)
+
+    # FIREWALL: Contract Validation
     try:
-        with open(input_path) as f:
-            raw_data = json.load(f)
-        
-        # 1. INITIALIZATION & STATE ASSEMBLY
-        input_container = SolverInput.from_dict(raw_data)
-        state = orchestrate_step1(input_container)
-        state = orchestrate_step2(state)
-
-        # FIREWALL: Contract Validation
-        try:
-            state.validate_against_schema(str(SCHEMA_PATH))
-            if DEBUG:
-                print("DEBUG [Main]: ✅ State validation passed.")
-        except jsonschema.exceptions.ValidationError as e:
-            print(f"!!! CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
-            print(f"!!! Message: {e.message}")
-            raise
-
+        state.validate_against_schema(str(SCHEMA_PATH))
         if DEBUG:
-            print(f"🚀 Starting Simulation: {state.config.case_name}")
+            print("DEBUG [Main]: ✅ State validation passed.")
+    except jsonschema.exceptions.ValidationError as e:
+        print(f"!!! CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
+        print(f"!!! Message: {e.message}")
+        raise
+
+    if DEBUG:
+        print(f"🚀 Starting Simulation: {state.config.case_name}")
+    
+    # 2. MAIN EXECUTION LOOP
+    while state.ready_for_time_loop:
+        # A. PREDICTOR PASS
+        for block in state.stencil_matrix:
+            block, _ = orchestrate_step3(block, omega=omega, is_first_pass=True)
+            block = orchestrate_step4(block, state.config.boundary_conditions, state.grid)
         
-        # 2. MAIN EXECUTION LOOP
-        while state.ready_for_time_loop:
-            # A. PREDICTOR PASS
+        # B. ITERATIVE SOLVER & BOUNDARY PASS
+        for _ in range(max_iter):
+            max_delta = 0.0
             for block in state.stencil_matrix:
-                block, _ = orchestrate_step3(block, omega=omega, is_first_pass=True)
+                block, delta = orchestrate_step3(block, omega=omega, is_first_pass=False)
                 block = orchestrate_step4(block, state.config.boundary_conditions, state.grid)
+                max_delta = max(max_delta, delta)
             
-            # B. ITERATIVE SOLVER & BOUNDARY PASS
-            for _ in range(max_iter):
-                max_delta = 0.0
-                for block in state.stencil_matrix:
-                    block, delta = orchestrate_step3(block, omega=omega, is_first_pass=False)
-                    block = orchestrate_step4(block, state.config.boundary_conditions, state.grid)
-                    max_delta = max(max_delta, delta)
-                
-                # Convergence check
-                if max_delta < tol:
-                    if DEBUG:
-                        print(f"DEBUG [Main]: PPE Converged: Iter={_ + 1} | Delta={max_delta:.2e} < Tol={tol:.2e}")
-                    break
-            
-            # C. ODOMETER UPDATE
-            state.iteration += 1
-            state.time += state.config.time_step
-            
-            # D. ARCHIVING (Step 5)
-            state = orchestrate_step5(state)
-            
-            # E. TEMPORAL GUARD
-            if state.time >= state.config.total_time:
-                state.ready_for_time_loop = False
-            
-            if DEBUG and state.iteration % 10 == 0:
-                print(f"DEBUG [Main]: Iter {state.iteration}: t={state.time:.4f}s | PPE Delta={max_delta:.2e}")
+            # Convergence check
+            if max_delta < tol:
+                if DEBUG:
+                    print(f"DEBUG [Main]: PPE Converged: Iter={_ + 1} | Delta={max_delta:.2e} < Tol={tol:.2e}")
+                break
+        
+        # C. ODOMETER UPDATE
+        state.iteration += 1
+        state.time += state.config.time_step
+        
+        # D. ARCHIVING (Step 5 - Individual Snapshots)
+        state = orchestrate_step5(state)
+        
+        # E. TEMPORAL GUARD
+        if state.time >= state.config.total_time:
+            state.ready_for_time_loop = False
 
-        if DEBUG:
-            print("DEBUG [Main]: Loop exit detected. Finalizing artifacts.")
-
-        return archive_simulation_artifacts(state)
-
-    except Exception as e:
-        print(f"FATAL PIPELINE ERROR: {str(e)}")
-        raise RuntimeError(f"Solver Pipeline crashed: {str(e)}") from e
+    if DEBUG:
+        print("DEBUG [Main]: Loop exit detected.")
+        
+    return state
 
 def archive_simulation_artifacts(state) -> str:
     """Rule 4: SSoT Archiving. Moves manifest snapshots into a single ZIP."""
@@ -122,8 +114,20 @@ def archive_simulation_artifacts(state) -> str:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
+        print("Error: Input file path required.")
         sys.exit(1)
+    
     try:
-        print(run_solver_from_file(sys.argv[1])) 
-    except Exception:
+        # Step 1: Run the simulation physics
+        final_state = run_solver(sys.argv[1])
+        
+        # Step 2: Package the results
+        zip_path = archive_simulation_artifacts(final_state)
+        
+        # Output exactly the path for GitHub Actions
+        print(zip_path)
+        sys.exit(0)
+        
+    except Exception as e:
+        print(f"FATAL PIPELINE ERROR: {str(e)}", file=sys.stderr)
         sys.exit(1)
