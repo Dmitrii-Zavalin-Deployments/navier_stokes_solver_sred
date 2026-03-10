@@ -1,12 +1,10 @@
 # src/main_solver.py
 
 import json
-import logging
 import os
 import shutil
 import sys
 from pathlib import Path
-
 import jsonschema
 
 from src.solver_input import SolverInput
@@ -19,10 +17,6 @@ from src.step5.orchestrate_step5 import orchestrate_step5
 # Global Debug Toggle
 DEBUG = True
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, stream=sys.stderr)
-logger = logging.getLogger(__name__)
-
 def _load_solver_config() -> dict:
     config_path = Path("config.json")
     with open(config_path) as f:
@@ -33,7 +27,7 @@ def run_solver_from_file(input_path: str) -> str:
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file missing at {input_path}")
 
-    # Load configuration once
+    # Load configuration
     cfg = _load_solver_config()
     max_iter = cfg["ppe_max_iter"]
     tol = cfg["ppe_tolerance"]
@@ -53,14 +47,15 @@ def run_solver_from_file(input_path: str) -> str:
         # FIREWALL: Contract Validation
         try:
             state.validate_against_schema(str(SCHEMA_PATH))
-            logger.info("✅ State validation passed.")
+            if DEBUG:
+                print("DEBUG [Main]: ✅ State validation passed.")
         except jsonschema.exceptions.ValidationError as e:
-            logger.error(f"CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
-            logger.error(f"Message: {e.message}")
+            print(f"!!! CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
+            print(f"!!! Message: {e.message}")
             raise
 
         if DEBUG:
-            logger.info(f"🚀 Starting Simulation: {state.config.case_name}")
+            print(f"🚀 Starting Simulation: {state.config.case_name}")
         
         # 2. MAIN EXECUTION LOOP
         while state.ready_for_time_loop:
@@ -77,13 +72,10 @@ def run_solver_from_file(input_path: str) -> str:
                     block = orchestrate_step4(block, state.config.boundary_conditions, state.grid)
                     max_delta = max(max_delta, delta)
                 
-                # Convergence check for the Pressure-Poisson equation
+                # Convergence check
                 if max_delta < tol:
                     if DEBUG:
-                        logger.info(
-                            f"PPE Converged: Iter={_ + 1} | "
-                            f"Delta={max_delta:.2e} < Tol={tol:.2e}"
-                        )
+                        print(f"DEBUG [Main]: PPE Converged: Iter={_ + 1} | Delta={max_delta:.2e} < Tol={tol:.2e}")
                     break
             
             # C. ODOMETER UPDATE
@@ -98,15 +90,15 @@ def run_solver_from_file(input_path: str) -> str:
                 state.ready_for_time_loop = False
             
             if DEBUG and state.iteration % 10 == 0:
-                logger.info(f"Iter {state.iteration}: t={state.time:.4f}s | PPE Delta={max_delta:.2e}")
+                print(f"DEBUG [Main]: Iter {state.iteration}: t={state.time:.4f}s | PPE Delta={max_delta:.2e}")
 
         if DEBUG:
-            logger.info("DEBUG [Main]: Loop exit detected. Finalizing artifacts.")
+            print("DEBUG [Main]: Loop exit detected. Finalizing artifacts.")
 
         return archive_simulation_artifacts(state)
 
     except Exception as e:
-        logger.error(f"FATAL PIPELINE ERROR: {str(e)}")
+        print(f"FATAL PIPELINE ERROR: {str(e)}")
         raise RuntimeError(f"Solver Pipeline crashed: {str(e)}") from e
 
 def archive_simulation_artifacts(state) -> str:
@@ -123,7 +115,7 @@ def archive_simulation_artifacts(state) -> str:
     result_path = shutil.make_archive(str(zip_base_name), 'zip', str(source_dir))
     
     if DEBUG:
-        logger.info(f"DEBUG [Main]: Artifact created: {result_path}")
+        print(f"DEBUG [Main]: Artifact created: {result_path}")
     
     return result_path
 
