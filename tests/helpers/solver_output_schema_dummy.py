@@ -2,6 +2,7 @@
 
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
+
 def make_output_schema_dummy(nx=4, ny=4, nz=4):
     """
     Generates a minimal, clean state representing the system
