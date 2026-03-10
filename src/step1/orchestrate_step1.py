@@ -20,12 +20,17 @@ from src.solver_input import SolverInput
 
 from .helpers import generate_3d_masks
 
+# Rule 7: Granular Traceability
+DEBUG = True
 
 def orchestrate_step1(input_data: SolverInput) -> SolverState:
     """
     Direct Ingestion Orchestrator (Phase C Compliant).
     Uses official setters to ensure all data is validated at the gate.
     """
+    if DEBUG:
+        print(f"DEBUG [Step 1]: Starting State Assembly...")
+
     state = SolverState()
 
     # --- 1. Grid & Domain ---
@@ -72,5 +77,8 @@ def orchestrate_step1(input_data: SolverInput) -> SolverState:
         bc.type = str(item.type)
         bc.values = dict(item.values)
         state.boundary_conditions.add_condition(bc)
+        
+    if DEBUG:
+        print(f"DEBUG [Step 1]: State assembly complete. Grid: {state.grid.nx}x{state.grid.ny}x{state.grid.nz}")
 
     return state
