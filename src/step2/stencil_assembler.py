@@ -1,7 +1,8 @@
 # src/step2/stencil_assembler.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI  # Import the Single Source of Truth
+from src.common.stencil_block import StencilBlock
+
 from .factory import build_core_cell, build_ghost_cell
 
 # Rule 7: Granular Traceability
