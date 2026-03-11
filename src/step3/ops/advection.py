@@ -2,30 +2,29 @@
 
 from src.common.stencil_block import StencilBlock
 
-
-def compute_local_advection(block: StencilBlock, field: str) -> float:
+def compute_local_advection(block: StencilBlock, field_name: str) -> float:
     """
-    Computes local (v^n ⋅ ∇) * field for a specific component (field).
+    Computes local (v^n ⋅ ∇) * field.
     
     Formula: 
     u_c * (df/dx) + v_c * (df/dy) + w_c * (df/dz)
     
-    Args:
-        block: The StencilBlock instance.
-        field: The attribute name in Cell to advect (e.g., 'vx', 'vy', 'vz').
+    Compliance:
+    - Uses schema-locked property access via getattr.
+    - Accesses the global Foundation buffers via the StencilBlock pointer graph.
     """
     # 1. Access components for central difference (df/dx, df/dy, df/dz)
-    # Using getattr to dynamically fetch the attribute from neighbors
-    f_ip, f_im = getattr(block.i_plus, field), getattr(block.i_minus, field)
-    f_jp, f_jm = getattr(block.j_plus, field), getattr(block.j_minus, field)
-    f_kp, f_km = getattr(block.k_plus, field), getattr(block.k_minus, field)
+    # The properties (vx, vy, vz, etc.) map directly to the FI schema foundation.
+    f_ip, f_im = getattr(block.i_plus, field_name), getattr(block.i_minus, field_name)
+    f_jp, f_jm = getattr(block.j_plus, field_name), getattr(block.j_minus, field_name)
+    f_kp, f_km = getattr(block.k_plus, field_name), getattr(block.k_minus, field_name)
     
     df_dx = (f_ip - f_im) / (2.0 * block.dx)
     df_dy = (f_jp - f_jm) / (2.0 * block.dy)
     df_dz = (f_kp - f_km) / (2.0 * block.dz)
     
     # 2. Compute cell-centered velocities (average of neighbors)
-    # This provides the necessary coupling for collocated grid stability
+    # Uses schema-locked velocity properties.
     u_c = (block.i_plus.vx + block.i_minus.vx) / 2.0
     v_c = (block.j_plus.vy + block.j_minus.vy) / 2.0
     w_c = (block.k_plus.vz + block.k_minus.vz) / 2.0
@@ -35,8 +34,7 @@ def compute_local_advection(block: StencilBlock, field: str) -> float:
 
 def compute_local_advection_vector(block: StencilBlock) -> tuple:
     """
-    Computes the full advective term for the momentum equation:
-    (v^n ⋅ ∇) * v^n = ((v ⋅ ∇)u, (v ⋅ ∇)v, (v ⋅ ∇)w)
+    Computes the full advective term for the momentum equation.
     """
     return (
         compute_local_advection(block, 'vx'),

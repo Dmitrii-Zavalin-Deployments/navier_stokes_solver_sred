@@ -2,13 +2,13 @@
 
 from src.common.stencil_block import StencilBlock
 
-
 def compute_local_laplacian_v_n(block: StencilBlock) -> tuple:
     """
     Computes the discrete Laplacian ∇²v^n = (∇²u, ∇²v, ∇²w) for the Predictor Step.
     
-    Formula (centered at i,j,k):
-    ∇²f \approx (f_{i+1} - 2f_{i,j,k} + f_{i-1}) / dx² + ... (for y and z)
+    Compliance:
+    - Uses schema-locked property getters (e.g., .vx, .vy, .vz) to access
+      the foundation buffers via the Cell pointer graph.
     """
     
     def compute_comp(f_ip, f_im, f_jp, f_jm, f_kp, f_km, f_c):
