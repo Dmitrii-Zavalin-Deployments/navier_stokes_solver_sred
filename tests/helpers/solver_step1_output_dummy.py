@@ -31,12 +31,12 @@ def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverStat
     state = SolverState()
     
     # 1. Geometry & Domain: Atomic Constructor Injection
-    state.grid = GridManager(
-        x_min=0.0, x_max=1.0, 
-        y_min=0.0, y_max=1.0, 
-        z_min=0.0, z_max=1.0, 
-        nx=nx, ny=ny, nz=nz
-    )
+    state.grid = GridManager()
+    state.grid._x_min, state.grid._x_max = 0.0, 1.0
+    state.grid._y_min, state.grid._y_max = 0.0, 1.0
+    state.grid._z_min, state.grid._z_max = 0.0, 1.0
+    state.grid._nx, state.grid._ny, state.grid._nz = nx, ny, nz
+    
     state.domain = DomainManager(
         type="INTERNAL", 
         reference_velocity=np.array([0.0, 0.0, 0.0])
