@@ -10,34 +10,32 @@
     "grid": { "type": "object" },
     "fields": {
       "type": "object",
+      "description": "The Foundation Buffer state at the current iteration.",
       "properties": {
-        "P": { "type": "array" },
-        "U": { "type": "array" },
-        "V": { "type": "array" },
-        "W": { "type": "array" },
-        "P_ext": { "type": ["array", "null"] },
-        "U_ext": { "type": ["array", "null"] },
-        "V_ext": { "type": ["array", "null"] },
-        "W_ext": { "type": ["array", "null"] }
+        "data": { "type": "array", "description": "Monolithic NumPy buffer shaped (N_CELLS, FI.num_fields())" }
       },
-      "additionalProperties": true
+      "required": ["data"]
     },
     "masks": {
       "type": "object",
       "properties": {
-        "mask": { "type": ["array", "null"] },
-        "is_fluid": { "type": ["array", "null"] },
-        "is_boundary": { "type": ["array", "null"] }
-      }
+        "mask": { "type": "array" }
+      },
+      "required": ["mask"]
     },
     "fluid": { "type": "object" },
-    "operators": { "type": "object" },
-    "advection": { "type": "object" },
-    "ppe": { "type": "object" },
-    "health": { "type": "object" },
-    "history": { "type": "object" },
-    "diagnostics": { "type": "object" },
-    "manifest": { "type": "object" }
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "output_directory": { "type": "string" },
+        "saved_snapshots": { 
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["output_directory", "saved_snapshots"]
+    },
+    "health": { "type": "object", "description": "System state (POST results)" }
   },
   "required": [
     "time",
@@ -47,14 +45,7 @@
     "grid",
     "fields",
     "masks",
-    "fluid",
-    "operators",
-    "advection",
-    "ppe",
-    "health",
-    "history",
-    "diagnostics",
     "manifest"
   ],
-  "additionalProperties": true
+  "additionalProperties": false
 }
