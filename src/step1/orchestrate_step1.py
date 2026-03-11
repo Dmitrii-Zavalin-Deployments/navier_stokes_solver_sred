@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
+from src.common.field_schema import FI  # Single Source of Truth
 from src.common.solver_state import (
     BoundaryCondition,
     BoundaryConditionManager,
     DomainManager,
     ExternalForceManager,
+    FieldManager,  # Ensure FieldManager is imported
     FluidPropertiesManager,
     GridManager,
     InitialConditionManager,
@@ -64,10 +66,15 @@ def orchestrate_step1(input_data: SolverInput) -> SolverState:
     state.sim_params.total_time = float(input_data.simulation_parameters.total_time)
     state.sim_params.output_interval = int(input_data.simulation_parameters.output_interval)
 
-    # --- 5. Topology & Geometry ---
+    # --- 5. Topology, Geometry & Foundation ---
     state.masks = MaskManager()
     mask_3d, _, _ = generate_3d_masks(input_data.mask.data, input_data.grid)
     state.masks.mask = mask_3d
+    
+    # Initialize the Foundation Buffer based on the schema
+    state.fields = FieldManager()
+    n_cells = state.grid.nx * state.grid.ny * state.grid.nz
+    state.fields.allocate(n_cells)
 
     # --- 6. Boundary Conditions ---
     state.boundary_conditions = BoundaryConditionManager()
@@ -79,6 +86,8 @@ def orchestrate_step1(input_data: SolverInput) -> SolverState:
         state.boundary_conditions.add_condition(bc)
         
     if DEBUG:
-        print(f"DEBUG [Step 1]: State assembly complete. Grid: {state.grid.nx}x{state.grid.ny}x{state.grid.nz}")
+        print(f"DEBUG [Step 1]: State assembly complete.")
+        print(f"  > Grid: {state.grid.nx}x{state.grid.ny}x{state.grid.nz}")
+        print(f"  > Foundation: {n_cells} cells allocated with {FI.num_fields()} fields.")
 
     return state
