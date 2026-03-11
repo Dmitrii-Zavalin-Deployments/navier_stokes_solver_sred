@@ -1,7 +1,7 @@
 # tests/helpers/solver_step1_output_dummy.py
 
 import numpy as np
-from src.common.field_schema import FI
+
 from src.common.solver_state import (
     BoundaryCondition,
     BoundaryConditionManager,
@@ -15,6 +15,7 @@ from src.common.solver_state import (
     SimulationParameterManager,
     SolverState,
 )
+
 
 def make_step1_output_dummy(nx=4, ny=4, nz=4):
     state = SolverState()

@@ -2,6 +2,7 @@
 
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
+
 def make_step5_output_dummy(nx=4, ny=4, nz=4):
     """
     Generates state immediately after orchestrate_step5.

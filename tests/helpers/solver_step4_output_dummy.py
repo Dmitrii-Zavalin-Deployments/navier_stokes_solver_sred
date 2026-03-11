@@ -1,7 +1,8 @@
 # tests/helpers/solver_step4_output_dummy.py
 
-from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from src.common.field_schema import FI
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+
 
 def make_step4_output_dummy(nx=4, ny=4, nz=4):
     """

@@ -4,6 +4,7 @@ from src.step2.factory import get_initialization_context
 from src.step2.stencil_assembler import assemble_stencil_matrix
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
+
 def make_step2_output_dummy(nx=4, ny=4, nz=4):
     """
     Generates a valid SolverState with the stencil_matrix wiring 

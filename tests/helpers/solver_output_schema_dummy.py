@@ -2,6 +2,7 @@
 
 from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
 
+
 def make_output_schema_dummy(nx=4, ny=4, nz=4):
     """
     Simulates the terminal state of the entire main_solver.py pipeline.

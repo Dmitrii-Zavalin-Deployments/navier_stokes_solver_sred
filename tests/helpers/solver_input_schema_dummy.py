@@ -1,7 +1,7 @@
 # tests/helpers/solver_input_schema_dummy.py
 
 from src.common.solver_input import SolverInput
-from src.common.field_schema import FI
+
 
 def solver_input_schema_dummy() -> dict:
     """
