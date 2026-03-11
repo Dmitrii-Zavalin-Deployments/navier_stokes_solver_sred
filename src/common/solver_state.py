@@ -1,6 +1,7 @@
 # src/common/solver_state.py
 
 from dataclasses import dataclass
+
 import numpy as np
 
 from src.common.base_container import ValidatedContainer

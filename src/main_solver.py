@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+
 import jsonschema
 
 from src.solver_input import SolverInput
