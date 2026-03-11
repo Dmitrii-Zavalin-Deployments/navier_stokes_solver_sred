@@ -556,3 +556,32 @@ class SolverState(ValidatedContainer):
             self.validate_physical_readiness()
             
         self._ready_for_time_loop = value
+    
+    def to_json_safe(self) -> dict:
+        """
+        Exports the current state to a JSON-compatible dictionary.
+        Strictly adheres to the Foundation-based output schema.
+        """
+        return {
+            "time": float(self.time),
+            "iteration": int(self.iteration),
+            "ready_for_time_loop": bool(self.ready_for_time_loop),
+            
+            # Ensure your Managers have a .to_dict() or .__dict__ access
+            "config": self.sim_params.to_dict(), 
+            "grid": {
+                "nx": self.grid.nx, "ny": self.grid.ny, "nz": self.grid.nz,
+                "dx": self.grid.dx, "dy": self.grid.dy, "dz": self.grid.dz
+            },
+            "fields": {
+                "data": self.fields.data.tolist() # Foundation Buffer -> List
+            },
+            "masks": {
+                "mask": self.masks.mask.tolist()   # Foundation Mask -> List
+            },
+            "manifest": {
+                # Ensure you add 'manifest' to SolverState slots if not present
+                "output_directory": getattr(self, 'manifest', {}).get('output_directory', 'output'),
+                "saved_snapshots": getattr(self, 'manifest', {}).get('saved_snapshots', [])
+            }
+        }
