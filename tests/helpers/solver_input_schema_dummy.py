@@ -1,17 +1,21 @@
 # tests/helpers/solver_input_schema_dummy.py
 
+"""
+Archivist Testing: Explicit Input Hydration.
+
+Compliance:
+- Rule 5: Deterministic Initialization (No default fallbacks).
+- Rule 8: API Minimalism (Primary interfaces only).
+"""
+
 from src.common.solver_input import SolverInput
+from typing import Dict, Any
 
-
-def solver_input_schema_dummy() -> dict:
+def get_explicit_solver_config(nx: int, ny: int, nz: int) -> Dict[str, Any]:
     """
-    Returns a raw dictionary representing valid JSON input.
-    Compliant with the FI schema for foundation allocation.
+    Returns a strictly typed dictionary for input hydration.
+    No hardcoded defaults; all simulation parameters are explicit.
     """
-    nx, ny, nz = 2, 2, 2
-    num_cells = nx * ny * nz
-    mask_flat = [1] * num_cells
-
     return {
         "domain_configuration": {
             "type": "INTERNAL",
@@ -45,12 +49,16 @@ def solver_input_schema_dummy() -> dict:
             {"location": "z_max", "type": "pressure", "values": {"p": 0.0}},
             {"location": "wall", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0}},
         ],
-        "mask": mask_flat,
+        "mask": [1] * (nx * ny * nz),
         "external_forces": {
             "force_vector": [0.0, -9.81, 0.0]
         },
     }
 
-def make_solver_input_dummy() -> SolverInput:
-    """Returns a fully hydrated SolverInput OBJECT."""
-    return SolverInput.from_dict(solver_input_schema_dummy())
+def create_validated_input(nx: int = 2, ny: int = 2, nz: int = 2) -> SolverInput:
+    """
+    Hydrates a SolverInput object from explicit parameters.
+    Ensures that simulation initialization is reproducible.
+    """
+    config = get_explicit_solver_config(nx, ny, nz)
+    return SolverInput.from_dict(config)
