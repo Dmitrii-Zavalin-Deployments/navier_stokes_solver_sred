@@ -11,16 +11,24 @@ def orchestrate_step4(block: StencilBlock, boundary_cfg: list, grid, domain_cfg:
     Coordinates the identification and application of boundary conditions
     to a specific stencil block, using domain configuration to select the 
     physics strategy (Internal vs. External).
+    
+    Compliance:
+    - Acts as the final stage of the pipeline to enforce physical constraints.
+    - Operates exclusively on the Foundation through the StencilBlock pointer graph,
+      ensuring that modifications are reflected in the global fields_buffer.
     """
-    # Ghost cells are managed outside the physics loop or skipped here
+    # Ghost cells are identified by the Foundation logic and are typically skipped 
+    # to avoid redundant boundary condition overwriting.
     if block.center.is_ghost:
         return block
 
     # 1. Identify which boundaries apply based on location and the domain strategy
-    # We now pass domain_cfg to the dispatcher to determine BC enforcement logic
+    # The dispatcher uses the schema-compliant block.center.mask to determine strategy.
     rules = get_applicable_boundary_configs(block, boundary_cfg, grid, domain_cfg)
     
     # 2. Apply updates for each rule found (Selective partial updates)
+    # The applier uses the schema-locked property setters (e.g., block.center.vx = ...)
+    # to perform in-place mutations of the contiguous Foundation buffer.
     for rule in rules:
         apply_boundary_values(block, rule)
         
