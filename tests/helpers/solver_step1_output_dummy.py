@@ -31,42 +31,42 @@ def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverStat
     state = SolverState()
     
     # 1. Geometry & Domain: Atomic Constructor Injection
-    state.grid = GridManager()
-    state.grid._x_min, state.grid._x_max = 0.0, 1.0
-    state.grid._y_min, state.grid._y_max = 0.0, 1.0
-    state.grid._z_min, state.grid._z_max = 0.0, 1.0
-    state.grid._nx, state.grid._ny, state.grid._nz = nx, ny, nz
+    state._grid = GridManager()
+    state._grid._x_min, state._grid._x_max = 0.0, 1.0
+    state._grid._y_min, state._grid._y_max = 0.0, 1.0
+    state._grid._z_min, state._grid._z_max = 0.0, 1.0
+    state._grid._nx, state._grid._ny, state._grid._nz = nx, ny, nz
     
-    state.domain = DomainManager(
+    state._domain = DomainManager(
         type="INTERNAL", 
         reference_velocity=np.array([0.0, 0.0, 0.0])
     )
     
     # 2. Physics & Foundation: Atomic Constructor Injection
-    state.fluid = FluidPropertiesManager(density=1000.0, viscosity=0.001)
-    state.initial_conditions = InitialConditionManager(
+    state._fluid = FluidPropertiesManager(density=1000.0, viscosity=0.001)
+    state._initial_conditions = InitialConditionManager(
         velocity=np.array([0.0, 0.0, 0.0]), 
         pressure=0.0
     )
-    state.sim_params = SimulationParameterManager(
+    state._sim_params = SimulationParameterManager(
         time_step=0.001, 
         total_time=1.0, 
         output_interval=1
     )
-    state.external_forces = ExternalForceManager(
+    state._external_forces = ExternalForceManager(
         force_vector=np.array([0.0, 0.0, -9.81])
     )
     
     # 3. Foundation Allocation: Explicit call per Rule 9
-    state.fields = FieldManager()
-    state.fields.allocate(nx * ny * nz)
+    state._fields = FieldManager()
+    state._fields.allocate(nx * ny * nz)
     
     # 4. Topology: Explicit injection
-    state.masks = MaskManager()
-    state.masks.mask = np.ones((nx, ny, nz), dtype=int)
+    state._masks = MaskManager()
+    state._masks.mask = np.ones((nx, ny, nz), dtype=int)
     
     # 5. Boundary Condition Setup: Atomic instantiation
-    state.boundary_conditions = BoundaryConditionManager(conditions=[
+    state._boundary_conditions = BoundaryConditionManager(conditions=[
         BoundaryCondition(location='x_min', type='inflow', values={'u': 1.0, 'v': 0.0, 'w': 0.0, 'p': 1.0}),
         BoundaryCondition(location='x_max', type='outflow', values={'p': 0.0}),
         BoundaryCondition(location='y_min', type='no-slip', values={'u': 0.0, 'v': 0.0, 'w': 0.0}),
@@ -77,8 +77,8 @@ def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverStat
     ])
     
     # 6. Engine State: Explicit declaration
-    state.iteration = 0
-    state.time = 0.0
-    state.ready_for_time_loop = False
+    state._iteration = 0
+    state._time = 0.0
+    state._ready_for_time_loop = False
 
     return state
