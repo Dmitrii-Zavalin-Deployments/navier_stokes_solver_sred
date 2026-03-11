@@ -1,9 +1,8 @@
 # tests/helpers/solver_step3_output_dummy.py
 
 import numpy as np
-
+from src.common.field_schema import FI
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
-
 
 def make_step3_output_dummy(nx=4, ny=4, nz=4):
     """
@@ -12,29 +11,29 @@ def make_step3_output_dummy(nx=4, ny=4, nz=4):
     """
     state = make_step2_output_dummy(nx=nx, ny=ny, nz=nz)
 
-    # 1. Populate StencilBlock internal fields
-    # Only physical data that Step 3 modifies
-    for block in state.stencil_matrix:
-        if not block.center.is_ghost:
-            # Synced pressure
-            block.center.p = 0.01
-            block.center.p_next = 0.01
-            
-            # Corrected velocities (divergence-free)
-            block.center.u = 0.5
-            block.center.v = 0.5
-            block.center.w = 0.5
-            
-            # Intermediate velocities (v*)
-            block.center.u_star = 0.51
-            block.center.v_star = 0.51
-            block.center.w_star = 0.51
+    # 1. Populate Field Foundation (The Hybrid Memory Bridge)
+    # Orchestrate_step3 modifies buffers in-place via indices defined in FI.
+    # We simulate a post-projection state (divergence-free velocities, updated pressure).
+    
+    # Velocity fields (FI.VX, FI.VY, FI.VZ = 0, 1, 2)
+    state.fields.data[:, FI.VX] = 0.5
+    state.fields.data[:, FI.VY] = 0.5
+    state.fields.data[:, FI.VZ] = 0.5
+    
+    # Intermediate velocities (FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR = 3, 4, 5)
+    # These represent the prediction before correction
+    state.fields.data[:, FI.VX_STAR] = 0.51
+    state.fields.data[:, FI.VY_STAR] = 0.51
+    state.fields.data[:, FI.VZ_STAR] = 0.51
+    
+    # Pressure fields (FI.P, FI.P_NEXT = 6, 7)
+    # Synchronization ensures P == P_NEXT
+    state.fields.data[:, FI.P] = 0.01
+    state.fields.data[:, FI.P_NEXT] = 0.01
 
-    # 2. Populate global SolverState fields
-    # These represent the aggregated field buffers ready for downstream steps
-    state.fields.U = np.ones((nx + 1, ny, nz)) * 0.5
-    state.fields.V = np.ones((nx, ny + 1, nz)) * 0.5
-    state.fields.W = np.ones((nx, ny, nz + 1)) * 0.5
-    state.fields.P = np.ones((nx, ny, nz)) * 0.01
+    # 2. Synchronize StencilBlocks (The Wiring)
+    # Since Cell objects are pointers/views into the Foundation, 
+    # they reflect the buffer updates automatically via property getters.
+    # No manual synchronization loop is required.
 
     return state

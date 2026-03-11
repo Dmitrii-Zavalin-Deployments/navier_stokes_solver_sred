@@ -1,17 +1,16 @@
 # tests/helpers/solver_input_schema_dummy.py
 
 from src.common.solver_input import SolverInput
-
+from src.common.field_schema import FI
 
 def solver_input_schema_dummy() -> dict:
     """
     Returns a raw dictionary representing valid JSON input.
-    Compliant with Phase C: Deterministic Initialization and Law of Singular Access.
+    Compliant with the FI schema for foundation allocation.
     """
     nx, ny, nz = 2, 2, 2
-    # Rule 5: Explicit initialization. 
-    # Mask values: 1 = fluid, 0 = solid, -1 = boundary-fluid
-    mask_flat = [1] * (nx * ny * nz) 
+    num_cells = nx * ny * nz
+    mask_flat = [1] * num_cells
 
     return {
         "domain_configuration": {
@@ -53,8 +52,5 @@ def solver_input_schema_dummy() -> dict:
     }
 
 def make_solver_input_dummy() -> SolverInput:
-    """
-    Returns a fully hydrated SolverInput OBJECT.
-    Rule 8: Singular access; all data must pass through .from_dict().
-    """
+    """Returns a fully hydrated SolverInput OBJECT."""
     return SolverInput.from_dict(solver_input_schema_dummy())
