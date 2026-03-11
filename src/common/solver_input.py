@@ -1,223 +1,9 @@
 # src/common/solver_input.py
 
 from dataclasses import dataclass, field
-
 from src.common.base_container import ValidatedContainer
 
-# =========================================================
-# 1. SUB-DEPARTMENT CONTAINERS
-# =========================================================
-
-@dataclass
-class DomainConfigInput(ValidatedContainer):
-    __slots__ = ['_type', '_reference_velocity']
-    _type: str
-    _reference_velocity: list | None
-
-    @property
-    def type(self) -> str: return self._get_safe("type")
-    @type.setter
-    def type(self, v: str):
-        if v not in ["INTERNAL", "EXTERNAL"]: 
-            raise ValueError(f"Invalid domain type: {v}. Must be INTERNAL or EXTERNAL.")
-        self._set_safe("type", v, str)
-
-    @property
-    def reference_velocity(self) -> list: return self._get_safe("reference_velocity")
-    @reference_velocity.setter
-    def reference_velocity(self, v: list):
-        if v is not None and len(v) != 3: 
-            raise ValueError("reference_velocity must have 3 items [u, v, w]")
-        self._set_safe("reference_velocity", v, list)
-
-@dataclass
-class GridInput(ValidatedContainer):
-    __slots__ = ['_x_min', '_x_max', '_y_min', '_y_max', '_z_min', '_z_max', '_nx', '_ny', '_nz']
-    _x_min: float; _x_max: float
-    _y_min: float; _y_max: float
-    _z_min: float; _z_max: float
-    _nx: int; _ny: int; _nz: int
-
-    @property
-    def x_min(self) -> float: return self._get_safe("x_min")
-    @x_min.setter
-    def x_min(self, v: float): self._set_safe("x_min", v, float)
-    @property
-    def x_max(self) -> float: return self._get_safe("x_max")
-    @x_max.setter
-    def x_max(self, v: float): self._set_safe("x_max", v, float)
-    @property
-    def nx(self) -> int: return self._get_safe("nx")
-    @nx.setter
-    def nx(self, v: int): 
-        if v < 1: raise ValueError(f"nx must be >= 1, got {v}")
-        self._set_safe("nx", v, int)
-    @property
-    def y_min(self) -> float: return self._get_safe("y_min")
-    @y_min.setter
-    def y_min(self, v: float): self._set_safe("y_min", v, float)
-    @property
-    def y_max(self) -> float: return self._get_safe("y_max")
-    @y_max.setter
-    def y_max(self, v: float): self._set_safe("y_max", v, float)
-    @property
-    def ny(self) -> int: return self._get_safe("ny")
-    @ny.setter
-    def ny(self, v: int): 
-        if v < 1: raise ValueError(f"ny must be >= 1, got {v}")
-        self._set_safe("ny", v, int)
-    @property
-    def z_min(self) -> float: return self._get_safe("z_min")
-    @z_min.setter
-    def z_min(self, v: float): self._set_safe("z_min", v, float)
-    @property
-    def z_max(self) -> float: return self._get_safe("z_max")
-    @z_max.setter
-    def z_max(self, v: float): self._set_safe("z_max", v, float)
-    @property
-    def nz(self) -> int: return self._get_safe("nz")
-    @nz.setter
-    def nz(self, v: int): 
-        if v < 1: raise ValueError(f"nz must be >= 1, got {v}")
-        self._set_safe("nz", v, int)
-
-    @property
-    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
-    @property
-    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
-    @property
-    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
-    @property
-    def total_cells(self) -> int: return self.nx * self.ny * self.nz
-
-@dataclass
-class FluidInput(ValidatedContainer):
-    __slots__ = ['_density', '_viscosity']
-    _density: float
-    _viscosity: float
-
-    @property
-    def density(self) -> float: return self._get_safe("density")
-    @density.setter
-    def density(self, v: float):
-        if v <= 0: raise ValueError(f"Density must be > 0, got {v}")
-        self._set_safe("density", v, float)
-    @property
-    def viscosity(self) -> float: return self._get_safe("viscosity")
-    @viscosity.setter
-    def viscosity(self, v: float):
-        if v < 0: raise ValueError(f"Viscosity must be >= 0, got {v}")
-        self._set_safe("viscosity", v, float)
-
-@dataclass
-class InitialConditionsInput(ValidatedContainer):
-    __slots__ = ['_velocity', '_pressure']
-    _velocity: list
-    _pressure: float
-
-    @property
-    def velocity(self) -> list: return self._get_safe("velocity")
-    @velocity.setter
-    def velocity(self, v: list):
-        if v is not None and len(v) != 3: raise ValueError("velocity must have 3 items")
-        self._set_safe("velocity", v, list)
-    @property
-    def pressure(self) -> float: return self._get_safe("pressure")
-    @pressure.setter
-    def pressure(self, v: float): self._set_safe("pressure", v, float)
-
-@dataclass
-class SimParamsInput(ValidatedContainer):
-    __slots__ = ['_time_step', '_total_time', '_output_interval']
-    _time_step: float
-    _total_time: float
-    _output_interval: int
-
-    @property
-    def time_step(self) -> float: return self._get_safe("time_step")
-    @time_step.setter
-    def time_step(self, v: float):
-        if v <= 0: raise ValueError("time_step must be > 0")
-        self._set_safe("time_step", v, float)
-    @property
-    def total_time(self) -> float: return self._get_safe("total_time")
-    @total_time.setter
-    def total_time(self, v: float):
-        if v <= 0: raise ValueError("total_time must be > 0")
-        self._set_safe("total_time", v, float)
-    @property
-    def output_interval(self) -> int: return self._get_safe("output_interval")
-    @output_interval.setter
-    def output_interval(self, v: int):
-        if v < 1: raise ValueError("output_interval must be >= 1")
-        self._set_safe("output_interval", v, int)
-
-@dataclass
-class BoundaryConditionItem(ValidatedContainer):
-    __slots__ = ['_location', '_type', '_values']
-    _location: str
-    _type: str
-    _values: dict
-
-    @property
-    def location(self) -> str: return self._get_safe("location")
-    @location.setter
-    def location(self, v: str):
-        valid = ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "wall"]
-        if v not in valid: raise ValueError(f"Invalid location: {v}")
-        self._set_safe("location", v, str)
-    @property
-    def type(self) -> str: return self._get_safe("type")
-    @type.setter
-    def type(self, v: str):
-        valid = ["no-slip", "free-slip", "inflow", "outflow", "pressure"]
-        if v not in valid: raise ValueError(f"Invalid type: {v}")
-        self._set_safe("type", v, str)
-    @property
-    def values(self) -> dict: return self._get_safe("values")
-    @values.setter
-    def values(self, v: dict): self._set_safe("values", v, dict)
-
-@dataclass
-class BoundaryConditionsInput(ValidatedContainer):
-    __slots__ = ['_items']
-    _items: list[BoundaryConditionItem]
-
-    @property
-    def items(self) -> list[BoundaryConditionItem]: return self._get_safe("items")
-    @items.setter
-    def items(self, v: list):
-        processed = [bc if isinstance(bc, BoundaryConditionItem) else BoundaryConditionItem(**bc) for bc in v]
-        self._set_safe("items", processed, list)
-
-@dataclass
-class MaskInput(ValidatedContainer):
-    __slots__ = ['_data']
-    _data: list
-
-    @property
-    def data(self) -> list: return self._get_safe("data")
-    @data.setter
-    def data(self, v: list):
-        if not all(val in {-1, 0, 1} for val in v):
-            raise ValueError("Mask contains invalid values. Only -1, 0, 1 allowed.")
-        self._set_safe("data", v, list)
-
-@dataclass
-class ExternalForcesInput(ValidatedContainer):
-    __slots__ = ['_force_vector']
-    _force_vector: list
-
-    @property
-    def force_vector(self) -> list: return self._get_safe("force_vector")
-    @force_vector.setter
-    def force_vector(self, v: list):
-        if len(v) != 3: raise ValueError("force_vector must have 3 items")
-        self._set_safe("force_vector", v, list)
-
-# =========================================================
-# 2. THE UNIVERSAL INPUT CONTAINER
-# =========================================================
+# ... [Keep all your Sub-Department Containers: DomainConfigInput, GridInput, etc.] ...
 
 @dataclass
 class SolverInput(ValidatedContainer):
@@ -236,27 +22,34 @@ class SolverInput(ValidatedContainer):
     @classmethod
     def from_dict(cls, data: dict) -> "SolverInput":
         obj = cls()
+        
+        # Domain Configuration
         dc = data["domain_configuration"]
         obj.domain_configuration.type = dc["type"]
         obj.domain_configuration.reference_velocity = dc.get("reference_velocity")
         
+        # Grid
         g = data["grid"]
         for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]:
             setattr(obj.grid, k, g[k])
             
+        # Fluid
         f = data["fluid_properties"]
         obj.fluid_properties.density = f["density"]
         obj.fluid_properties.viscosity = f["viscosity"]
         
+        # Initial Conditions
         ic = data["initial_conditions"]
         obj.initial_conditions.velocity = ic["velocity"]
         obj.initial_conditions.pressure = ic["pressure"]
         
+        # Simulation Parameters
         sp = data["simulation_parameters"]
         obj.simulation_parameters.time_step = sp["time_step"]
         obj.simulation_parameters.total_time = sp["total_time"]
         obj.simulation_parameters.output_interval = sp["output_interval"]
         
+        # Forces, Mask, Boundary Conditions
         obj.external_forces.force_vector = data["external_forces"]["force_vector"]
         obj.mask.data = data["mask"]
         obj.boundary_conditions.items = data["boundary_conditions"]
@@ -264,6 +57,7 @@ class SolverInput(ValidatedContainer):
         return obj
 
     def to_dict(self) -> dict:
+        """Returns a dictionary strictly adhering to the input schema."""
         return {
             "domain_configuration": {
                 "type": self.domain_configuration.type,
