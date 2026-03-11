@@ -2,8 +2,10 @@
 
 import jsonschema
 import pytest
+
 from src.step1.schema_utils import load_schema
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
+
 
 def test_final_state_contract():
     """
