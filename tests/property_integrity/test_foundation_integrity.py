@@ -6,10 +6,12 @@ Ensures the StencilBlock pointer graph is perfectly aligned with the
 underlying NumPy FieldManager foundation (Rule 9).
 """
 
-import pytest
 import numpy as np
+import pytest
+
 from src.common.field_schema import FI
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 def verify_foundation_integrity(state):
     """
