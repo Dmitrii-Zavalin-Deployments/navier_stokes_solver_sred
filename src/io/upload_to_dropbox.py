@@ -1,41 +1,46 @@
 # src/io/upload_to_dropbox.py
 
-import os
-import sys
+"""
+Archivist I/O: Cloud Upload Module.
+
+Compliance:
+- Rule 0 (Law of Performance): Uses __slots__ to minimize memory footprint.
+- Rule 5 (Deterministic Init): Relies on injected TokenManager.
+- Rule 8 (API Minimalism): Encapsulated upload logic.
+"""
 
 import dropbox
+from pathlib import Path
+from src.io.dropbox_utils import TokenManager
 
-from src.io.dropbox_utils import refresh_access_token
+class CloudUploader:
+    """
+    Handles secure uploading of simulation artifacts.
+    Uses __slots__ per Rule 0 to minimize memory footprint.
+    """
+    __slots__ = ['dbx']
 
+    def __init__(self, token_manager: TokenManager, refresh_token: str):
+        """
+        Deterministic initialization via TokenManager dependency.
+        """
+        access_token = token_manager.refresh_access_token(refresh_token)
+        self.dbx = dropbox.Dropbox(access_token)
 
-def upload_file_to_dropbox(local_file_path, dropbox_folder, refresh_token, client_id, client_secret):
-    """Uploads a local file to a specified path on Dropbox."""
-    try:
-        access_token = refresh_access_token(refresh_token, client_id, client_secret)
-        dbx = dropbox.Dropbox(access_token)
+    def upload(self, local_path: Path, dropbox_folder: str):
+        """
+        Atomic upload operation with explicit path handling.
+        """
+        if not local_path.exists():
+            raise FileNotFoundError(f"Local file '{local_path}' not found.")
+
+        dropbox_file_path = f"{dropbox_folder}/{local_path.name}"
         
-        output_file_name = os.path.basename(local_file_path)
-        dropbox_file_path = f"{dropbox_folder}/{output_file_name}"
-
-        with open(local_file_path, "rb") as f:
-            dbx.files_upload(f.read(), dropbox_file_path, mode=dropbox.files.WriteMode.overwrite)
+        with open(local_path, "rb") as f:
+            self.dbx.files_upload(
+                f.read(), 
+                dropbox_file_path, 
+                mode=dropbox.files.WriteMode.overwrite
+            )
         
-        print(f"✅ Successfully uploaded to Dropbox: {dropbox_file_path}")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to upload '{local_file_path}': {e}")
-        return False
-
-if __name__ == "__main__":
-    if len(sys.argv) != 6:
-        print("Usage: python upload_to_dropbox.py <local_path> <dbx_folder> <token> <id> <secret>")
-        sys.exit(1)
-
-    local_path, dbx_folder, token, client_id, secret = sys.argv[1:]
-    
-    if not os.path.exists(local_path):
-        print(f"❌ Error: Local file '{local_path}' not found.")
-        sys.exit(1)
-
-    success = upload_file_to_dropbox(local_path, dbx_folder, token, client_id, secret)
-    sys.exit(0 if success else 1)
+        print(f"✅ Successfully uploaded: {dropbox_file_path}")

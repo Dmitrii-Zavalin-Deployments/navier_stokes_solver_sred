@@ -1,42 +1,43 @@
 #!/bin/bash
 # src/upload_to_dropbox.sh
-# 📤 Dropbox Upload Orchestrator — Professional Cloud Export Gate
+# 📤 Dropbox Upload Orchestrator — Professional Cloud Export Gate.
 
-# 1. Environment Guard (Secrets from GitHub)
-APP_KEY="${APP_KEY}"
-APP_SECRET="${APP_SECRET}"
-REFRESH_TOKEN="${REFRESH_TOKEN}"
+# 1. Environment Guard
+if [[ -z "${APP_KEY}" || -z "${APP_SECRET}" || -z "${REFRESH_TOKEN}" ]]; then
+    echo "❌ ERROR: Missing required credentials."
+    exit 1
+fi
 
-# 2. Input Logic (Handshake from Point 2)
-# If an argument is passed (the ZIP path), we use it. 
-# Otherwise, we default to the standard location.
+# 2. Path Resolution
 BASE_WORK_DIR="${GITHUB_WORKSPACE:-$(pwd)}"
 DEFAULT_ZIP="${BASE_WORK_DIR}/data/testing-input-output/navier_stokes_output.zip"
 LOCAL_ZIP_PATH="${1:-$DEFAULT_ZIP}"
 
-echo "🔍 Validating archive for upload: $LOCAL_ZIP_PATH"
-
-# 3. Explicit Guard (Zero-Debt Mandate)
+# 3. Validation (Zero-Debt Mandate)
 if [ ! -f "$LOCAL_ZIP_PATH" ]; then
     echo "❌ ERROR: Target file not found at $LOCAL_ZIP_PATH."
-    echo "Possible cause: Solver failed or path handshake was lost."
     exit 1
 fi
 
-# 4. Cloud Export Execution
-DROPBOX_DEST_FOLDER="/engineering_simulations_pipeline"
-
-# Set PYTHONPATH so the worker can find src.io.dropbox_utils
 export PYTHONPATH="${PYTHONPATH}:${BASE_WORK_DIR}"
 
-echo "🔄 Triggering Python Worker..."
+echo "🔄 Triggering Python CloudUploader..."
 
-python3 "${BASE_WORK_DIR}/src/io/upload_to_dropbox.py" \
-    "$LOCAL_ZIP_PATH" \
-    "$DROPBOX_DEST_FOLDER" \
-    "$REFRESH_TOKEN" \
-    "$APP_KEY" \
-    "$APP_SECRET"
+# 4. Explicit Orchestration via Inline Python
+# Bypasses CLI-argument reliance for safer, deterministic instantiation.
+python3 -c "
+from pathlib import Path
+from src.io.dropbox_utils import TokenManager
+from src.io.upload_to_dropbox import CloudUploader
+import os
+
+# Initialize components explicitly
+tm = TokenManager(client_id=os.environ['APP_KEY'], client_secret=os.environ['APP_SECRET'])
+uploader = CloudUploader(tm, os.environ['REFRESH_TOKEN'])
+
+# Execute atomic upload
+uploader.upload(Path(os.environ['LOCAL_ZIP_PATH']), '/engineering_simulations_pipeline')
+"
 
 # 5. Final Result Audit
 if [ $? -eq 0 ]; then

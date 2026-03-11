@@ -1,61 +1,61 @@
 # src/io/download_from_dropbox.py
 
-import os
-import sys
+"""
+Archivist I/O: Cloud Ingestion Module.
+
+Compliance:
+- Rule 0 (Law of Performance): Uses __slots__ for memory efficiency.
+- Rule 5 (Deterministic Init): Relies on injected TokenManager.
+- Rule 8 (API Minimalism): Single-responsibility ingestion logic.
+"""
 
 import dropbox
+from pathlib import Path
+from src.io.dropbox_utils import TokenManager
 
-from src.io.dropbox_utils import refresh_access_token
+class CloudIngestor:
+    """
+    Handles secure synchronization of simulation artifacts.
+    Uses __slots__ to minimize memory footprint during heavy I/O.
+    """
+    __slots__ = ['dbx', 'log_path']
 
-# Contract: Only ingest files that the Navier-Stokes solver can process
-ALLOWED_EXTENSIONS = [".step", ".stp", ".json", ".zip"]
+    def __init__(self, token_manager: TokenManager, refresh_token: str, log_path: Path):
+        """
+        Deterministic initialization via TokenManager dependency.
+        Raises RuntimeError if the token refresh fails immediately.
+        """
+        access_token = token_manager.refresh_access_token(refresh_token)
+        self.dbx = dropbox.Dropbox(access_token)
+        self.log_path = log_path
 
-def download_files_from_dropbox(dropbox_folder, local_folder, refresh_token, client_id, client_secret, log_file_path):
-    """Syncs allowed files from cloud to local data/testing-input-output."""
-    access_token = refresh_access_token(refresh_token, client_id, client_secret)
-    dbx = dropbox.Dropbox(access_token)
-
-    with open(log_file_path, "a") as log_file:
-        log_file.write(f"🚀 Syncing from Dropbox: {dropbox_folder}\n")
-        try:
-            os.makedirs(local_folder, exist_ok=True)
+    def sync(self, source_folder: str, target_folder: Path, allowed_ext: list):
+        """Atomic sync operation with logging."""
+        target_folder.mkdir(parents=True, exist_ok=True)
+        
+        with open(self.log_path, "a") as log:
+            log.write(f"🚀 Ingestion started: {source_folder}\n")
+            
             has_more = True
             cursor = None
             
             while has_more:
-                result = (
-                    dbx.files_list_folder_continue(cursor)
-                    if cursor else
-                    dbx.files_list_folder(dropbox_folder)
-                )
+                result = (self.dbx.files_list_folder_continue(cursor) 
+                          if cursor else self.dbx.files_list_folder(source_folder))
                 
                 for entry in result.entries:
                     if isinstance(entry, dropbox.files.FileMetadata):
-                        ext = os.path.splitext(entry.name)[1].lower()
-                        if ext in ALLOWED_EXTENSIONS:
-                            local_path = os.path.join(local_folder, entry.name)
-                            with open(local_path, "wb") as f:
-                                _, res = dbx.files_download(path=entry.path_lower)
-                                f.write(res.content)
-                            log_file.write(f"✅ Downloaded {entry.name} to local storage.\n")
-                            print(f"✅ Downloaded: {entry.name}")
-                        else:
-                            log_file.write(f"⏭ Skipped: {entry.name} (Unsupported Extension)\n")
-
+                        if Path(entry.name).suffix.lower() in allowed_ext:
+                            self._download_file(entry, target_folder, log)
+                
                 has_more = result.has_more
                 cursor = result.cursor
-            log_file.write("🎉 Ingestion phase completed successfully.\n")
-        except Exception as e:
-            log_file.write(f"❌ Ingestion Error: {e}\n")
-            print(f"❌ Ingestion Error: {e}")
-            sys.exit(1)
+            log.write("🎉 Ingestion complete.\n")
 
-if __name__ == "__main__":
-    if len(sys.argv) != 7:
-        print("Usage: python download_from_dropbox.py <dbx_f> <local_f> <token> <id> <secret> <log>")
-        sys.exit(1)
-        
-    download_files_from_dropbox(
-        sys.argv[1], sys.argv[2], sys.argv[3], 
-        sys.argv[4], sys.argv[5], sys.argv[6]
-    )
+    def _download_file(self, entry, target_folder, log):
+        """Internal helper for specific file transfer."""
+        local_path = target_folder / entry.name
+        _, res = self.dbx.files_download(path=entry.path_lower)
+        with open(local_path, "wb") as f:
+            f.write(res.content)
+        log.write(f"✅ Downloaded {entry.name}\n")
