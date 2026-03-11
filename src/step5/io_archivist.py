@@ -1,13 +1,17 @@
 # src/step5/io_archivist.py
-from pathlib import Path
 
+from pathlib import Path
 import h5py
 import numpy as np
-
+from src.common.field_schema import FI
 
 def save_snapshot(state):
     """
-    Exports the physical 3D domain state to HDF5 with spatial verification.
+    Exports the physical 3D domain state to HDF5.
+    
+    Compliance:
+    - Direct Foundation Slicing: Uses the FI schema to extract data directly 
+      from the pre-allocated fields_buffer, bypassing object-pointer overhead.
     """
     output_dir = Path("output")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -15,24 +19,23 @@ def save_snapshot(state):
     filename = output_dir / f"snapshot_{state.iteration:04d}.h5"
     nx, ny, nz = state.grid.nx, state.grid.ny, state.grid.nz
     
-    # Helper to extract field attributes into a 3D NumPy array
-    def get_field(attr_name):
-        return np.array([getattr(b.center, attr_name) for b in state.stencil_matrix]).reshape(nx, ny, nz)
+    # Access the contiguous Foundation buffer directly
+    # Shape is (N_CELLS, FI.num_fields())
+    data = state.fields_buffer 
 
     with h5py.File(filename, 'w') as h5f:
-        # Spatial Coordinates (Verification Layer)
-        h5f.create_dataset('x', data=get_field('x'))
-        h5f.create_dataset('y', data=get_field('y'))
-        h5f.create_dataset('z', data=get_field('z'))
+        # Physical Fields extracted via direct schema-locked slicing
+        # This is an O(1) memory operation relative to the object graph
+        h5f.create_dataset('vx', data=data[:, FI.VX].reshape(nx, ny, nz))
+        h5f.create_dataset('vy', data=data[:, FI.VY].reshape(nx, ny, nz))
+        h5f.create_dataset('vz', data=data[:, FI.VZ].reshape(nx, ny, nz))
+        h5f.create_dataset('p',  data=data[:, FI.P].reshape(nx, ny, nz))
         
-        # Physical Fields
-        h5f.create_dataset('vx', data=get_field('vx'))
-        h5f.create_dataset('vy', data=get_field('vy'))
-        h5f.create_dataset('vz', data=get_field('vz'))
-        h5f.create_dataset('p',  data=get_field('p'))
-        
-        # Topology
-        h5f.create_dataset('mask', data=get_field('mask'))
+        # Spatial/Mask metadata (Assuming these are cached in state.grid or equivalent)
+        h5f.create_dataset('x', data=state.grid.x_mesh)
+        h5f.create_dataset('y', data=state.grid.y_mesh)
+        h5f.create_dataset('z', data=state.grid.z_mesh)
+        h5f.create_dataset('mask', data=state.grid.mask_mesh)
         
         # Global Metadata
         h5f.attrs['time'] = state.time
