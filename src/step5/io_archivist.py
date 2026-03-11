@@ -1,9 +1,11 @@
 # src/step5/io_archivist.py
 
 from pathlib import Path
+
 import h5py
-import numpy as np
+
 from src.common.field_schema import FI
+
 
 def save_snapshot(state):
     """
