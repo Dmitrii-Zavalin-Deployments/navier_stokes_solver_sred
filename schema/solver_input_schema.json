@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Solver Input Schema",
+  "description": "Deterministic configuration for Navier-Stokes solver. No internal defaults permitted.",
   "type": "object",
   "required": [
     "grid",
@@ -30,11 +31,11 @@
         "reference_velocity": {
           "type": "array",
           "description": "Optional reference velocity of the EXTERNAL flow",
+          "minItems": 3,
+          "maxItems": 3,
           "items": {
             "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3
+          }
         }
       }
     },
@@ -119,11 +120,11 @@
       "properties": {
         "velocity": {
           "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
           "items": {
             "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3
+          }
         },
         "pressure": {
           "type": "number"
@@ -158,11 +159,11 @@
         "type": "object",
         "required": [
           "location",
-          "type"
+          "type",
+          "values"
         ],
         "properties": {
           "location": {
-            "type": "string",
             "enum": [
               "x_min",
               "x_max",
@@ -174,7 +175,6 @@
             ]
           },
           "type": {
-            "type": "string",
             "enum": [
               "no-slip",
               "free-slip",
@@ -185,6 +185,12 @@
           },
           "values": {
             "type": "object",
+            "required": [
+              "u",
+              "v",
+              "w",
+              "p"
+            ],
             "properties": {
               "u": {
                 "type": "number"
@@ -205,7 +211,7 @@
     },
     "mask": {
       "type": "array",
-      "description": "Flat mask of length nx*ny*nz using canonical flattening: i + nx*(j + ny*k). Values: 1 = fluid, 0 = solid, -1 = boundary-fluid.",
+      "description": "Canonical flattening: i + nx*(j + ny*k). Must match grid.nx*grid.ny*grid.nz length.",
       "items": {
         "type": "integer",
         "enum": [
@@ -223,11 +229,11 @@
       "properties": {
         "force_vector": {
           "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
           "items": {
             "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3
+          }
         }
       }
     }
