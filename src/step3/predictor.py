@@ -1,7 +1,7 @@
 # src/step3/predictor.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
 from src.step3.ops.advection import compute_local_advection_vector
 from src.step3.ops.forces import get_local_body_force
 from src.step3.ops.gradient import compute_local_gradient_p

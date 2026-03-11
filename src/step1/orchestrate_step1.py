@@ -1,23 +1,23 @@
 # src/step1/orchestrate_step1.py
 
 from __future__ import annotations
+
 import numpy as np
 
-from src.common.field_schema import FI
 from src.common.solver_state import (
-    SolverState,
-    GridManager,
-    DomainManager,
-    FluidPropertiesManager,
-    ExternalForceManager,
-    InitialConditionManager,
-    SimulationParameterManager,
-    MaskManager,
-    FieldManager,
     BoundaryConditionManager,
-    BoundaryCondition
+    DomainManager,
+    ExternalForceManager,
+    FieldManager,
+    FluidPropertiesManager,
+    GridManager,
+    InitialConditionManager,
+    MaskManager,
+    SimulationParameterManager,
+    SolverState,
 )
 from src.solver_input import SolverInput
+
 from .helpers import generate_3d_masks, parse_bc_lookup
 
 # Rule 7: Granular Traceability

@@ -1,7 +1,8 @@
 # src/step3/ops/advection.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
+
 
 def compute_local_advection(block: StencilBlock, field_id: FI) -> float:
     """

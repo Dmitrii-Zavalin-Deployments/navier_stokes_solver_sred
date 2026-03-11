@@ -1,7 +1,7 @@
 # src/step3/orchestrate_step3.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
 from src.step3.corrector import apply_local_velocity_correction
 from src.step3.ppe_solver import solve_pressure_poisson_step
 from src.step3.predictor import compute_local_predictor_step

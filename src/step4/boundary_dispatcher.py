@@ -1,7 +1,7 @@
 # src/step4/boundary_dispatcher.py
 
 from src.common.stencil_block import StencilBlock
-from src.common.field_schema import FI
+
 
 def get_applicable_boundary_configs(block: StencilBlock, boundary_cfg: list, grid, domain_cfg: dict) -> list:
     """
@@ -14,7 +14,7 @@ def get_applicable_boundary_configs(block: StencilBlock, boundary_cfg: list, gri
     
     # Accessing mask and index directly from the Foundation via Cell properties
     mask = block.center.mask
-    index = block.center.index
+    block.center.index
     
     # 1. Wall Boundary (Mask -1)
     if mask == -1:

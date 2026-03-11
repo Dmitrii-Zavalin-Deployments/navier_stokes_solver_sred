@@ -1,6 +1,7 @@
 # src/step1/helpers.py
 
 import numpy as np
+
 from src.common.solver_input import BoundaryConditionsInput, GridInput
 
 # Rule 7: Granular Traceability

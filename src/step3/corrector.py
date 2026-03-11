@@ -1,7 +1,7 @@
 # src/step3/corrector.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
 from src.step3.ops.gradient import compute_local_gradient_p
 from src.step3.ops.scaling import get_dt_over_rho
 

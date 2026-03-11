@@ -1,7 +1,8 @@
 # src/step3/ops/gradient.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
+
 
 def compute_local_gradient_p(block: StencilBlock, field_id: FI = FI.P) -> tuple:
     """

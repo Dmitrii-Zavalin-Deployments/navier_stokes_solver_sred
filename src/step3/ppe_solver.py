@@ -1,7 +1,7 @@
 # src/step3/ppe_solver.py
 
-from src.common.stencil_block import StencilBlock
 from src.common.field_schema import FI
+from src.common.stencil_block import StencilBlock
 from src.step3.ops.divergence import compute_local_divergence_v_star
 from src.step3.ops.scaling import get_rho_over_dt
 

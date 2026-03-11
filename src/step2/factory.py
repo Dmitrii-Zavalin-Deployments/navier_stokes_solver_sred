@@ -1,8 +1,6 @@
 # src/step2/factory.py
 
-import numpy as np
 from src.common.cell import Cell
-from src.common.field_schema import FI
 from src.core.solver_state import SolverState
 
 # Rule 7: Granular Traceability
@@ -21,7 +19,7 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
 
     # 2. Index calculation and topology (Rule 9)
     index = i + grid.nx * (j + grid.ny * k)
-    mask = int(masks.mask[i, j, k])
+    int(masks.mask[i, j, k])
     
     # 3. Instantiate the Cell (The Wiring)
     cell = Cell(index=index, fields_buffer=fields.data)
