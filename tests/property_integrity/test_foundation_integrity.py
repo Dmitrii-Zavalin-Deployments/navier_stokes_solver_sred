@@ -1,6 +1,6 @@
-"""
-tests/property_integrity/test_foundation_integrity.py
+# tests/property_integrity/test_foundation_integrity.py
 
+"""
 Scientific Testing Suite (STS) for Hybrid Memory Foundation.
 Ensures the StencilBlock pointer graph is perfectly aligned with the 
 underlying NumPy FieldManager foundation (Rule 9).
