@@ -4,6 +4,7 @@ from src.common.simulation_context import SimulationContext
 from src.common.solver_state import SolverState
 from src.step5.io_archivist import save_snapshot
 
+
 def orchestrate_step5(state: SolverState, context: SimulationContext) -> SolverState:
     """
     Step 5: The Archivist Orchestration.

@@ -5,6 +5,7 @@ from src.common.stencil_block import StencilBlock
 from src.step4.boundary_applier import apply_boundary_values
 from src.step4.boundary_dispatcher import get_applicable_boundary_configs
 
+
 def orchestrate_step4(
     block: StencilBlock, 
     context: SimulationContext, 

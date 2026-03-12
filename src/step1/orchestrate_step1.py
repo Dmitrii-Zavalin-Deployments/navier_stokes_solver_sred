@@ -17,7 +17,7 @@ from src.common.solver_state import (
     SimulationParameterManager,
     SolverState,
 )
-from src.common.field_schema import FI
+
 from .helpers import generate_3d_masks, parse_bc_lookup
 
 # Rule 7: Granular Traceability

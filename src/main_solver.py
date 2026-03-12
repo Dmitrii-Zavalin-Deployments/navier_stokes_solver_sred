@@ -4,11 +4,10 @@ import json
 import os
 import sys
 from pathlib import Path
+
 import jsonschema
 
 from src.common.archive_service import archive_simulation_artifacts
-from src.common.solver_input import SolverInput
-from src.common.solver_config import SolverConfig
 from src.common.simulation_context import SimulationContext
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
