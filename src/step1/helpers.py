@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from src.common.solver_input import BoundaryConditionsInput, GridInput
+from src.common.solver_input import GridInput
 
 # Rule 7: Granular Traceability
 DEBUG = True
