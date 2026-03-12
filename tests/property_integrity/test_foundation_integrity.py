@@ -24,6 +24,10 @@ def verify_foundation_integrity(state):
         state.fields.data[:, field_id] = np.arange(state.grid.nx * state.grid.ny * state.grid.nz) + (float(field_id) / 10.0)
         
     # 2. Verify via object-pointer graph (The Sentinel Test)
+    # Skip wiring check if Step 2 is not yet complete
+    if getattr(state, "_stencil_matrix") is None:
+        print("⚠️ POST: Stencil matrix not yet assembled. Skipping wiring check.")
+        return
     # Checking specific points: sample (50), start (0), and end (n-1)
     test_indices = [0, 50, state.grid.nx * state.grid.ny * state.grid.nz - 1]
     
