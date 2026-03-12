@@ -16,33 +16,29 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     """
     local_stencil_list = []
     
-    # Foundation Verification (Rule 9)
+    # 1. Foundation Verification (Rule 9 & Rule 5)
+    # Ensure the buffer is fully compliant with the current FI Schema
     if state.fields.data.shape[1] != FI.num_fields():
         raise RuntimeError(f"Foundation Mismatch: Buffer width {state.fields.data.shape[1]} "
                            f"!= Schema requirement {FI.num_fields()}.")
 
-    # Local caching of SSoT pointers for performance (Rule 0)
+    # 2. Local caching of SSoT pointers for performance (Rule 0)
     grid = state.grid
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     
-    # Physics parameters cached from state (Rule 5 & Rule 4)
-    sim_params = state.sim_params
-    fluid_props = state.fluid
-    ext_forces = state.external_forces
-    
-    # Prepare parameter bundle for StencilBlock (Rule 5: No defaults)
-    # Using dot-notation to access Manager properties as per Rule 8
+    # 3. Physics & Geometry parameters cached from SSoT (Rule 4 & 5)
+    # No hardcoded fallbacks; every value must exist in the validated State
     physics_params = {
-        "dx": grid.dx,
-        "dy": grid.dy,
-        "dz": grid.dz,
-        "dt": sim_params.time_step,
-        "rho": fluid_props.density,
-        "mu": fluid_props.viscosity,
-        "f_vals": tuple(ext_forces.force_vector)
+        "dx": (grid.x_max - grid.x_min) / nx,
+        "dy": (grid.y_max - grid.y_min) / ny,
+        "dz": (grid.z_max - grid.z_min) / nz,
+        "dt": state.sim_params.time_step,
+        "rho": state.fluid.density,
+        "mu": state.fluid.viscosity,
+        "f_vals": tuple(state.external_forces.force_vector)
     }
 
-    # Cache for Cell objects to prevent redundant object creation
+    # Cache for Cell objects to prevent redundant object creation (Flyweight pattern)
     cell_cache = {}
 
     def get_cell(ix, iy, iz):
@@ -50,7 +46,7 @@ def assemble_stencil_matrix(state: SolverState) -> list:
         if coord in cell_cache:
             return cell_cache[coord]
             
-        # Factory call uses state directly (Rule 4)
+        # Factory call uses state directly (Rule 4: Hierarchy over convenience)
         if (0 <= ix < nx) and (0 <= iy < ny) and (0 <= iz < nz):
             cell = build_core_cell(ix, iy, iz, state)
         else:
@@ -61,8 +57,9 @@ def assemble_stencil_matrix(state: SolverState) -> list:
 
     if DEBUG:
         print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Domain")
+        print(f"  > Physics Bundle: {physics_params}")
 
-    # Iterate through the Core domain to build the wiring (Logic Layer)
+    # 4. Iterate through the Core domain to build the wiring (Logic Layer)
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):

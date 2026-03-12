@@ -1,10 +1,8 @@
 # src/common/cell.py
 
 import numpy as np
-
 from src.common.base_container import ValidatedContainer
 from src.common.field_schema import FI
-
 
 class Cell(ValidatedContainer):
     """
@@ -12,17 +10,23 @@ class Cell(ValidatedContainer):
     Uses __slots__ to enforce zero-overhead logic-data.
     The Cell acts as a pointer-view into the shared Foundation buffer.
     """
-    __slots__ = ['index', 'fields_buffer', 'x', 'y', 'z', 'mask', 'is_ghost']
+    # Logic-data only: index and reference to the foundation buffer
+    __slots__ = ['index', 'fields_buffer', 'is_ghost']
 
-    def __init__(self, index: int, fields_buffer: np.ndarray, x: int, y: int, z: int, mask: int, is_ghost: bool = False):
+    def __init__(self, index: int, fields_buffer: np.ndarray, is_ghost: bool = False):
         # Explicit initialization to bypass __dict__ creation
         object.__setattr__(self, 'index', index)
         object.__setattr__(self, 'fields_buffer', fields_buffer)
-        object.__setattr__(self, 'x', x)
-        object.__setattr__(self, 'y', y)
-        object.__setattr__(self, 'z', z)
-        object.__setattr__(self, 'mask', mask)
         object.__setattr__(self, 'is_ghost', is_ghost)
+
+    # --- Topological Access (View into Foundation) ---
+    @property
+    def mask(self) -> int: 
+        return int(self.fields_buffer[self.index, FI.MASK])
+    
+    @mask.setter
+    def mask(self, value: int): 
+        self.fields_buffer[self.index, FI.MASK] = value
 
     # --- Physical Fields (View into Foundation) ---
     # Rule 9: Access is Enum-locked to ensure 100% mapping reliability.

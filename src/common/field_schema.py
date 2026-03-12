@@ -2,7 +2,6 @@
 
 from enum import IntEnum
 
-
 class FI(IntEnum):
     """
     FieldIndex (FI) Schema:
@@ -25,12 +24,14 @@ class FI(IntEnum):
     # Pressure Fields
     P = 6
     P_NEXT = 7
+    
+    # Topological Mask (Unified into Foundation per Rule 9)
+    MASK = 8
 
     @classmethod
     def num_fields(cls) -> int:
         """
         Returns the total number of fields in the buffer.
-        Used by the FieldManager to allocate the Foundation buffer:
-        buffer = np.zeros((N_CELLS, FI.num_fields()), dtype=np.float32)
+        Used by the FieldManager to allocate the Foundation buffer.
         """
         return len(cls)

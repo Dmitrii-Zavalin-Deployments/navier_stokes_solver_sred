@@ -15,21 +15,24 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     grid = state.grid
     fields = state.fields
     init = state.initial_conditions
-    masks = state.masks
+    # Retrieve the mask from the SSoT (the MaskManager)
+    mask_grid = state.masks.mask
 
     # 2. Index calculation and topology (Rule 9)
     index = i + grid.nx * (j + grid.ny * k)
-    int(masks.mask[i, j, k])
     
     # 3. Instantiate the Cell (The Wiring)
-    cell = Cell(index=index, fields_buffer=fields.data)
+    cell = Cell(index=index, fields_buffer=fields.data, is_ghost=False)
     
     if DEBUG:
         print(f"DEBUG [Step 2.1]: Core Cell Created -> Index: {index} at ({i}, {j}, {k})")
     
-    # 4. Initialize physical fields via property setters (Rule 9)
+    # 4. Initialize physical fields and topological mask (Rule 9)
+    # The Cell writes directly to the NumPy-managed Foundation buffer.
     cell.vx, cell.vy, cell.vz = init.velocity
     cell.p = init.pressure
+    # Explicitly set the mask into the foundation via the Cell view
+    cell.mask = int(mask_grid[i, j, k])
     
     return cell
 
@@ -38,7 +41,7 @@ def build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     Creates a View-based virtual cell on the perimeter with sentinel indexing.
     """
     # Sentinel index -1 for ghost regions (Rule 9)
-    cell = Cell(index=-1, fields_buffer=state.fields.data)
+    cell = Cell(index=-1, fields_buffer=state.fields.data, is_ghost=True)
     
     if DEBUG:
         print(f"DEBUG [Step 2.1]: Ghost Cell Created -> ({i}, {j}, {k}) mapped to sentinel index -1")
@@ -46,5 +49,7 @@ def build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     # Initialize physical fields to zero state (Explicit zeroing per Rule 5)
     cell.vx, cell.vy, cell.vz = 0.0, 0.0, 0.0
     cell.p = 0.0
+    # Ghost cells are explicitly non-fluid (0)
+    cell.mask = 0
     
     return cell

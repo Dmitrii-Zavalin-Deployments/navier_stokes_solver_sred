@@ -1,7 +1,6 @@
 # src/step2/orchestrate_step2.py
 
 from src.common.solver_state import SolverState
-
 from .stencil_assembler import assemble_stencil_matrix
 
 # Rule 7: Granular Traceability
@@ -21,13 +20,13 @@ def orchestrate_step2(state: SolverState) -> SolverState:
         print(f"  > Grid: {state.grid.nx}x{state.grid.ny}x{state.grid.nz}")
 
     # Rule 4 & 5: Direct dependency access (SSoT).
-    # We pass the state directly to the assembler, which extracts 
-    # configuration and geometry internally. This eliminates 
-    # intermediate 'ctx' or 'params' dictionaries.
+    # The assembler consumes the state directly, maintaining architectural integrity.
+    # The Foundation (state.fields) and the Wiring (stencil_matrix) are now linked.
     state.stencil_matrix = assemble_stencil_matrix(state)
     
     # Rule 9: Structural Persistence
-    # Wiring is now set and persistent in state.stencil_matrix
+    # The Wiring is fully materialized. 
+    # Subsequent time-loop operations will operate in-place on state.fields.data.
     state.ready_for_time_loop = True
     
     if DEBUG:
