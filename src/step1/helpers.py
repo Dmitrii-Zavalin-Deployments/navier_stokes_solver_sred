@@ -38,7 +38,7 @@ def generate_3d_masks(mask_data: list[int], grid: GridInput) -> tuple[np.ndarray
         
     return mask_3d, is_fluid, is_boundary
 
-def parse_bc_lookup(bc_input: BoundaryConditionsInput) -> dict[str, dict]:
+def parse_bc_lookup(bc_list: list) -> dict[str, dict]:
     """
     Converts BC input container into a high-speed lookup table for the BoundaryManager.
     
@@ -48,18 +48,16 @@ def parse_bc_lookup(bc_input: BoundaryConditionsInput) -> dict[str, dict]:
       missing physics data triggers an immediate KeyError.
     """
     table = {}
-    
-    # Use the items list directly from the validated container
-    for item in bc_input.items:
-        # The values dictionary is already validated by the BoundaryConditionItem container.
-        # Direct key access ensures that any missing physical parameters (u, v, w, p) 
-        # results in an immediate crash, adhering to the Zero-Debt mandate.
-        table[str(item.location)] = {
-            "type": str(item.type),
-            "u": float(item.values["u"]),
-            "v": float(item.values["v"]),
-            "w": float(item.values["w"]),
-            "p": float(item.values["p"])
+    # Iterate over the list directly, not an '.items' attribute
+    for item in bc_list:
+        # Assuming item is a dictionary (from your dummy data) or 
+        # a container object. If it's a dict:
+        table[str(item["location"])] = {
+            "type": str(item["type"]),
+            "u": float(item["values"]["u"]),
+            "v": float(item["values"]["v"]),
+            "w": float(item["values"]["w"]),
+            "p": float(item["values"]["p"])
         }
         
         if DEBUG:
