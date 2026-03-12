@@ -25,20 +25,21 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     grid = state.grid
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     
-    # Physics parameters cached from state.config (Rule 5)
+    # Physics parameters cached from state (Rule 5 & Rule 4)
     sim_params = state.sim_params
-    fluid_props = fluid_props = state.fluid
-    ext_forces = ext_forces = state.external_forces
+    fluid_props = state.fluid
+    ext_forces = state.external_forces
     
     # Prepare parameter bundle for StencilBlock (Rule 5: No defaults)
+    # Using dot-notation to access Manager properties as per Rule 8
     physics_params = {
         "dx": grid.dx,
         "dy": grid.dy,
         "dz": grid.dz,
-        "dt": sim_params["time_step"],
-        "rho": fluid_props["density"],
-        "mu": fluid_props["viscosity"],
-        "f_vals": tuple(ext_forces["force_vector"])
+        "dt": sim_params.time_step,
+        "rho": fluid_props.density,
+        "mu": fluid_props.viscosity,
+        "f_vals": tuple(ext_forces.force_vector)
     }
 
     # Cache for Cell objects to prevent redundant object creation
