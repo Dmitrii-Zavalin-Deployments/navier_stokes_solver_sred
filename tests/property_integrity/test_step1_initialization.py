@@ -16,7 +16,7 @@ class TestStep1Initialization:
     def setup_data(self):
         # Explicit input hydration ensures we test the exact state defined in our schema
         input_data = create_validated_input(nx=4, ny=4, nz=4)
-        config = SolverConfig()
+        config = SolverConfig(ppe_tolerance=1e-6, ppe_atol=1e-9, ppe_max_iter=1000, ppe_omega=1.0)
         config.ppe_tolerance = 1e-6
         
         context = SimulationContext(input_data=input_data, config=config)
