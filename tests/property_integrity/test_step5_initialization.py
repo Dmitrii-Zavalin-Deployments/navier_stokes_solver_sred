@@ -5,6 +5,7 @@ import pytest
 from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
 from src.common.solver_state import SolverState
+from src.common.grid_manager import GridManager
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 
@@ -23,14 +24,18 @@ class TestStep5Initialization:
             ppe_omega=1.0
         )
         
-        # input_data now houses simulation-specific parameters like output_interval
+        # input_data houses simulation parameters
         input_data = create_validated_input(nx=4, ny=4, nz=4)
         input_data.simulation_parameters.output_interval = 10 
         
         context = SimulationContext(input_data=input_data, config=config)
         
+        # Initialize state
         state = SolverState()
         state.iteration = 0 
+        
+        # Rule 5: Satisfy the GridManager contract to prevent uninitialized access errors
+        state.grid = GridManager(nx=4, ny=4, nz=4)
         
         return state, context
 
@@ -47,6 +52,7 @@ class TestStep5Initialization:
         state, context = setup_state
         
         state.iteration = 10
+        # This will now trigger save_snapshot without hitting an uninitialized GridManager
         orchestrate_step5(state, context)
         
         assert state.iteration == 10, "Archivist should not modify iteration count."
