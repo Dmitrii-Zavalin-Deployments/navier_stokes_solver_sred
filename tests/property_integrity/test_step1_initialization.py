@@ -1,6 +1,7 @@
 # tests/property_integrity/test_step1_initialization.py
 
 import pytest
+from src.common.field_schema import FI
 
 from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
@@ -43,11 +44,11 @@ class TestStep1Initialization:
         assert state.fields.data is not None
         assert state.fields.data.size > 0, "Foundation memory allocation empty"
         # Access data via index/schema, not by convenience aliases (Rule 8)
-        assert state.fields.data.ndim == 2, "Foundation must be (n_cells, 8)"
+        assert state.fields.data.ndim == 2, "Foundation must be (n_cells, FI.num_fields())"
 
     def test_scale_guard_memory_architecture(self, setup_data):
         """Rule 0: Scale Guard (Memory Locality)."""
         state, _ = setup_data
         assert state.fields.data.flags['C_CONTIGUOUS'], "Memory foundation must be C-contiguous."
-        expected_shape = (64, 8) # 4*4*4 = 64
+        expected_shape = (64, FI.num_fields()) # 4*4*4 = 64
         assert state.fields.data.shape == expected_shape
