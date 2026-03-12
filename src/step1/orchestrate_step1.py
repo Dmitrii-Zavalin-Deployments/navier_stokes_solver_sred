@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from src.common.solver_input import SolverInput
 from src.common.solver_state import (
     BoundaryConditionManager,
     DomainManager,
@@ -16,7 +17,6 @@ from src.common.solver_state import (
     SimulationParameterManager,
     SolverState,
 )
-from src.common.solver_input import SolverInput
 
 from .helpers import generate_3d_masks, parse_bc_lookup
 
