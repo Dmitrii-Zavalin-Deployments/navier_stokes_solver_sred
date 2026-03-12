@@ -25,7 +25,7 @@ def verify_foundation_integrity(state):
         
     # 2. Verify via object-pointer graph (The Sentinel Test)
     # Skip wiring check if Step 2 is not yet complete
-    if getattr(state, "_stencil_matrix") is None:
+    if state._stencil_matrix is None:
         print("⚠️ POST: Stencil matrix not yet assembled. Skipping wiring check.")
         return
     # Checking specific points: sample (50), start (0), and end (n-1)
