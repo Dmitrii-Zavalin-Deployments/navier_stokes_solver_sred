@@ -40,24 +40,18 @@ def generate_3d_masks(mask_data: list[int], grid: GridInput) -> tuple[np.ndarray
 
 def parse_bc_lookup(bc_list: list) -> dict[str, dict]:
     """
-    Converts BC input container into a high-speed lookup table for the BoundaryManager.
-    
-    Compliance:
-    - Rule 8 (Singular Access): Primary interface for boundary definition.
-    - Rule 5 (Deterministic): Direct access to validated input schema ensures 
-      missing physics data triggers an immediate KeyError.
+    Converts BC input container into a high-speed lookup table.
+    Uses dot notation to access object attributes, ensuring Rule 5 compliance.
     """
     table = {}
-    # Iterate over the list directly, not an '.items' attribute
     for item in bc_list:
-        # Assuming item is a dictionary (from your dummy data) or 
-        # a container object. If it's a dict:
-        table[str(item["location"])] = {
-            "type": str(item["type"]),
-            "u": float(item["values"]["u"]),
-            "v": float(item["values"]["v"]),
-            "w": float(item["values"]["w"]),
-            "p": float(item["values"]["p"])
+        # Access attributes directly via dot notation
+        table[str(item.location)] = {
+            "type": str(item.type),
+            "u": float(item.values["u"]),
+            "v": float(item.values["v"]),
+            "w": float(item.values["w"]),
+            "p": float(item.values["p"])
         }
         
         if DEBUG:
