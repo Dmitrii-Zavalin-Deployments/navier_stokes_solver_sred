@@ -1,4 +1,4 @@
-# tests/property_integrity/test_step2_integrity.py
+# tests/property_integrity/test_step2_initialization.py
 
 import pytest
 

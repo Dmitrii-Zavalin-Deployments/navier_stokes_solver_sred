@@ -1,6 +1,6 @@
 # src/step2/orchestrate_step2.py
 
-from src.core.solver_state import SolverState
+from src.common.solver_state import SolverState
 
 from .stencil_assembler import assemble_stencil_matrix
 
