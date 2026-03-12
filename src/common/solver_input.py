@@ -225,7 +225,8 @@ class SolverInput(ValidatedContainer):
         
         # Domain Configuration
         dc = data["domain_configuration"]
-        obj.domain_configuration.type = dc["type"]
+        # Use the explicit setter to trigger the validation logic
+        setattr(obj.domain_configuration, "type", dc["type"])
         obj.domain_configuration.reference_velocity = dc.get("reference_velocity")
         
         # Grid
