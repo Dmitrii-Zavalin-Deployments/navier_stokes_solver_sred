@@ -17,7 +17,7 @@ class TestSolverStateIntegrity:
         state = SolverState()
         
         # Setup underlying data required for facades
-        state.config.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
+        fluid_props = state.fluid = {"density": 1000.0, "viscosity": 0.001}
         state.config.simulation_parameters = {
             "time_step": 0.1, 
             "total_time": 1.0, 

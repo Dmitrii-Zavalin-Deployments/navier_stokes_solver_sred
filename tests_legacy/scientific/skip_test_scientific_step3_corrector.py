@@ -14,7 +14,7 @@ def state_corrector():
     state = SolverState()
     
     # 1. Hydrate the raw dictionaries so the SolverState @property shortcuts work
-    state.config.fluid_properties = {
+    fluid_props = state.fluid = {
         "density": 1000.0, 
         "viscosity": 0.001
     }

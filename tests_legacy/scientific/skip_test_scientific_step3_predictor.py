@@ -18,9 +18,9 @@ def state_predictor():
     state = SolverState()
     
     # 1. Physics Setup (rho=1000, mu=1, dt=0.1 -> nu=0.001)
-    state.config.fluid_properties = AttributeDict({"density": 1000.0, "viscosity": 1.0})
+    fluid_props = state.fluid = AttributeDict({"density": 1000.0, "viscosity": 1.0})
     state.config.simulation_parameters = AttributeDict({"time_step": 0.1})
-    state.config.external_forces = AttributeDict({"force_vector": [1.0, 0.0, 0.0]})
+    ext_forces = state.external_forces = AttributeDict({"force_vector": [1.0, 0.0, 0.0]})
     
     # 2. Field Allocation (Staggered Grid Dimensions)
     state.fields.U = np.ones((4, 3, 3), order='F') 

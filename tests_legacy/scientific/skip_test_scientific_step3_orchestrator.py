@@ -12,7 +12,7 @@ def state_orchestrator():
     """Fixture to set up a minimal valid state for orchestration."""
     state = SolverState()
     # Direct dictionary hydration to satisfy _get_safe validation
-    state.config.fluid_properties = {"density": 1000.0, "viscosity": 0.001}
+    fluid_props = state.fluid = {"density": 1000.0, "viscosity": 0.001}
     state.config.simulation_parameters = {
         "time_step": 0.01, 
         "total_time": 1.0, 
