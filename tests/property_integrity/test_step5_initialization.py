@@ -32,6 +32,8 @@ class TestStep5Initialization:
         # Rule 5: Deterministic Init (no defaults assumed)
         state = SolverState()
         state.iteration = 0 
+        state.time = 0.0
+        state.sim_params = input_data.simulation_parameters
         
         # Rule 9: Initialize and allocate the contiguous Foundation
         fields = FieldManager()
@@ -41,41 +43,40 @@ class TestStep5Initialization:
         # Rule 0: Mandatory __slots__ and Rule 9: Foundation-Object Bridge
         class MockGrid:
             __slots__ = [
-                'nx', 'ny', 'nz', 'dx', 'dy', 'dz', 
-                'x_mesh', 'y_mesh', 'z_mesh', 'mask_mesh'
+                'nx', 'ny', 'nz', 'x_min', 'x_max', 'y_min', 'y_max', 'z_min', 'z_max'
             ]
-            
             def __init__(self, nx, ny, nz):
                 self.nx, self.ny, self.nz = nx, ny, nz
-                self.dx = self.dy = self.dz = 0.1
-                
-                # Rule 9: Contiguous NumPy buffers for geometric fields
-                shape = (nx, ny, nz)
-                self.x_mesh = np.zeros(shape, dtype=np.float32)
-                self.y_mesh = np.zeros(shape, dtype=np.float32)
-                self.z_mesh = np.zeros(shape, dtype=np.float32)
-                self.mask_mesh = np.zeros(shape, dtype=np.int32)
+                self.x_min, self.x_max = 0.0, 1.0
+                self.y_min, self.y_max = 0.0, 1.0
+                self.z_min, self.z_max = 0.0, 1.0
 
         # Rule 4: Hierarchy over Convenience
-        state._grid = MockGrid(nx=4, ny=4, nz=4)
+        state.grid = MockGrid(nx=4, ny=4, nz=4)
+        
+        # Mocking the MaskManager and Manifest for state integrity
+        class MockMask: mask = np.zeros((4,4,4))
+        class MockManifest: saved_snapshots = []
+        state.masks = MockMask()
+        state.manifest = MockManifest()
         
         return state, context
 
     def test_archivist_orchestration_contract(self, setup_state):
         """Rule 4: Verify Archivist receives valid configuration context."""
         state, context = setup_state
-        state.iteration = 0 
+        state.iteration = 10 # Trigger snapshot
         
         orchestrate_step5(state, context)
         
-        # Rule 8 & 4: Accessing manifest via the new ManifestManager container
+        # Rule 8 & 4: Accessing manifest via the Manifest container
         assert len(state.manifest.saved_snapshots) > 0, "Snapshot must be recorded in manifest."
 
     def test_archival_decision_logic(self, setup_state):
         """Rule 5: Verify archival threshold is strictly iteration-dependent."""
         state, context = setup_state
         
-        # Force iteration 10 to trigger snapshot based on output_interval=10
+        # Force iteration 10 to trigger snapshot
         state.iteration = 10
         orchestrate_step5(state, context)
         
