@@ -25,14 +25,14 @@ class TestSolverLifecycle:
         orig_config = config_file.read_text() if config_file.exists() else None
         
         try:
-            # 1. Write configuration matching the dummy's physics profile
+            # 1. Write configuration matching the physics profile
             config_file.write_text(json.dumps({
                 "ppe_tolerance": 1e-6, 
                 "ppe_max_iter": 10, 
                 "ppe_omega": 1.0
             }))
             
-            # 2. Write mock data mirroring make_step1_output_dummy structure
+            # 2. Write mock data mirroring schema requirements exactly
             input_file.write_text(json.dumps({
                 "domain_configuration": {"type": "INTERNAL", "reference_velocity": [0.0, 0.0, 0.0]},
                 "grid": {"nx": 4, "ny": 4, "nz": 4, "x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0},
@@ -40,14 +40,24 @@ class TestSolverLifecycle:
                 "initial_conditions": {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0},
                 "simulation_parameters": {"time_step": 0.001, "total_time": 0.002, "output_interval": 1},
                 "external_forces": {"force_vector": [0.0, 0.0, -9.81]},
-                "mask": [1] * 64, # Matches the dummy's np.ones mask
-                "boundary_conditions": {
-                    "conditions": [
-                        {"side": "x_min", "bc_type": "inflow", "value": {"u": 1.0, "v": 0.0, "w": 0.0, "p": 1.0}},
-                        {"side": "x_max", "bc_type": "outflow", "value": {"p": 0.0}},
-                        {"side": "y_min", "bc_type": "no-slip", "value": {"u": 0.0, "v": 0.0, "w": 0.0}}
-                    ]
-                }
+                "mask": [0] * 64, # Canonical flattening: i + nx*(j + ny*k)
+                "boundary_conditions": [
+                    {
+                        "location": "x_min", 
+                        "type": "inflow", 
+                        "values": {"u": 1.0, "v": 0.0, "w": 0.0, "p": 1.0}
+                    },
+                    {
+                        "location": "x_max", 
+                        "type": "outflow", 
+                        "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
+                    },
+                    {
+                        "location": "y_min", 
+                        "type": "no-slip", 
+                        "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
+                    }
+                ]
             }))
             
             # 3. Execution
