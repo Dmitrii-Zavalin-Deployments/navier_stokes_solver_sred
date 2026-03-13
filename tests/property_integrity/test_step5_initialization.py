@@ -1,10 +1,10 @@
 # tests/property_integrity/test_step5_initialization.py
 
 import pytest
-
+import numpy as np
 from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
-from src.common.solver_state import SolverState
+from src.common.solver_state import SolverState, FieldManager
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 
@@ -33,16 +33,21 @@ class TestStep5Initialization:
         state = SolverState()
         state.iteration = 0 
         
+        # FIX: Rule 9 Foundation Allocation
+        # Archivist requires a contiguous buffer to slice. 4x4x4 = 64 cells.
+        fields = FieldManager()
+        fields.allocate(n_cells=64)
+        state.fields = fields
+        
         # Rule 5 & 9: Use a Structural Mock to satisfy the State's grid requirement
-        # Since the real GridManager is not yet implemented (verified via find),
-        # we provide the minimum interface required by io_archivist.py.
+        # Since the real GridManager is not yet implemented, we provide the 
+        # minimum interface required by io_archivist.py.
         class MockGrid:
             __slots__ = ['nx', 'ny', 'nz']
             def __init__(self, nx, ny, nz):
                 self.nx, self.ny, self.nz = nx, ny, nz
 
-        # We bypass the type-check in _set_safe by using a mock that 
-        # the archivist can read from. 
+        # Bypass internal _set_safe to allow the MockGrid for these tests
         state._grid = MockGrid(nx=4, ny=4, nz=4)
         
         return state, context
@@ -51,7 +56,10 @@ class TestStep5Initialization:
         """Rule 4: Verify Archivist receives valid configuration context."""
         state, context = setup_state
         
+        # Reset iteration to ensure it triggers (snapshot_0000.h5)
+        state.iteration = 0
         result = orchestrate_step5(state, context)
+        
         assert isinstance(result, SolverState), "Orchestrator must return the SolverState."
         assert callable(orchestrate_step5), "Orchestrator must be callable."
 
@@ -59,8 +67,8 @@ class TestStep5Initialization:
         """Rule 5: Verify archival threshold is strictly iteration-dependent."""
         state, context = setup_state
         
+        # Force an archival iteration based on the interval (10)
         state.iteration = 10
-        # This will now proceed into save_snapshot and find the grid dimensions
         orchestrate_step5(state, context)
         
         assert state.iteration == 10, "Archivist should not modify iteration count."
