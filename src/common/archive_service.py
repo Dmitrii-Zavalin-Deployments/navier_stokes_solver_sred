@@ -1,6 +1,8 @@
 import shutil
 from pathlib import Path
+
 from src.common.solver_state import SolverState
+
 
 def archive_simulation_artifacts(state: SolverState) -> str:
     """
