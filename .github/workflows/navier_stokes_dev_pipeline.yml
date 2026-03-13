@@ -72,7 +72,37 @@ jobs:
         run: |
           # Rule 6: Audit-driven coverage
           # Rule 7: Scientific Testing Suite must pass
+          # 1. Diagnostic: Inspect the actual structure being sent to validation
+          python3 -c "
+          import json
+          from src.common.solver_input import SolverInput
+          from pathlib import Path
+          import jsonschema
+
+          # Load the same input used in the failing test
+          data = json.loads(Path('input_validated.json').read_text())
+          obj = SolverInput.from_dict(data)
+          dict_output = obj.to_dict()
+
+          print('--- DEBUG: Dict Output Keys ---')
+          print(list(dict_output.keys()))
+
+          print('--- DEBUG: Full Dict Structure ---')
+          print(json.dumps(dict_output, indent=2))
+
+          # Load Schema
+          schema = json.loads(Path('path/to/your/schema.json').read_text())
+          try:
+              jsonschema.validate(instance=dict_output, schema=schema)
+              print('SUCCESS: Validation passed')
+          except jsonschema.exceptions.ValidationError as e:
+              print('--- FAILED: Validation Error ---')
+              print(f'Message: {e.message}')
+              print(f'Path in JSON: {list(e.path)}')
+          "
+          # 2. Run the main test suite
           pytest -s tests/ -vv --cov=src --cov-report=term-missing
+          # pytest -s tests/ -vv --cov=src --cov-report=term-missing
 
       - name: 📊 Audit Performance & Update Ledger
         if: always()
