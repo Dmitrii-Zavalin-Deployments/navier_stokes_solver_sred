@@ -9,6 +9,7 @@ from src.common.solver_state import (
     FieldManager,
     SimulationParameterManager,
     SolverState,
+    GridManager,
 )
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_input_schema_dummy import create_validated_input
@@ -38,7 +39,7 @@ class TestStep5Initialization:
         state.iteration = 0 
         state.time = 0.0
         
-        # FIX: Manual property assignment for ValidatedContainer
+        # FIX: Manual property assignment for SimulationParameterManager
         params_manager = SimulationParameterManager()
         params_manager.time_step = input_data.simulation_parameters.time_step
         params_manager.total_time = input_data.simulation_parameters.total_time
@@ -50,19 +51,13 @@ class TestStep5Initialization:
         fields.allocate(n_cells=64) 
         state.fields = fields
         
-        # Rule 0: Mandatory __slots__ and Rule 9: Foundation-Object Bridge
-        class MockGrid:
-            __slots__ = [
-                'nx', 'ny', 'nz', 'x_min', 'x_max', 'y_min', 'y_max', 'z_min', 'z_max'
-            ]
-            def __init__(self, nx, ny, nz):
-                self.nx, self.ny, self.nz = nx, ny, nz
-                self.x_min, self.x_max = 0.0, 1.0
-                self.y_min, self.y_max = 0.0, 1.0
-                self.z_min, self.z_max = 0.0, 1.0
-
-        # Rule 4: Hierarchy over Convenience
-        state.grid = MockGrid(nx=4, ny=4, nz=4)
+        # FIX: Instantiate the real GridManager to satisfy type validation
+        grid = GridManager()
+        grid.nx, grid.ny, grid.nz = 4, 4, 4
+        grid.x_min, grid.x_max = 0.0, 1.0
+        grid.y_min, grid.y_max = 0.0, 1.0
+        grid.z_min, grid.z_max = 0.0, 1.0
+        state.grid = grid
         
         # Mocking the MaskManager, Manifest, and Domain for state integrity
         class MockMask: mask = np.zeros((4,4,4))
@@ -83,16 +78,13 @@ class TestStep5Initialization:
         
         orchestrate_step5(state, context)
         
-        # Rule 8 & 4: Accessing manifest via the Manifest container
         assert len(state.manifest.saved_snapshots) > 0, "Snapshot must be recorded in manifest."
 
     def test_archival_decision_logic(self, setup_state):
         """Rule 5: Verify archival threshold is strictly iteration-dependent."""
         state, context = setup_state
         
-        # Force iteration 10 to trigger snapshot
         state.iteration = 10
         orchestrate_step5(state, context)
         
-        # Rule 8: Access via typed container property
         assert any("snapshot_0010.h5" in s for s in state.manifest.saved_snapshots)

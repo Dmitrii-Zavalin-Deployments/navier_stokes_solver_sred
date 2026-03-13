@@ -73,7 +73,7 @@ jobs:
           # Rule 6: Audit-driven coverage
           # Rule 7: Scientific Testing Suite must pass
           # pytest -s tests/ -vv --cov=src --cov-report=term-missing
-          pytest tests/property_integrity/test_step5_initialization.py -vv --tb=short
+          pytest tests/property_integrity/test_step5_initialization.py -vv
 
       - name: 📊 Audit Performance & Update Ledger
         if: always()
