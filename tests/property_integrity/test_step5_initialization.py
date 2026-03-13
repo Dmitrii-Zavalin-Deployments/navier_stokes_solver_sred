@@ -1,11 +1,13 @@
 # tests/property_integrity/test_step5_initialization.py
 
 import pytest
+
 from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
 from src.common.solver_state import SolverState
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_input_schema_dummy import create_validated_input
+
 
 class TestStep5Initialization:
     """AUDITOR: Step 5 Archivist Orchestration Pipeline Verification."""
