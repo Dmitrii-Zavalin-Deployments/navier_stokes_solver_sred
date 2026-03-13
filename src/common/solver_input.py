@@ -143,7 +143,6 @@ class SimParamsInput(ValidatedContainer):
 class BoundaryConditionItem(ValidatedContainer):
     __slots__ = ['_location', '_type', '_values']
     
-    # Bypass the dataclass generator for __init__ by explicitly defining one
     def __init__(self, location: str, type: str, values: dict):
         self.location = location
         self.type = type
@@ -220,8 +219,6 @@ class SolverInput(ValidatedContainer):
     @classmethod
     def from_dict(cls, data: dict) -> "SolverInput":
         obj = cls()
-        
-        # Instantiate sub-containers
         obj.domain_configuration = DomainConfigInput()
         obj.grid = GridInput()
         obj.fluid_properties = FluidInput()
@@ -234,10 +231,10 @@ class SolverInput(ValidatedContainer):
         
         # Domain Configuration
         dc = data["domain_configuration"]
-        
-        # Use explicit setters to trigger validation logic (Rule 5 compliance)
         obj.domain_configuration.type = dc["type"]
-        obj.domain_configuration.reference_velocity = dc.get("reference_velocity")
+        # CRITICAL: Only set if present to prevent uninitialized state triggers
+        if "reference_velocity" in dc and dc["reference_velocity"] is not None:
+            obj.domain_configuration.reference_velocity = dc["reference_velocity"]
         
         # Grid
         g = data["grid"]
@@ -268,14 +265,10 @@ class SolverInput(ValidatedContainer):
         return obj
 
     def to_dict(self) -> dict:
-        """Returns a dictionary strictly adhering to the input schema."""
-        # 1. Handle Domain Configuration (Conditional reference_velocity)
         domain_cfg = {"type": self.domain_configuration.type}
-        # Check if attribute exists and is set before accessing
         if hasattr(self.domain_configuration, '_reference_velocity') and self.domain_configuration._reference_velocity is not None:
             domain_cfg["reference_velocity"] = self.domain_configuration.reference_velocity
             
-        # 2. Build the result dict
         return {
             "domain_configuration": domain_cfg,
             "grid": {k: getattr(self.grid, k) for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]},
