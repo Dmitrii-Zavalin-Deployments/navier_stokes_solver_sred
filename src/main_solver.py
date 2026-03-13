@@ -63,7 +63,6 @@ def run_solver(input_path: str):
         # A. PREDICTOR PASS
         for block in state.stencil_matrix:
             block, _ = orchestrate_step3(block, context=context, is_first_pass=True)
-            # UPDATED: Passing context, grid, and boundary manager
             block = orchestrate_step4(block, context, state.grid, state.boundary_conditions)
         
         # B. ITERATIVE SOLVER & BOUNDARY PASS
@@ -71,7 +70,6 @@ def run_solver(input_path: str):
             max_delta = 0.0
             for block in state.stencil_matrix:
                 block, delta = orchestrate_step3(block, context=context, is_first_pass=False)
-                # UPDATED: Passing context, grid, and boundary manager
                 block = orchestrate_step4(block, context, state.grid, state.boundary_conditions)
                 max_delta = max(max_delta, delta)
             
@@ -94,8 +92,9 @@ if __name__ == "__main__":
     
     try:
         final_state = run_solver(sys.argv[1])
+        # ARCHIVING TRIGGER: Called only once post-execution
         zip_path = archive_simulation_artifacts(final_state)
-        print(zip_path)
+        print(f"Pipeline complete. Artifacts: {zip_path}")
         sys.exit(0)
     except Exception as e:
         print(f"FATAL PIPELINE ERROR: {str(e)}", file=sys.stderr)
