@@ -1,10 +1,10 @@
 # tests/integration/test_solver_lifecycle.py
 
-import pytest
 import os
 from pathlib import Path
+
 from src.main_solver import run_solver
-from src.common.solver_state import SolverState
+
 
 class TestSolverLifecycle:
     """
