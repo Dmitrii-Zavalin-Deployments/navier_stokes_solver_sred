@@ -35,6 +35,7 @@ def _load_simulation_context(input_path: str) -> SimulationContext:
     with open(config_path) as f:
         config_data = json.load(f)
         
+    print(f"DEBUG: Config file contents: {config_data}")
     print(f"DEBUG [Main]: Loading config from {config_path}. Content keys: {list(config_data.keys())}")
     return SimulationContext.create(input_data, config_data)
 

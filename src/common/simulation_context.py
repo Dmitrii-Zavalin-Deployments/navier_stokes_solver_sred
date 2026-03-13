@@ -24,13 +24,17 @@ class SimulationContext:
         # Validate and create the input container
         input_data = SolverInput.from_dict(input_dict)
         
-        # Assemble numerical settings
-        print(f"DEBUG: config_dict keys: {list(config_dict.keys())}")
-        print(f"DEBUG: solver_settings content: {config_dict.get('solver_settings')}")
-        config = SolverConfig()
-        config.ppe_tolerance = config_dict["solver_settings"]["ppe_tolerance"]
-        config.ppe_atol = config_dict["solver_settings"]["ppe_atol"]
-        config.ppe_max_iter = config_dict["solver_settings"]["ppe_max_iter"]
-        config.ppe_omega = config_dict["solver_settings"]["ppe_omega"]
+        # Assemble numerical settings from the 'solver_settings' block
+        settings = config_dict.get("solver_settings", {})
+        
+        # Pass the parameters directly into the constructor.
+        # SolverConfig will handle the validation of these values 
+        # inside its internal __init__ logic.
+        config = SolverConfig(
+            ppe_tolerance=settings.get("ppe_tolerance"),
+            ppe_atol=settings.get("ppe_atol"),
+            ppe_max_iter=settings.get("ppe_max_iter"),
+            ppe_omega=settings.get("ppe_omega")
+        )
         
         return cls(input_data=input_data, config=config)
