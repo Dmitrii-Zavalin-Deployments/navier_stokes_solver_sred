@@ -1,10 +1,10 @@
 # tests/property_integrity/test_step5_initialization.py
 
 import pytest
-
+import numpy as np  # FIX: Explicit import for Rule 0 compliance
 from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
-from src.common.solver_state import FieldManager, SolverState
+from src.common.solver_state import SolverState, FieldManager
 from src.step5.orchestrate_step5 import orchestrate_step5
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 
@@ -15,6 +15,7 @@ class TestStep5Initialization:
     @pytest.fixture(scope="class")
     def setup_state(self):
         """Prepare minimal state for archive logic verification."""
+        # Rule 5: Explicitly define config with no fallbacks
         config = SolverConfig(
             ppe_tolerance=1e-6, 
             ppe_atol=1e-9, 
@@ -27,31 +28,36 @@ class TestStep5Initialization:
         
         context = SimulationContext(input_data=input_data, config=config)
         
-        # Initialize state
+        # Rule 5: Deterministic Init (no defaults assumed)
         state = SolverState()
         state.iteration = 0 
         
-        # Rule 9: Initialize and allocate the Foundation
+        # Rule 9: Initialize and allocate the contiguous Foundation
         fields = FieldManager()
-        fields.allocate(n_cells=64) # 4*4*4 = 64
+        fields.allocate(n_cells=64) # 4x4x4 grid
         state.fields = fields
         
-        # Rule 5 & 9: UPGRADED Structural Mock
-        # Providing dummy meshes to satisfy io_archivist requirements
+        # Rule 0: Mandatory __slots__ and Rule 9: Foundation-Object Bridge
+        # We use a Structural Mock that mimics the production GridManager interface
         class MockGrid:
-            __slots__ = ['nx', 'ny', 'nz', 'dx', 'dy', 'dz', 
-                         'x_mesh', 'y_mesh', 'z_mesh', 'mask_mesh']
+            __slots__ = [
+                'nx', 'ny', 'nz', 'dx', 'dy', 'dz', 
+                'x_mesh', 'y_mesh', 'z_mesh', 'mask_mesh'
+            ]
+            
             def __init__(self, nx, ny, nz):
                 self.nx, self.ny, self.nz = nx, ny, nz
                 self.dx = self.dy = self.dz = 0.1
-                # Create dummy 3D meshes for HDF5 writing
+                
+                # Rule 9: Contiguous NumPy buffers for geometric fields
                 shape = (nx, ny, nz)
-                self.x_mesh = np.zeros(shape)
-                self.y_mesh = np.zeros(shape)
-                self.z_mesh = np.zeros(shape)
-                self.mask_mesh = np.zeros(shape, dtype=int)
+                self.x_mesh = np.zeros(shape, dtype=np.float32)
+                self.y_mesh = np.zeros(shape, dtype=np.float32)
+                self.z_mesh = np.zeros(shape, dtype=np.float32)
+                self.mask_mesh = np.zeros(shape, dtype=np.int32)
 
-        # Bypass internal _set_safe for the mock
+        # Rule 4: Hierarchy over Convenience
+        # Bypass internal _set_safe to allow the mock for structural validation
         state._grid = MockGrid(nx=4, ny=4, nz=4)
         
         return state, context
@@ -59,20 +65,19 @@ class TestStep5Initialization:
     def test_archivist_orchestration_contract(self, setup_state):
         """Rule 4: Verify Archivist receives valid configuration context."""
         state, context = setup_state
-        state.iteration = 0 # Force trigger
+        state.iteration = 0 
         
         result = orchestrate_step5(state, context)
         assert isinstance(result, SolverState), "Orchestrator must return the SolverState."
-        # Verify the file was actually tracked in the manifest
-        assert len(state.manifest["saved_snapshots"]) > 0
+        assert len(state.manifest["saved_snapshots"]) > 0, "Snapshot must be recorded in manifest."
 
     def test_archival_decision_logic(self, setup_state):
         """Rule 5: Verify archival threshold is strictly iteration-dependent."""
         state, context = setup_state
         
-        # Force an archival iteration based on the interval (10)
+        # Force iteration 10 to trigger snapshot based on output_interval=10
         state.iteration = 10
         orchestrate_step5(state, context)
         
-        # Check if the specific filename is in the manifest
+        # Rule 8: Singular Access - check manifest via authorized state interface
         assert any("snapshot_0010.h5" in s for s in state.manifest["saved_snapshots"])
