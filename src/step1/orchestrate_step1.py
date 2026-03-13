@@ -45,7 +45,10 @@ def orchestrate_step1(context: SimulationContext) -> SolverState:
 
     state.domain = DomainManager()
     state.domain.type = str(input_data.domain_configuration.type)
-    state.domain.reference_velocity = np.array(input_data.domain_configuration.reference_velocity, dtype=np.float64)
+    
+    # Rule 5: No-default policy. Assign only if explicitly provided in input.
+    if hasattr(input_data.domain_configuration, '_reference_velocity') and input_data.domain_configuration._reference_velocity is not None:
+        state.domain.reference_velocity = np.array(input_data.domain_configuration.reference_velocity, dtype=np.float64)
 
     # --- 2. Physical Context ---
     state.fluid = FluidPropertiesManager()
@@ -78,10 +81,8 @@ def orchestrate_step1(context: SimulationContext) -> SolverState:
     # --- 6. Boundary Conditions ---
     state.boundary_conditions = BoundaryConditionManager()
     
-    # Iterate over the items list populated by the SolverInput container
     for item in input_data.boundary_conditions.items:
         bc = BoundaryCondition()
-        # Direct object access is now safe and correct
         bc.location = item.location
         bc.type = item.type
         bc.values = item.values
