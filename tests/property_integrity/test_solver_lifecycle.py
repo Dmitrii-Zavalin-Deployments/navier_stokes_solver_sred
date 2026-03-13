@@ -1,10 +1,10 @@
 # tests/integration/test_solver_lifecycle.py
 
+import pytest
 import json
 from pathlib import Path
-
 from src.main_solver import run_solver
-
+from src.common.solver_config import SolverConfig # Ensure the class is available
 
 class TestSolverLifecycle:
     """
@@ -13,54 +13,41 @@ class TestSolverLifecycle:
     """
 
     def test_full_solver_pipeline_integrity(self):
-        """
-        Rule 7 (STS): Atomic Verification of the end-to-end 
-        solver lifecycle using the project root as the anchor.
-        """
         project_root = Path(__file__).resolve().parent.parent.parent
         config_file = project_root / "config.json"
         input_file = project_root / "input_validated.json"
         
-        # Save original state to restore after test
         orig_config = config_file.read_text() if config_file.exists() else None
         
         try:
-            # 1. Write configuration matching the physics profile
-            config_file.write_text(json.dumps({
+            # 1. Define configuration explicitly
+            config_dict = {
                 "ppe_tolerance": 1e-6, 
                 "ppe_max_iter": 10, 
                 "ppe_omega": 1.0
-            }))
+            }
+            config_file.write_text(json.dumps(config_dict))
             
-            # 2. Write mock data mirroring schema requirements exactly
-            input_file.write_text(json.dumps({
+            # 2. Write mock input data
+            input_dict = {
                 "domain_configuration": {"type": "INTERNAL", "reference_velocity": [0.0, 0.0, 0.0]},
                 "grid": {"nx": 4, "ny": 4, "nz": 4, "x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0},
                 "fluid_properties": {"density": 1000.0, "viscosity": 0.001},
                 "initial_conditions": {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0},
                 "simulation_parameters": {"time_step": 0.001, "total_time": 0.002, "output_interval": 1},
                 "external_forces": {"force_vector": [0.0, 0.0, -9.81]},
-                "mask": [0] * 64, # Canonical flattening: i + nx*(j + ny*k)
+                "mask": [0] * 64,
                 "boundary_conditions": [
-                    {
-                        "location": "x_min", 
-                        "type": "inflow", 
-                        "values": {"u": 1.0, "v": 0.0, "w": 0.0, "p": 1.0}
-                    },
-                    {
-                        "location": "x_max", 
-                        "type": "outflow", 
-                        "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
-                    },
-                    {
-                        "location": "y_min", 
-                        "type": "no-slip", 
-                        "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}
-                    }
+                    {"location": "x_min", "type": "inflow", "values": {"u": 1.0, "v": 0.0, "w": 0.0, "p": 1.0}},
+                    {"location": "x_max", "type": "outflow", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}},
+                    {"location": "y_min", "type": "no-slip", "values": {"u": 0.0, "v": 0.0, "w": 0.0, "p": 0.0}}
                 ]
-            }))
+            }
+            input_file.write_text(json.dumps(input_dict))
             
             # 3. Execution
+            # If run_solver() internally uses config_file, this now succeeds 
+            # because config_file exists and is valid.
             final_state = run_solver("input_validated.json")
             
             # 4. Assertions
