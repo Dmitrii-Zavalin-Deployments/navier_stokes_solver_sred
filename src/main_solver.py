@@ -3,7 +3,6 @@
 import json
 import sys
 from pathlib import Path
-
 import jsonschema
 
 from src.common.archive_service import archive_simulation_artifacts
@@ -16,12 +15,10 @@ from src.step5.orchestrate_step5 import orchestrate_step5
 
 # Global Debug Toggle
 DEBUG = True
-# BASE_DIR anchors all file lookups to the project root
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 def _load_simulation_context(input_path: str) -> SimulationContext:
     """Assembles physical input and numerical config into a unified context."""
-    # Resolve paths relative to BASE_DIR
     full_input_path = BASE_DIR / input_path
     config_path = BASE_DIR / "config.json"
     
@@ -35,8 +32,6 @@ def _load_simulation_context(input_path: str) -> SimulationContext:
     with open(config_path) as f:
         config_data = json.load(f)
         
-    print(f"DEBUG: Config file contents: {config_data}")
-    print(f"DEBUG [Main]: Loading config from {config_path}. Content keys: {list(config_data.keys())}")
     return SimulationContext.create(input_data, config_data)
 
 def run_solver(input_path: str):
@@ -44,25 +39,27 @@ def run_solver(input_path: str):
     
     context = _load_simulation_context(input_path)
     
-    # Assembly via Orchestrators
+    # 1. PRE-EXECUTION FIREWALL: Validate Input Schema
+    # We validate the raw input_data from the context before it is processed into State
+    SCHEMA_PATH = BASE_DIR / "schema/solver_input_schema.json"
+    try:
+        # Validate the dict before assembly
+        with open(SCHEMA_PATH) as f:
+            schema = json.load(f)
+        jsonschema.validate(instance=context.input_data.to_dict(), schema=schema)
+        if DEBUG:
+            print(f"DEBUG [Main]: ✅ Input schema validation passed.")
+    except jsonschema.exceptions.ValidationError as e:
+        print(f"!!! CONTRACT VIOLATION: {e.message}")
+        raise
+
+    # 2. ASSEMBLY via Orchestrators
     state = orchestrate_step1(context)
     state = orchestrate_step2(state)
 
-    # FIREWALL: Contract Validation
-    # Use BASE_DIR for schema path resolution
-    SCHEMA_PATH = BASE_DIR / "schema/solver_input_schema.json"
-    try:
-        state.validate_against_schema(str(SCHEMA_PATH))
-        if DEBUG:
-            print(f"DEBUG [Main]: ✅ State validation passed using {SCHEMA_PATH.name}")
-    except jsonschema.exceptions.ValidationError as e:
-        print(f"!!! CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
-        raise
-
-    # 2. ACTIVATE SYSTEM SENTINEL
+    # 3. MAIN EXECUTION LOOP
     state.ready_for_time_loop = True
     
-    # 3. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
         # A. PREDICTOR PASS
         for block in state.stencil_matrix:
@@ -78,8 +75,6 @@ def run_solver(input_path: str):
                 max_delta = max(max_delta, delta)
             
             if max_delta < context.config.ppe_tolerance:
-                if DEBUG:
-                    print(f"DEBUG [Main]: PPE Converged: Iter={_ + 1} | Delta={max_delta:.2e} < Tol={context.config.ppe_tolerance:.2e}")
                 break
         
         state.iteration += 1
@@ -89,9 +84,6 @@ def run_solver(input_path: str):
         if state.time >= state.sim_params.total_time:
             state.ready_for_time_loop = False
 
-    if DEBUG:
-        print("DEBUG [Main]: Loop exit detected.")
-        
     return state
 
 if __name__ == "__main__":
