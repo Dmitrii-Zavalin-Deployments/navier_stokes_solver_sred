@@ -4,7 +4,6 @@ import json
 import os
 import sys
 from pathlib import Path
-
 import jsonschema
 
 from src.common.archive_service import archive_simulation_artifacts
@@ -17,17 +16,21 @@ from src.step5.orchestrate_step5 import orchestrate_step5
 
 # Global Debug Toggle
 DEBUG = True
+# BASE_DIR anchors all file lookups to the project root
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 def _load_simulation_context(input_path: str) -> SimulationContext:
     """Assembles physical input and numerical config into a unified context."""
-    if not os.path.exists(input_path):
-        raise FileNotFoundError(f"Input file missing at {input_path}")
+    # Resolve paths relative to BASE_DIR
+    full_input_path = BASE_DIR / input_path
+    config_path = BASE_DIR / "config.json"
     
-    config_path = Path("config.json")
+    if not full_input_path.exists():
+        raise FileNotFoundError(f"Input file missing at {full_input_path}")
     if not config_path.exists():
-        raise FileNotFoundError("config.json required for solver orchestration.")
+        raise FileNotFoundError(f"config.json required at {config_path}")
 
-    with open(input_path) as f:
+    with open(full_input_path) as f:
         input_data = json.load(f)
     with open(config_path) as f:
         config_data = json.load(f)
@@ -37,7 +40,6 @@ def _load_simulation_context(input_path: str) -> SimulationContext:
 def run_solver(input_path: str):
     """Orchestrates the physics pipeline using the unified SimulationContext."""
     
-    # 1. INITIALIZATION & CONTEXT ASSEMBLY
     context = _load_simulation_context(input_path)
     
     # Assembly via Orchestrators
@@ -45,19 +47,18 @@ def run_solver(input_path: str):
     state = orchestrate_step2(state)
 
     # FIREWALL: Contract Validation
-    SCHEMA_PATH = Path("schema/solver_input_schema.json")
+    # Use BASE_DIR for schema path resolution
+    SCHEMA_PATH = BASE_DIR / "schema/solver_input_schema.json"
     try:
         state.validate_against_schema(str(SCHEMA_PATH))
         if DEBUG:
-            print("DEBUG [Main]: ✅ State validation passed.")
+            print(f"DEBUG [Main]: ✅ State validation passed using {SCHEMA_PATH.name}")
     except jsonschema.exceptions.ValidationError as e:
         print(f"!!! CONTRACT VIOLATION at {'.'.join([str(p) for p in e.path])}")
         raise
 
     # 2. ACTIVATE SYSTEM SENTINEL
     state.ready_for_time_loop = True
-    if DEBUG:
-        print(f"🚀 Starting Simulation: {state.domain.type}")
     
     # 3. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
@@ -79,14 +80,10 @@ def run_solver(input_path: str):
                     print(f"DEBUG [Main]: PPE Converged: Iter={_ + 1} | Delta={max_delta:.2e} < Tol={context.config.ppe_tolerance:.2e}")
                 break
         
-        # C. ODOMETER UPDATE
         state.iteration += 1
         state.time += state.sim_params.time_step
-        
-        # D. ARCHIVING
         state = orchestrate_step5(state)
         
-        # E. TEMPORAL GUARD
         if state.time >= state.sim_params.total_time:
             state.ready_for_time_loop = False
 
