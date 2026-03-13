@@ -269,11 +269,15 @@ class SolverInput(ValidatedContainer):
 
     def to_dict(self) -> dict:
         """Returns a dictionary strictly adhering to the input schema."""
+        # 1. Handle Domain Configuration (Conditional reference_velocity)
+        domain_cfg = {"type": self.domain_configuration.type}
+        # Check if attribute exists and is set before accessing
+        if hasattr(self.domain_configuration, '_reference_velocity') and self.domain_configuration._reference_velocity is not None:
+            domain_cfg["reference_velocity"] = self.domain_configuration.reference_velocity
+            
+        # 2. Build the result dict
         return {
-            "domain_configuration": {
-                "type": self.domain_configuration.type,
-                "reference_velocity": self.domain_configuration.reference_velocity
-            },
+            "domain_configuration": domain_cfg,
             "grid": {k: getattr(self.grid, k) for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]},
             "fluid_properties": {"density": self.fluid_properties.density, "viscosity": self.fluid_properties.viscosity},
             "initial_conditions": {"velocity": self.initial_conditions.velocity, "pressure": self.initial_conditions.pressure},
