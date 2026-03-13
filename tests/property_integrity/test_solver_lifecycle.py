@@ -1,9 +1,10 @@
 # tests/integration/test_solver_lifecycle.py
 
-import pytest
 import json
 from pathlib import Path
-from src.main_solver import run_solver, BASE_DIR  # Import BASE_DIR to verify
+
+from src.main_solver import BASE_DIR, run_solver  # Import BASE_DIR to verify
+
 
 class TestSolverLifecycle:
     """
