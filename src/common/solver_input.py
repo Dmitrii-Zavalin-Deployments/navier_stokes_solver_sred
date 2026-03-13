@@ -1,7 +1,6 @@
 # src/common/solver_input.py
 
 from dataclasses import dataclass
-
 from src.common.base_container import ValidatedContainer
 
 # =========================================================
@@ -11,11 +10,11 @@ from src.common.base_container import ValidatedContainer
 @dataclass
 class DomainConfigInput(ValidatedContainer):
     __slots__ = ['_type', '_reference_velocity']
-
+    
     def __init__(self):
         self._type = None
         self._reference_velocity = None
-    
+
     @property
     def type(self) -> str: return self._get_safe("type")
     @type.setter
@@ -35,6 +34,9 @@ class DomainConfigInput(ValidatedContainer):
 @dataclass
 class GridInput(ValidatedContainer):
     __slots__ = ['_x_min', '_x_max', '_y_min', '_y_max', '_z_min', '_z_max', '_nx', '_ny', '_nz']
+    
+    def __init__(self):
+        for slot in self.__slots__: setattr(self, slot, None)
     
     @property
     def x_min(self) -> float: return self._get_safe("x_min")
@@ -79,19 +81,14 @@ class GridInput(ValidatedContainer):
         if v < 1: raise ValueError(f"nz must be >= 1, got {v}")
         self._set_safe("nz", v, int)
 
-    @property
-    def dx(self) -> float: return (self.x_max - self.x_min) / self.nx
-    @property
-    def dy(self) -> float: return (self.y_max - self.y_min) / self.ny
-    @property
-    def dz(self) -> float: return (self.z_max - self.z_min) / self.nz
-    @property
-    def total_cells(self) -> int: return self.nx * self.ny * self.nz
-
 @dataclass
 class FluidInput(ValidatedContainer):
     __slots__ = ['_density', '_viscosity']
     
+    def __init__(self):
+        self._density = None
+        self._viscosity = None
+        
     @property
     def density(self) -> float: return self._get_safe("density")
     @density.setter
@@ -109,6 +106,10 @@ class FluidInput(ValidatedContainer):
 class InitialConditionsInput(ValidatedContainer):
     __slots__ = ['_velocity', '_pressure']
     
+    def __init__(self):
+        self._velocity = None
+        self._pressure = None
+
     @property
     def velocity(self) -> list: return self._get_safe("velocity")
     @velocity.setter
@@ -124,6 +125,11 @@ class InitialConditionsInput(ValidatedContainer):
 class SimParamsInput(ValidatedContainer):
     __slots__ = ['_time_step', '_total_time', '_output_interval']
     
+    def __init__(self):
+        self._time_step = None
+        self._total_time = None
+        self._output_interval = None
+
     @property
     def time_step(self) -> float: return self._get_safe("time_step")
     @time_step.setter
@@ -177,6 +183,8 @@ class BoundaryConditionItem(ValidatedContainer):
 class BoundaryConditionsInput(ValidatedContainer):
     __slots__ = ['_items']
     
+    def __init__(self): self._items = None
+
     @property
     def items(self) -> list[BoundaryConditionItem]: return self._get_safe("items")
     @items.setter
@@ -188,6 +196,8 @@ class BoundaryConditionsInput(ValidatedContainer):
 class MaskInput(ValidatedContainer):
     __slots__ = ['_data']
     
+    def __init__(self): self._data = None
+
     @property
     def data(self) -> list: return self._get_safe("data")
     @data.setter
@@ -200,6 +210,8 @@ class MaskInput(ValidatedContainer):
 class ExternalForcesInput(ValidatedContainer):
     __slots__ = ['_force_vector']
     
+    def __init__(self): self._force_vector = None
+
     @property
     def force_vector(self) -> list: return self._get_safe("force_vector")
     @force_vector.setter
@@ -217,8 +229,7 @@ class SolverInput(ValidatedContainer):
                  'simulation_parameters', 'external_forces', 'mask', 'boundary_conditions']
     
     def __init__(self):
-        for slot in self.__slots__:
-            object.__setattr__(self, slot, None)
+        for slot in self.__slots__: object.__setattr__(self, slot, None)
 
     @classmethod
     def from_dict(cls, data: dict) -> "SolverInput":
@@ -231,37 +242,32 @@ class SolverInput(ValidatedContainer):
         obj.external_forces = ExternalForcesInput()
         obj.mask = MaskInput()
         obj.boundary_conditions = BoundaryConditionsInput()
+        
+        # Ingestion logic
         obj.boundary_conditions.items = data["boundary_conditions"]
         
-        # Domain Configuration
         dc = data["domain_configuration"]
         obj.domain_configuration.type = dc["type"]
-        # CRITICAL: Only set if present to prevent uninitialized state triggers
         if "reference_velocity" in dc and dc["reference_velocity"] is not None:
             obj.domain_configuration.reference_velocity = dc["reference_velocity"]
         
-        # Grid
         g = data["grid"]
         for k in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max", "nx", "ny", "nz"]:
             setattr(obj.grid, k, g[k])
             
-        # Fluid
         f = data["fluid_properties"]
         obj.fluid_properties.density = f["density"]
         obj.fluid_properties.viscosity = f["viscosity"]
         
-        # Initial Conditions
         ic = data["initial_conditions"]
         obj.initial_conditions.velocity = ic["velocity"]
         obj.initial_conditions.pressure = ic["pressure"]
         
-        # Simulation Parameters
         sp = data["simulation_parameters"]
         obj.simulation_parameters.time_step = sp["time_step"]
         obj.simulation_parameters.total_time = sp["total_time"]
         obj.simulation_parameters.output_interval = sp["output_interval"]
         
-        # Forces, Mask, Boundary Conditions
         obj.external_forces.force_vector = data["external_forces"]["force_vector"]
         obj.mask.data = data["mask"]
         obj.boundary_conditions.items = data["boundary_conditions"]
