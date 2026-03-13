@@ -1,6 +1,5 @@
 # tests/integration/test_solver_lifecycle.py
 
-import os
 import json
 from pathlib import Path
 

@@ -1,9 +1,9 @@
 # src/main_solver.py
 
 import json
-import os
 import sys
 from pathlib import Path
+
 import jsonschema
 
 from src.common.archive_service import archive_simulation_artifacts
