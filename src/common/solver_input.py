@@ -230,6 +230,7 @@ class SolverInput(ValidatedContainer):
         obj.external_forces = ExternalForcesInput()
         obj.mask = MaskInput()
         obj.boundary_conditions = BoundaryConditionsInput()
+        obj.boundary_conditions.items = data["boundary_conditions"]
         
         # Domain Configuration
         dc = data["domain_configuration"]

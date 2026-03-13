@@ -78,12 +78,13 @@ def orchestrate_step1(context: SimulationContext) -> SolverState:
     # --- 6. Boundary Conditions ---
     state.boundary_conditions = BoundaryConditionManager()
     
-    # Strictly adhere to dictionary input structure as hydrated by SolverInput
-    for item in input_data.boundary_conditions:
+    # Iterate over the items list populated by the SolverInput container
+    for item in input_data.boundary_conditions.items:
         bc = BoundaryCondition()
-        bc.location = str(item["location"])
-        bc.type = str(item["type"])
-        bc.values = item["values"]
+        # Direct object access is now safe and correct
+        bc.location = item.location
+        bc.type = item.type
+        bc.values = item.values
         
         state.boundary_conditions.add_condition(bc)
         
