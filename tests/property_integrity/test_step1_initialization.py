@@ -29,7 +29,7 @@ class TestStep1Initialization:
         state, _ = setup_data
         assert state.grid is not None, "Missing GridManager"
         assert state.fields is not None, "Missing FieldManager"
-        assert state.masks is not None, "Missing MaskManager"
+        assert state.mask is not None, "Missing MaskManager"
 
     def test_no_convenience_leaks(self, setup_data):
         """Rule 4: Ensures no convenience aliases exist on root."""

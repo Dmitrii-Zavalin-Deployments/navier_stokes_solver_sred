@@ -42,7 +42,7 @@ class TestStep5Initialization:
         params_manager.time_step = input_data.simulation_parameters.time_step
         params_manager.total_time = input_data.simulation_parameters.total_time
         params_manager.output_interval = input_data.simulation_parameters.output_interval
-        state.sim_params = params_manager
+        state.simulation_parameters = params_manager
         
         fields = FieldManager()
         fields.allocate(n_cells=64) 
