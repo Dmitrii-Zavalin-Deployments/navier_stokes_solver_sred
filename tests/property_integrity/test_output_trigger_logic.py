@@ -5,6 +5,7 @@ import pytest
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
+
 @pytest.mark.parametrize("stage_name, factory", [
     ("Step 4", make_step4_output_dummy),
     ("Final Output", make_output_schema_dummy)
