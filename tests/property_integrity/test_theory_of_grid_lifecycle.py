@@ -51,8 +51,10 @@ def test_theory_mapping_formula_integrity():
     assert expected_index == 57, "Mapping formula specification failure."
 
 def test_theory_extended_geometry_consistency():
-    """Verify extended field coordinate alignment (ghost cells) in the buffer."""
+    """Verify the FieldManager buffer accommodates interior + ghost cells."""
     nx, ny, nz = 10, 10, 10
+    # Expected total cells including 1-cell ghost layer on all sides (N+2)
+    expected_total_pts = (nx + 2) * (ny + 2) * (nz + 2)
     
     for stage_name, factory in [
         ("Step 4", make_step4_output_dummy), 
@@ -61,7 +63,6 @@ def test_theory_extended_geometry_consistency():
     ]:
         state = factory(nx=nx, ny=ny, nz=nz)
         
-        # Verify buffer size matches expected ghost-cell-inclusive dimensions
-        # Total points in a (N+2) box
-        expected_total_pts = (nx + 2) * (ny + 2) * (nz + 2)
-        assert state._fields._data.shape[0] >= expected_total_pts, f"{stage_name}: Buffer size insufficient for ghost cells."
+        # Validate that the buffer is at least large enough for the ghosted geometry
+        assert state._fields._data.shape[0] >= expected_total_pts, \
+            f"{stage_name}: Buffer {state._fields._data.shape[0]} too small for ghosted geometry {expected_total_pts}"

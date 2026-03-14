@@ -62,7 +62,8 @@ def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverStat
     
     # 3. Foundation Allocation: Explicit call per Rule 9
     state._fields = FieldManager()
-    state._fields.allocate(nx * ny * nz)
+    ghosted_nx, ghosted_ny, ghosted_nz = nx + 2, ny + 2, nz + 2
+    state._fields.allocate(ghosted_nx * ghosted_ny * ghosted_nz)
     
     # 4. Topology: Explicit injection
     state._mask = MaskManager()
