@@ -181,7 +181,7 @@ class FluidPropertiesManager(ValidatedContainer):
 
 class InitialConditionManager(ValidatedContainer):
     def to_dict(self):
-        return {"velocity": self.velocity.tolist(), "pressure": self.pressure}
+        return {"force_vector": self.force_vector.tolist()} if self.force_vector is not None else {"force_vector": [0.0, 0.0, 0.0]}
 
     __slots__ = ['_velocity', '_pressure']
     
@@ -259,7 +259,7 @@ class BoundaryCondition(ValidatedContainer):
 
 class BoundaryConditionManager(ValidatedContainer):
     def to_dict(self):
-        return [c.to_dict() if hasattr(c, "to_dict") else c for c in self.conditions] if self.conditions else []
+        return {"force_vector": self.force_vector.tolist()} if self.force_vector is not None else {"force_vector": [0.0, 0.0, 0.0]}
 
     __slots__ = ['_conditions']
     
@@ -281,7 +281,7 @@ class BoundaryConditionManager(ValidatedContainer):
 
 class MaskManager(ValidatedContainer):
     def to_dict(self):
-        return self._mask.tolist()
+        return {"force_vector": self.force_vector.tolist()} if self.force_vector is not None else {"force_vector": [0.0, 0.0, 0.0]}
 
     __slots__ = ['_mask']
     
@@ -299,8 +299,9 @@ class MaskManager(ValidatedContainer):
 
 class ExternalForceManager(ValidatedContainer):
     def to_dict(self):
-        return self._force_vector.tolist() if self._force_vector is not None else []
-
+        if self.force_vector is None:
+            raise AttributeError("ExternalForceManager: force_vector must be initialized.")
+        return {"force_vector": self.force_vector.tolist()}
     __slots__ = ['_force_vector']
     
     def __init__(self):
