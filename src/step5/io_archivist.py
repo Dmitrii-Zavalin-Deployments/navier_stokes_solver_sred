@@ -48,7 +48,7 @@ def save_snapshot(state) -> None:
         h5f.create_dataset('z', data=z)
         
         # Grid mask retrieved from MaskManager
-        h5f.create_dataset('mask', data=state.masks.mask)
+        h5f.create_dataset('mask', data=state.mask.mask)
         
         # Global Metadata: Explicit attribution
         h5f.attrs['time'] = state.time

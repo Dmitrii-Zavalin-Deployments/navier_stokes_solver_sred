@@ -16,7 +16,7 @@ def build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     fields = state.fields
     init = state.initial_conditions
     # Retrieve the mask from the SSoT (the MaskManager)
-    mask_grid = state.masks.mask
+    mask_grid = state.mask.mask
 
     # 2. Index calculation and topology (Rule 9)
     index = i + grid.nx * (j + grid.ny * k)
