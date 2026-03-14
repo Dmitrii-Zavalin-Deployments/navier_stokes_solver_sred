@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
+from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
@@ -58,7 +59,7 @@ def test_external_forces_immutability_logic():
     """
     Theory: Ensure the force vector does not change value from start to finish.
     """
-    s1 = make_step1_output_dummy() # Ensure this is imported
+    s1 = make_step1_output_dummy()
     s_final = make_output_schema_dummy()
     
     np.testing.assert_array_equal(
