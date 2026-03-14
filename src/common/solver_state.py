@@ -283,7 +283,7 @@ class MaskManager(ValidatedContainer):
     __slots__ = ['_mask']
     
     def to_dict(self):
-        return {"mask": self.mask.flatten().tolist()}
+        return self.data.flatten().tolist()
     
     def __init__(self):
         self._mask = None
