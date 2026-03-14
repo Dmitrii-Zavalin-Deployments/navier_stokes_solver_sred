@@ -36,7 +36,31 @@ class ValidatedContainer:
         """Final Firewall: Validates current state against the SSoT JSON Schema."""
         with open(schema_path) as f:
             schema = json.load(f)
-        jsonschema.validate(instance=self.to_dict(), schema=schema)
+            
+        try:
+            # Generate the dictionary using whichever to_dict is active
+            data_to_validate = self.to_dict()
+            jsonschema.validate(instance=data_to_validate, schema=schema)
+        except jsonschema.exceptions.ValidationError as e:
+            # Extract high-value diagnostic info for the logs
+            error_message = e.message
+            # Construct a readable path (e.g., "boundary_conditions -> 0 -> values")
+            path_to_error = " -> ".join([str(p) for p in e.path]) if e.path else "root"
+            
+            # Print a surgical diagnostic report
+            print("\n" + "!" * 60)
+            print("❌ SCHEMA VALIDATION FAILED")
+            print(f"CLASS:    {self.__class__.__name__}")
+            print(f"ERROR:    {error_message}")
+            print(f"LOCATION: {path_to_error}")
+            print(f"SCHEMA RULE: {e.validator}")
+            print("!" * 60 + "\n")
+            
+            # Re-raise as a clean ValueError to stop the test suite 
+            # 'from None' suppresses the original 3000-line jsonschema traceback
+            raise ValueError(
+                f"\n[Validation Failure] {self.__class__.__name__}: {error_message} at {path_to_error}"
+            ) from None
 
     def __setattr__(self, name: str, value: Any):
         if self._ALLOWED_ATTRS is None:
