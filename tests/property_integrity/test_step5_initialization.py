@@ -57,7 +57,7 @@ class TestStep5Initialization:
         
         masks = MaskManager()
         masks.mask = np.zeros((4, 4, 4))
-        state.masks = masks
+        state.mask = masks
         
         manifest = ManifestManager()
         manifest.saved_snapshots = []
