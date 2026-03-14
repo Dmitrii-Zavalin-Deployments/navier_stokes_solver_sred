@@ -363,9 +363,9 @@ class SolverState(ValidatedContainer):
     def manifest(self, value: ManifestManager): self._set_safe("manifest", value, ManifestManager)
 
     @property
-    def domain(self) -> DomainManager: return self._get_safe("domain")
-    @domain.setter
-    def domain(self, value: DomainManager): self._set_safe("domain", value, DomainManager)
+    def domain_configuration(self) -> DomainManager: return self._get_safe("domain_configuration")
+    @domain_configuration.setter
+    def domain_configuration(self, value: DomainManager): self._set_safe("domain_configuration", value, DomainManager)
 
     @property
     def grid(self) -> GridManager: return self._get_safe("grid")
@@ -373,9 +373,9 @@ class SolverState(ValidatedContainer):
     def grid(self, value: GridManager): self._set_safe("grid", value, GridManager)
 
     @property
-    def fluid(self) -> FluidPropertiesManager: return self._get_safe("fluid")
-    @fluid.setter
-    def fluid(self, value: FluidPropertiesManager): self._set_safe("fluid", value, FluidPropertiesManager)
+    def fluid_properties(self) -> FluidPropertiesManager: return self._get_safe("fluid_properties")
+    @fluid_properties.setter
+    def fluid_properties(self, value: FluidPropertiesManager): self._set_safe("fluid_properties", value, FluidPropertiesManager)
 
     @property
     def initial_conditions(self) -> InitialConditionManager: return self._get_safe("initial_conditions")
@@ -393,14 +393,14 @@ class SolverState(ValidatedContainer):
     def external_forces(self, value: ExternalForceManager): self._set_safe("external_forces", value, ExternalForceManager)
 
     @property
-    def sim_params(self) -> SimulationParameterManager: return self._get_safe("sim_params")
-    @sim_params.setter
-    def sim_params(self, value: SimulationParameterManager): self._set_safe("sim_params", value, SimulationParameterManager)
+    def simulation_parameters(self) -> SimulationParameterManager: return self._get_safe("simulation_parameters")
+    @simulation_parameters.setter
+    def simulation_parameters(self, value: SimulationParameterManager): self._set_safe("simulation_parameters", value, SimulationParameterManager)
 
     @property
-    def masks(self) -> MaskManager: return self._get_safe("masks")
-    @masks.setter
-    def masks(self, value: MaskManager): self._set_safe("masks", value, MaskManager)
+    def mask(self) -> MaskManager: return self._get_safe("mask")
+    @mask.setter
+    def mask(self, value: MaskManager): self._set_safe("mask", value, MaskManager)
 
     @property
     def fields(self) -> FieldManager: return self._get_safe("fields")
