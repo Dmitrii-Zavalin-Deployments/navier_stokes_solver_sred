@@ -283,7 +283,9 @@ class MaskManager(ValidatedContainer):
     __slots__ = ['_mask']
     
     def to_dict(self):
-        return self.data.flatten().tolist()
+        if self._mask is None:
+            raise RuntimeError("MaskManager: _mask is uninitialized. Cannot serialize.")
+        return self._mask.flatten().tolist()
     
     def __init__(self):
         self._mask = None
