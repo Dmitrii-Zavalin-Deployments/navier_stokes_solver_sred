@@ -24,17 +24,18 @@ def test_staggered_value_lifecycle_persistence(stage_name, factory):
     nx, ny, nz = 4, 4, 4
     state = factory(nx=nx, ny=ny, nz=nz)
     
-    # 1. Existence Check: Access _boundary_conditions slot
-    bcs = getattr(state, "_boundary_conditions", None)
-    assert bcs is not None, f"{stage_name}: '_boundary_conditions' slot missing"
+    # 1. Access the Manager, then the list inside it
+    bc_manager = getattr(state, "_boundary_conditions", None)
+    assert bc_manager is not None, f"{stage_name}: _boundary_conditions manager missing"
     
-    # 2. Locate specific BC entry
-    # Assuming _boundary_conditions is a list of objects/dicts
-    bc_entry = next((bc for bc in bcs if getattr(bc, "location", None) == "x_min"), None)
+    bcs = getattr(bc_manager, "_conditions", [])
+    
+    # 2. Locate specific BC entry using the correct slot '_location'
+    bc_entry = next((bc for bc in bcs if getattr(bc, "_location", None) == "x_min"), None)
     assert bc_entry is not None, f"{stage_name}: BC entry for 'x_min' lost"
     
-    # 3. Verify Value Presence (u component)
-    actual_u = getattr(bc_entry, "values", {}).get("u")
+    # 3. Verify Value Presence (u component) using '_values'
+    actual_u = getattr(bc_entry, "_values", {}).get("u")
     assert isinstance(actual_u, (int, float)), f"{stage_name}: Value corruption for 'u'"
 
 def test_staggered_component_validity():
