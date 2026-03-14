@@ -8,6 +8,7 @@ from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
 
+
 @pytest.mark.parametrize("stage_name, factory", [
     ("Step 2", make_step2_output_dummy),
     ("Step 3", make_step3_output_dummy),
