@@ -455,17 +455,17 @@ class SolverState(ValidatedContainer):
         self._ready_for_time_loop = value
     
     def to_dict(self):
-    """
-    Serializes the solver state by delegating to sub-container methods.
-    Ensures SSoT compliance by preventing manual attribute mapping here.
-    """
-    return {
-        "domain_configuration": self.domain_configuration.to_dict(),
-        "grid": self.grid.to_dict(),
-        "fluid_properties": self.fluid_properties.to_dict(),
-        "initial_conditions": self.initial_conditions.to_dict(),
-        "simulation_parameters": self.simulation_parameters.to_dict(),
-        "boundary_conditions": self.boundary_conditions.to_dict(),
-        "mask": self.mask.to_dict(), # Refactor mask to handle its own flattening
-        "external_forces": self.external_forces.to_dict()
-    }
+        """
+        Serializes the solver state by delegating to sub-container methods.
+        Ensures SSoT compliance by preventing manual attribute mapping here.
+        """
+        return {
+            "domain_configuration": self.domain_configuration.to_dict(),
+            "grid": self.grid.to_dict(),
+            "fluid_properties": self.fluid_properties.to_dict(),
+            "initial_conditions": self.initial_conditions.to_dict(),
+            "simulation_parameters": self.simulation_parameters.to_dict(),
+            "boundary_conditions": self.boundary_conditions.to_dict(),
+            "mask": self.mask.to_dict(),
+            "external_forces": self.external_forces.to_dict()
+        }
