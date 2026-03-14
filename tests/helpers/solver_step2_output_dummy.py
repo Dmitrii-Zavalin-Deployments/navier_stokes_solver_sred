@@ -16,7 +16,8 @@ from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 def make_step2_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
     """
     Returns a 'frozen' prototype representing a successful Step 2 completion.
-    The stencil_matrix is populated with static, verified StencilBlocks.
+    The stencil_matrix is populated with static, verified StencilBlocks, 
+    accounting for ghost cell layers.
     """
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
@@ -27,13 +28,13 @@ def make_step2_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
         "f_vals": (0.0, 0.0, -9.81)
     }
     
-    # 2. Populate with Static Blocks
-    # Instead of running the assembler, we simulate the 'known-good' result
+    # 2. Populate with Static Blocks (Accounting for Ghost Cells)
+    # We iterate over (N+2) dimensions to match the buffer allocation
     state.stencil_matrix = []
-    for i in range(nx):
-        for j in range(ny):
-            for k in range(nz):
-                # Using the factory to build the core cell (Logic Wiring)
+    for i in range(nx + 2):
+        for j in range(ny + 2):
+            for k in range(nz + 2):
+                # Using the factory to build the cell
                 cell = build_core_cell(i, j, k, state)
                 
                 # Mocking the block connectivity for the test baseline
