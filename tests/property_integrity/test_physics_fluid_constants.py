@@ -48,11 +48,16 @@ def test_velocity_correction_scaling_consistency():
     assert np.isfinite(correction_factor), "Step 3: Velocity correction factor invalid"
 
 def test_diffusion_stability_coefficient():
-    state = make_step3_output_dummy(nx=4, ny=4, nz=nz)
+    """
+    Theory: Ensure the diffusion coefficient (nu * dt / dx^2) is calculable.
+    """
+    # Define local variables to satisfy the function scope
+    nx, ny, nz = 4, 4, 4
+    state = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
     
     nu = state._fluid_properties.nu
     dt = state._simulation_parameters.time_step
     dx = state._grid.dx
     
     stability_factor = (nu * dt) / (dx**2)
-    assert np.isfinite(stability_factor), "Step 3: Diffusion stability factor invalid"
+    assert np.isfinite(stability_factor), "Step 3: Diffusion stability factor is invalid"
