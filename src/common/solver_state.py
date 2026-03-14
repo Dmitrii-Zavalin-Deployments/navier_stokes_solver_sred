@@ -259,10 +259,7 @@ class BoundaryCondition(ValidatedContainer):
 
 class BoundaryConditionManager(ValidatedContainer):
     def to_dict(self):
-        return {"force_vector": self.force_vector.tolist()} if self.force_vector is not None else {"force_vector": [0.0, 0.0, 0.0]}
-
-    __slots__ = ['_conditions']
-    
+        return {"conditions": [c.to_dict() for c in self.conditions]}
     def __init__(self):
         self._conditions = None
 
@@ -281,9 +278,7 @@ class BoundaryConditionManager(ValidatedContainer):
 
 class MaskManager(ValidatedContainer):
     def to_dict(self):
-        return {"force_vector": self.force_vector.tolist()} if self.force_vector is not None else {"force_vector": [0.0, 0.0, 0.0]}
-
-    __slots__ = ['_mask']
+        return {"mask": self.mask.tolist()}
     
     def __init__(self):
         self._mask = None
