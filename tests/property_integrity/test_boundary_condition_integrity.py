@@ -1,7 +1,6 @@
 # tests/property_integrity/test_boundary_condition_integrity.py
 
 import pytest
-import numpy as np
 
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
