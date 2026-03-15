@@ -90,7 +90,7 @@ def test_stencil_topology_identity(state):
     stencils = assemble_stencil_matrix(state)
     
     # 2. Reshape to 3D grid for easier navigation [nx, ny, nz]
-    grid = state.grid
+    state.grid
     stencil_grid = {}
     for block in stencils:
         stencil_grid[(block.center.i, block.center.j, block.center.k)] = block
