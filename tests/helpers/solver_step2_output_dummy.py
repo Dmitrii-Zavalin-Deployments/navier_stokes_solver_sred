@@ -11,6 +11,7 @@ Compliance:
 from src.common.stencil_block import StencilBlock
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
+
 # Define a lightweight Mock Cell that satisfies the StencilBlock interface
 class SimpleCellMock:
     def __init__(self, index, is_ghost):
