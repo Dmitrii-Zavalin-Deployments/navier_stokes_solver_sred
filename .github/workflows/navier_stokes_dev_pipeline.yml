@@ -70,6 +70,10 @@ jobs:
 
       - name: 🧪 Run Logic & Scientific Verification
         run: |
+          # Pre-flight check: Verify buffer geometry against expectation
+          python3 -c "from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy; state = make_step1_output_dummy(nx=4, ny=4, nz=4); print(f'DEBUG [Buffer Shape]: {state.fields.data.shape}')"
+          
+          # Run the test suite
           pytest -s tests/property_integrity/test_foundation_integrity.py -vv --cov=src --cov-report=term-missing
           
       - name: 📊 Audit Performance & Update Ledger
