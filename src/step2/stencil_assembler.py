@@ -18,7 +18,6 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     local_stencil_list = []
     
     # 1. Foundation Verification
-    # Ensure buffer data shape aligns with the Field Index schema
     if state.fields.data.shape[-1] != FI.num_fields():
         raise RuntimeError(f"Foundation Mismatch: Buffer width {state.fields.data.shape[-1]} "
                            f"!= Schema requirement {FI.num_fields()}.")
@@ -27,28 +26,24 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     grid = state.grid
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     
-    # Extract params using standard attribute access from your state object
+    # Corrected attribute access paths following the hierarchy
     physics_params = {
         "dx": grid.dx,
         "dy": grid.dy,
         "dz": grid.dz,
-        "dt": state.dt,
-        "rho": state.rho,
-        "mu": state.mu,
-        "f_vals": state.f_vals
+        "dt": state.simulation_parameters.time_step,
+        "rho": state.fluid_properties.density,
+        "mu": state.fluid_properties.viscosity,
+        "f_vals": tuple(state.external_forces.force_vector)
     }
 
     if DEBUG:
         print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Domain")
 
-    # 3. Iterate through the Core domain (0 to N-1)
-    # The factory handles the mapping to the buffer (+2 padding)
+    # 3. Iterate through the Core domain
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
-                
-                # Fetch central and 6-neighbor stencils from Factory
-                # Factory guarantees cache consistency
                 c_center = get_cell(i, j, k, state)
                 c_i_m    = get_cell(i - 1, j, k, state)
                 c_i_p    = get_cell(i + 1, j, k, state)
@@ -69,7 +64,4 @@ def assemble_stencil_matrix(state: SolverState) -> list:
                 )
                 local_stencil_list.append(block)
     
-    if DEBUG:
-        print(f"DEBUG [Step 2.2]: Assembly Complete. Total Blocks: {len(local_stencil_list)}")
-                
     return local_stencil_list
