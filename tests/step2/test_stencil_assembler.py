@@ -3,9 +3,10 @@
 import numpy as np
 import pytest
 
-from src.step2.stencil_assembler import assemble_stencil_matrix
 from src.step2.factory import clear_cell_cache
+from src.step2.stencil_assembler import assemble_stencil_matrix
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
+
 
 @pytest.fixture(autouse=True)
 def reset_factory_cache():
