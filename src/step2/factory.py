@@ -6,9 +6,6 @@ from src.common.solver_state import SolverState
 # Rule 7: Granular Traceability
 DEBUG = True 
 
-# Centralized cache for Flyweight pattern
-_CELL_CACHE = {}
-
 # Explicit constants for ghost cell initialization
 GHOST_VELOCITY = (0.0, 0.0, 0.0)
 GHOST_PRESSURE = 0.0
@@ -16,41 +13,22 @@ GHOST_MASK = 0
 
 def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """
-    Unified entry point for Cell retrieval. 
-    Implements Flyweight caching with state-aware keys and type-normalized coordinates.
+    Pure allocator: Creates a new Cell instance. 
+    Responsibility for caching/identity has been delegated to the Assembler.
     """
-    # Root Cause Fix: Normalize coordinates to standard Python ints to ensure 
-    # hash consistency across different sources (NumPy scalars vs standard ints)
-    i, j, k = int(i), int(j), int(k)
-    
-    state_id = id(state)
-    coord = (i, j, k)
-    cache_key = (coord, state_id)
-
-    if (i, j, k) in [(0, 0, 0), (1, 0, 0)]:
-        print(f"DEBUG: Key trace | Coord: {coord} | Key: {cache_key} | Cache state: {'HIT' if cache_key in _CELL_CACHE else 'MISS'}")
-    
-    # Update your get_cell for debugging
-    if cache_key in _CELL_CACHE:
-        # Print the ID to verify we are returning the shared pointer
-        cached_obj = _CELL_CACHE[cache_key]
-        print(f"DEBUG: HIT! Key: {cache_key} | Returning existing ID: {id(cached_obj)}")
-        return cached_obj
-    
-    # Cache MISS
     grid = state.grid
+    
+    # Identify if the coordinate is in the core domain or ghost region
     is_core = (0 <= i < grid.nx) and (0 <= j < grid.ny) and (0 <= k < grid.nz)
     
     if is_core:
         cell = _build_core_cell(i, j, k, state)
     else:
         cell = _build_ghost_cell(i, j, k, state)
-        
-    _CELL_CACHE[cache_key] = cell
     
     if DEBUG:
-        # Only log misses to identify topology build-out without log flooding
-        print(f"DEBUG: CACHE MISS {coord} | New Cell Created.")
+        print(f"DEBUG [Factory]: Allocated new {'Core' if is_core else 'Ghost'} "
+              f"Cell at ({i}, {j}, {k}) | ID: {id(cell)}")
         
     return cell
 
@@ -84,9 +62,3 @@ def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     cell.mask = GHOST_MASK
     
     return cell
-
-def clear_cell_cache():
-    """Utility to reset cache between simulation steps."""
-    if DEBUG and len(_CELL_CACHE) > 0:
-        print(f"DEBUG: Clearing cache. Size: {len(_CELL_CACHE)}")
-    _CELL_CACHE.clear()

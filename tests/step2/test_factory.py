@@ -3,13 +3,8 @@
 import numpy as np
 import pytest
 
-from src.step2.factory import clear_cell_cache, get_cell
+from src.step2.factory import get_cell
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
-
-
-@pytest.fixture(autouse=True)
-def reset_cache():
-    clear_cell_cache()
 
 def test_factory_wiring_integrity():
     # Setup: 4x4x4 grid (6x6x6 buffer)
@@ -25,9 +20,6 @@ def test_factory_wiring_integrity():
     expected_index = (i + 1) + nx_buf * ((j + 1) + ny_buf * (k + 1))
     
     assert cell.index == expected_index
-    assert cell.i == i
-    assert cell.j == j
-    assert cell.k == k
     assert cell.is_ghost is False
     assert cell.mask == int(state.mask.mask[i, j, k])
 
@@ -35,9 +27,6 @@ def test_factory_wiring_integrity():
     gi, gj, gk = -1, 2, 2
     ghost_cell = get_cell(gi, gj, gk, state)
     
-    assert ghost_cell.i == gi
-    assert ghost_cell.j == gj
-    assert ghost_cell.k == gk
     assert ghost_cell.is_ghost is True
     assert ghost_cell.mask == 0 
     
@@ -58,7 +47,6 @@ def test_mask_round_trip_integrity():
             for k in range(nz):
                 cell = get_cell(i, j, k, state)
                 assert cell.mask == test_mask[i, j, k]
-                assert cell.i == i and cell.j == j and cell.k == k
 
 def test_exhaustive_field_integrity():
     nx, ny, nz = 4, 4, 4
@@ -70,9 +58,6 @@ def test_exhaustive_field_integrity():
             for i in range(-1, nx + 1):
                 cell = get_cell(i, j, k, state)
                 
-                # Verify coordinate derivation consistency
-                assert cell.i == i and cell.j == j and cell.k == k
-                
                 if cell.is_ghost:
                     assert cell.vx == 0.0 and cell.p == 0.0
                     assert cell.mask == 0
@@ -81,39 +66,34 @@ def test_exhaustive_field_integrity():
                     assert cell.p == init.pressure
                     assert cell.mask == int(state.mask.mask[i, j, k])
 
-def test_cache_hit_optimization():
+def test_factory_allocation_behavior():
+    """
+    Verifies that the factory acts as a pure allocator.
+    Calling get_cell twice creates two distinct object instances.
+    """
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
     cell1 = get_cell(2, 2, 2, state)
     cell2 = get_cell(2, 2, 2, state)
     
-    assert cell1 is cell2
-    assert cell1.i == 2 and cell1.j == 2 and cell1.k == 2
+    # In the new architecture, the factory creates new instances.
+    # Registry management is now the job of the Assembler.
+    assert cell1 is not cell2 
 
 def test_variable_grid_dimension_integrity():
     """
     Verifies that coordinate derivation correctly handles 
     varying grid sizes (nx_buf, ny_buf).
     """
-    # Test a non-cubic, rectangular grid: 8x4x2
     nx, ny, nz = 8, 4, 2
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
-    # Select a test point
     i, j, k = 5, 3, 1
     cell = get_cell(i, j, k, state)
     
-    # Assert stride-dependent coordinates
     assert cell.nx_buf == nx + 2
     assert cell.ny_buf == ny + 2
     
-    # Verification of derivation
-    assert cell.i == i, f"Expected i={i}, got {cell.i}"
-    assert cell.j == j, f"Expected j={j}, got {cell.j}"
-    assert cell.k == k, f"Expected k={k}, got {cell.k}"
-    
-    # Verify index mapping consistency: 
-    # index = (i+1) + (nx+2) * ((j+1) + (ny+2) * (k+1))
     expected_index = (i + 1) + (nx + 2) * ((j + 1) + (ny + 2) * (k + 1))
     assert cell.index == expected_index

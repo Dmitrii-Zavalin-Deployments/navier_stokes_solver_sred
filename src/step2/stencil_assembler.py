@@ -3,17 +3,32 @@
 from src.common.field_schema import FI
 from src.common.solver_state import SolverState
 from src.common.stencil_block import StencilBlock
-
 from .factory import get_cell
 
 # Rule 7: Granular Traceability
 DEBUG = True
 
+class CellRegistry:
+    """Manages the lifecycle and topological identity of Cell instances."""
+    def __init__(self):
+        self._cache = {}
+
+    def get_or_create(self, i: int, j: int, k: int, state: SolverState):
+        key = ((int(i), int(j), int(k)), id(state))
+        if key not in self._cache:
+            self._cache[key] = get_cell(i, j, k, state)
+        return self._cache[key]
+
+    def clear(self):
+        self._cache.clear()
+
+# Global registry instance
+registry = CellRegistry()
+
 def assemble_stencil_matrix(state: SolverState) -> list:
     """
-    Assembles a flattened list of StencilBlocks. 
-    Delegates Cell creation to the factory's Flyweight cache to ensure 
-    topological identity and memory efficiency.
+    Assembles a flattened list of StencilBlocks using the local registry 
+    to ensure topological identity.
     """
     local_stencil_list = []
     
@@ -43,16 +58,14 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
-                # The Factory now handles coordinate-context injection
-                c_center = get_cell(i, j, k, state)
-                print(f"DEBUG: Checking ({i},{j},{k}) | ID: {id(c_center)}")
-                c_i_m    = get_cell(i - 1, j, k, state)
-                c_i_p    = get_cell(i + 1, j, k, state)
-                print(f"DEBUG: Checking i_plus ID at ({i},{j},{k}) | ID: {id(c_i_p)}")
-                c_j_m    = get_cell(i, j - 1, k, state)
-                c_j_p    = get_cell(i, j + 1, k, state)
-                c_k_m    = get_cell(i, j, k - 1, state)
-                c_k_p    = get_cell(i, j, k + 1, state)
+                # Retrieve unique, registry-managed cells
+                c_center = registry.get_or_create(i, j, k, state)
+                c_i_m    = registry.get_or_create(i - 1, j, k, state)
+                c_i_p    = registry.get_or_create(i + 1, j, k, state)
+                c_j_m    = registry.get_or_create(i, j - 1, k, state)
+                c_j_p    = registry.get_or_create(i, j + 1, k, state)
+                c_k_m    = registry.get_or_create(i, j, k - 1, state)
+                c_k_p    = registry.get_or_create(i, j, k + 1, state)
                 
                 block = StencilBlock(
                     center=c_center,

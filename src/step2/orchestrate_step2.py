@@ -1,8 +1,7 @@
 # src/step2/orchestrate_step2.py
 
 from src.common.solver_state import SolverState
-from src.step2.factory import get_cell
-from src.step2.stencil_assembler import assemble_stencil_matrix
+from src.step2.stencil_assembler import assemble_stencil_matrix, registry
 
 # Rule 7: Granular Traceability
 DEBUG = True
@@ -11,9 +10,9 @@ def orchestrate_step2(state: SolverState) -> SolverState:
     """
     Orchestrates the construction of the Stencil Matrix.
     """
-    # Explicitly clear the cache at the start of orchestration 
-    # to ensure identity integrity for this specific state.
-    get_cell.cache_clear()
+    # Explicitly clear the registry at the start of orchestration 
+    # to ensure identity integrity for this specific simulation run.
+    registry.clear()
     
     if DEBUG:
         print(f"DEBUG [Step 2.0]: Orchestration Started")
