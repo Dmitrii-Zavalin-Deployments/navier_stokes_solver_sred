@@ -41,7 +41,7 @@ def test_stencil_physics_consistency():
     state.simulation_parameters.time_step = 0.0123
     state.fluid_properties.density = 999.0
     # Set external forces
-    state.external_forces.force_vector = [0.1, 0.2, 0.3]
+    state.external_forces.force_vector = np.array([0.1, 0.2, 0.3])
     
     stencil_list = assemble_stencil_matrix(state)
     
