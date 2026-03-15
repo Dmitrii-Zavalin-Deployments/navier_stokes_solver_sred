@@ -1,7 +1,9 @@
 # src/step1/helpers.py
 
 import numpy as np
+
 from src.common.grid_math import get_coords_from_index
+
 
 def generate_3d_masks(mask_data: list[int], grid: GridInput) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     nx, ny, nz = int(grid.nx), int(grid.ny), int(grid.nz)

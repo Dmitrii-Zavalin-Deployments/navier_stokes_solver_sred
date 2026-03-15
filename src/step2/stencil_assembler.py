@@ -1,9 +1,9 @@
 # src/step2/stencil_assembler.py
 
 from src.common.field_schema import FI
+from src.common.grid_math import get_flat_index
 from src.common.solver_state import SolverState
 from src.common.stencil_block import StencilBlock
-from src.common.grid_math import get_flat_index
 
 from .factory import get_cell
 

@@ -1,8 +1,8 @@
 # src/step2/factory.py
 
 from src.common.cell import Cell
-from src.common.solver_state import SolverState
 from src.common.grid_math import get_flat_index
+from src.common.solver_state import SolverState
 
 # Rule 7: Granular Traceability
 DEBUG = True 

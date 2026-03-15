@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.step2.stencil_assembler import assemble_stencil_matrix, CellRegistry
+from src.step2.stencil_assembler import assemble_stencil_matrix
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
@@ -94,7 +94,7 @@ def test_registry_cache_hit():
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
     # We assemble the matrix to populate the registry cache
-    stencil_list = assemble_stencil_matrix(state)
+    assemble_stencil_matrix(state)
     
     # Now we manually trigger another retrieval for the same (0,0,0)
     # We must access the registry inside the assembler.
