@@ -90,3 +90,30 @@ def test_cache_hit_optimization():
     
     assert cell1 is cell2
     assert cell1.i == 2 and cell1.j == 2 and cell1.k == 2
+
+def test_variable_grid_dimension_integrity():
+    """
+    Verifies that coordinate derivation correctly handles 
+    varying grid sizes (nx_buf, ny_buf).
+    """
+    # Test a non-cubic, rectangular grid: 8x4x2
+    nx, ny, nz = 8, 4, 2
+    state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
+    
+    # Select a test point
+    i, j, k = 5, 3, 1
+    cell = get_cell(i, j, k, state)
+    
+    # Assert stride-dependent coordinates
+    assert cell.nx_buf == nx + 2
+    assert cell.ny_buf == ny + 2
+    
+    # Verification of derivation
+    assert cell.i == i, f"Expected i={i}, got {cell.i}"
+    assert cell.j == j, f"Expected j={j}, got {cell.j}"
+    assert cell.k == k, f"Expected k={k}, got {cell.k}"
+    
+    # Verify index mapping consistency: 
+    # index = (i+1) + (nx+2) * ((j+1) + (ny+2) * (k+1))
+    expected_index = (i + 1) + (nx + 2) * ((j + 1) + (ny + 2) * (k + 1))
+    assert cell.index == expected_index
