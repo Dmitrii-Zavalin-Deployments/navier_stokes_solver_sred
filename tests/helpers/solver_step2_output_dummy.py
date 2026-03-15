@@ -9,7 +9,6 @@ Compliance:
 """
 
 from src.common.stencil_block import StencilBlock
-from src.step2.factory import get_cell, clear_cell_cache
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
 
