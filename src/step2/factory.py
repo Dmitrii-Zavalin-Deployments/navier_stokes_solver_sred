@@ -30,8 +30,12 @@ def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     if (i, j, k) in [(0, 0, 0), (1, 0, 0)]:
         print(f"DEBUG: Key trace | Coord: {coord} | Key: {cache_key} | Cache state: {'HIT' if cache_key in _CELL_CACHE else 'MISS'}")
     
+    # Update your get_cell for debugging
     if cache_key in _CELL_CACHE:
-        return _CELL_CACHE[cache_key]
+        # Print the ID to verify we are returning the shared pointer
+        cached_obj = _CELL_CACHE[cache_key]
+        print(f"DEBUG: HIT! Key: {cache_key} | Returning existing ID: {id(cached_obj)}")
+        return cached_obj
     
     # Cache MISS
     grid = state.grid
