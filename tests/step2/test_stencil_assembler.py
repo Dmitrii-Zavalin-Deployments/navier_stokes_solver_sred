@@ -8,12 +8,6 @@ from src.step2.stencil_assembler import assemble_stencil_matrix
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
 
-@pytest.fixture
-def state():
-    # Use your existing helper to create the dummy state
-    from src.step1.helpers import make_step1_output_dummy
-    return make_step1_output_dummy(nx=2, ny=2, nz=2)
-
 @pytest.fixture(autouse=True)
 def reset_factory_cache():
     """Ensure a clean factory state before every test."""
