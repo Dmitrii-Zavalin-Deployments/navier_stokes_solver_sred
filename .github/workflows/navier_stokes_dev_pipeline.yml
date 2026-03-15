@@ -76,7 +76,7 @@ jobs:
           
           # 2. Run the actual tests
           # pytest -s tests/step2/test_stencil_assembler.py -vv --cov=src --cov-report=term-missing
-          pytest -s tests/step2/test_factory.py -vv
+          pytest -s tests/step2/test_stencil_assembler.py -vv
           
           # 3. Diagnostic: Check cache state after tests
           echo "Cache size after tests:"
