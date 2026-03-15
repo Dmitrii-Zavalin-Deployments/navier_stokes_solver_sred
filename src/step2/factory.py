@@ -26,6 +26,9 @@ def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     state_id = id(state)
     coord = (i, j, k)
     cache_key = (coord, state_id)
+
+    if (i, j, k) in [(0, 0, 0), (1, 0, 0)]:
+        print(f"DEBUG: Key trace | Coord: {coord} | Key: {cache_key} | Cache state: {'HIT' if cache_key in _CELL_CACHE else 'MISS'}")
     
     if cache_key in _CELL_CACHE:
         return _CELL_CACHE[cache_key]
