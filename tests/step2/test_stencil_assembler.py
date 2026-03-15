@@ -89,21 +89,19 @@ def test_stencil_topology_identity(state):
     # 1. Assemble the matrix
     stencils = assemble_stencil_matrix(state)
     
-    # 2. Reshape to 3D grid for easier navigation [nx, ny, nz]
-    state.grid
+    # 2. Reshape to map coordinates to blocks
     stencil_grid = {}
     for block in stencils:
         stencil_grid[(block.center.i, block.center.j, block.center.k)] = block
         
-    # 3. Check internal consistency for a sample point in the bulk domain
-    # We test (1, 1, 1) and its i_plus neighbor (2, 1, 1)
+    # 3. Check internal consistency for a sample point
     i, j, k = 1, 1, 1
+    # Ensure the neighbor exists in the grid before asserting
     if (i+1, j, k) in stencil_grid:
         current_block = stencil_grid[(i, j, k)]
         neighbor_block = stencil_grid[(i+1, j, k)]
         
-        # ASSERTION: The 'i_plus' of the current block MUST be 
-        # the same object as the 'center' of the neighbor block
+        # ASSERTION: Topological identity verification
         assert id(current_block.i_plus) == id(neighbor_block.center), \
             f"Topological Mismatch at ({i},{j},{k}): i_plus cell != neighbor's center cell"
             
