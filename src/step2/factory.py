@@ -7,6 +7,7 @@ from src.common.solver_state import SolverState
 DEBUG = True # Enabled for diagnostic tracking
 
 # Centralized cache for Flyweight pattern
+# Key structure: (i, j, k, state_id)
 _CELL_CACHE = {}
 
 # Explicit constants for ghost cell initialization (Rule 5 compliance)
@@ -17,15 +18,15 @@ GHOST_MASK = 0
 def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """
     Unified entry point for Cell retrieval. 
-    Implements Flyweight caching to ensure topological identity.
+    Implements Flyweight caching with state-aware keys to ensure topological identity.
     """
-    coord = (i, j, k)
     state_id = id(state)
+    coord = (i, j, k)
+    cache_key = (coord, state_id)
     
-    if coord in _CELL_CACHE:
-        cell = _CELL_CACHE[coord]
+    if cache_key in _CELL_CACHE:
+        cell = _CELL_CACHE[cache_key]
         if DEBUG:
-            # We track the State ID here to ensure we aren't using a stale cell
             print(f"DEBUG: CACHE HIT {coord} | Cell ID: {id(cell)} | State ID: {state_id}")
         return cell
     
@@ -39,7 +40,7 @@ def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     else:
         cell = _build_ghost_cell(i, j, k, state)
         
-    _CELL_CACHE[coord] = cell
+    _CELL_CACHE[cache_key] = cell
     
     if DEBUG:
         print(f"DEBUG: CACHE MISS {coord} | Created NEW Cell ID: {id(cell)} | State ID: {state_id}")
@@ -47,22 +48,16 @@ def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     return cell
 
 def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
-    """
-    Creates a View-based Cell (Logic Wiring).
-    Uses local caching of SSoT pointers for high-performance access.
-    """
+    """Creates a View-based Core Cell."""
     grid = state.grid
     fields = state.fields
     init = state.initial_conditions
     mask_grid = state.mask.mask
 
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
-    # 1-based indexing to account for ghost halo
     index = (i + 1) + nx_buf * ((j + 1) + ny_buf * (k + 1))
     
     cell = Cell(index=index, fields_buffer=fields.data, is_ghost=False)
-    
-    # 4. Initialize physical fields and topological mask (Rule 9)
     cell.vx, cell.vy, cell.vz = init.velocity
     cell.p = init.pressure
     cell.mask = int(mask_grid[i, j, k])
@@ -70,18 +65,13 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     return cell
 
 def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
-    """
-    Creates a View-based virtual cell on the perimeter.
-    """
+    """Creates a View-based Ghost Cell."""
     grid = state.grid
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
     
-    # Calculate index with ghost padding
     index = (i + 1) + nx_buf * ((j + 1) + ny_buf * (k + 1))
     
     cell = Cell(index=index, fields_buffer=state.fields.data, is_ghost=True)
-    
-    # RULE 5: Explicitly zero all fields to ensure a clean state
     cell.vx, cell.vy, cell.vz = GHOST_VELOCITY
     cell.p = GHOST_PRESSURE
     cell.mask = GHOST_MASK
