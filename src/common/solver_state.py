@@ -42,6 +42,11 @@ def verify_foundation_integrity(state):
             block = state.stencil_matrix[idx]
             c = block.center
             
+            # RULE 9: Skip sentinel ghost cells as they do not have a 1-to-1 
+            # mapping in the primary foundation buffer.
+            if c.is_ghost:
+                continue
+            
             # Verify Pressure (FI.P = 6)
             expected_p = float(c.index) + (float(FI.P) / 10.0)
             print(f"DEBUG: Checking index {idx}, block.center.index={c.index}, num_cells={num_cells}")
