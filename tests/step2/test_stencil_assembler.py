@@ -79,3 +79,32 @@ def test_stencil_caching_efficiency():
     # The cell at (1,0,0) is both the i_plus neighbor of (0,0,0) and the center of (1,0,0)
     assert block.i_plus is right_neighbor.center, f"Identity failure: {id(block.i_plus)} != {id(right_neighbor.center)}"
     print("\nDEBUG: Flyweight pattern verified - Cell instances are shared.")
+
+def test_stencil_topology_identity(state):
+    """
+    Verifies that neighboring StencilBlocks share identical Cell object references.
+    """
+    from src.step2.stencil_assembler import assemble_stencil_matrix
+    
+    # 1. Assemble the matrix
+    stencils = assemble_stencil_matrix(state)
+    
+    # 2. Reshape to 3D grid for easier navigation [nx, ny, nz]
+    grid = state.grid
+    stencil_grid = {}
+    for block in stencils:
+        stencil_grid[(block.center.i, block.center.j, block.center.k)] = block
+        
+    # 3. Check internal consistency for a sample point in the bulk domain
+    # We test (1, 1, 1) and its i_plus neighbor (2, 1, 1)
+    i, j, k = 1, 1, 1
+    if (i+1, j, k) in stencil_grid:
+        current_block = stencil_grid[(i, j, k)]
+        neighbor_block = stencil_grid[(i+1, j, k)]
+        
+        # ASSERTION: The 'i_plus' of the current block MUST be 
+        # the same object as the 'center' of the neighbor block
+        assert id(current_block.i_plus) == id(neighbor_block.center), \
+            f"Topological Mismatch at ({i},{j},{k}): i_plus cell != neighbor's center cell"
+            
+        print(f"Verified topological link at ({i},{j},{k}) -> ({i+1},{j},{k})")
