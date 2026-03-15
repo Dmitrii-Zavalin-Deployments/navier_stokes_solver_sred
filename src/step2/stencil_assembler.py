@@ -1,5 +1,3 @@
-# src/step2/stencil_assembler.py
-
 from src.common.field_schema import FI
 from src.common.grid_math import get_flat_index
 from src.common.solver_state import SolverState
@@ -22,14 +20,12 @@ class CellRegistry:
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
         """
-        Maps 3D coordinates to a 1D flat index using the SSoT grid_math.
-        Using the full buffer dimensions ensures consistent mapping for 
-        both Core and Ghost cells.
+        Maps 3D coordinates to a 1D flat index.
+        The SSoT grid_math now correctly handles the 3D stride internally.
         """
         return get_flat_index(i, j, k, self.nx_dim, self.ny_dim)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
-        print(f"DEBUG: Registry checking ({i}, {j}, {k}) -> {self.nx_dim}x{self.ny_dim}")
         idx = self._get_idx(i, j, k)
         if self._cache[idx] is None:
             self._cache[idx] = get_cell(i, j, k, state)
@@ -38,7 +34,7 @@ class CellRegistry:
 def assemble_stencil_matrix(state: SolverState) -> list:
     """
     Assembles a flattened list of StencilBlocks using a deterministic
-    Flat Index Engine to ensure persistent topological identity.
+    Flat Index Engine. Loops are ordered K -> J -> I to match index monotonicity.
     """
     if state.fields.data.shape[-1] != FI.num_fields():
         raise RuntimeError(f"Foundation Mismatch: Buffer width {state.fields.data.shape[-1]} "
@@ -64,10 +60,11 @@ def assemble_stencil_matrix(state: SolverState) -> list:
 
     local_stencil_list = []
     
-    # Iterate through the Core domain
-    for i in range(nx):
+    # Iterate through the Core domain in K-J-I order.
+    # This ensures that list index increments monotonically with get_flat_index.
+    for k in range(nz):
         for j in range(ny):
-            for k in range(nz):
+            for i in range(nx):
                 block = StencilBlock(
                     center=registry.get_or_create(i, j, k, state),
                     i_minus=registry.get_or_create(i - 1, j, k, state),
