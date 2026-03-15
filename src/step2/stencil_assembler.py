@@ -5,7 +5,7 @@ from src.common.solver_state import SolverState
 from src.common.stencil_block import StencilBlock
 
 # Import the unified factory entry point
-from .factory import get_cell as factory_get_cell
+from .factory import get_cell
 
 # Rule 7: Granular Traceability
 DEBUG = True
@@ -13,7 +13,8 @@ DEBUG = True
 def assemble_stencil_matrix(state: SolverState) -> list:
     """
     Assembles a flattened list of StencilBlocks. 
-    Delegates Cell creation to the factory's Flyweight cache.
+    Delegates Cell creation to the factory's Flyweight cache to ensure 
+    topological identity and memory efficiency.
     """
     local_stencil_list = []
     
@@ -38,21 +39,21 @@ def assemble_stencil_matrix(state: SolverState) -> list:
 
     if DEBUG:
         print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Domain")
-        print(f"  > Physics Bundle: {physics_params}")
 
     # 3. Iterate through the Core domain to build the wiring
-    # The factory's global cache ensures we don't duplicate objects
+    # The factory's global cache ensures we maintain memory identity 
+    # for shared neighbors across StencilBlocks.
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
                 block = StencilBlock(
-                    center=factory_get_cell(i, j, k, state),
-                    i_minus=factory_get_cell(i-1, j, k, state), 
-                    i_plus=factory_get_cell(i+1, j, k, state),
-                    j_minus=factory_get_cell(i, j-1, k, state), 
-                    j_plus=factory_get_cell(i, j+1, k, state),
-                    k_minus=factory_get_cell(i, j, k-1, state), 
-                    k_plus=factory_get_cell(i, j, k+1, state),
+                    center=get_cell(i, j, k, state),
+                    i_minus=get_cell(i-1, j, k, state), 
+                    i_plus=get_cell(i+1, j, k, state),
+                    j_minus=get_cell(i, j-1, k, state), 
+                    j_plus=get_cell(i, j+1, k, state),
+                    k_minus=get_cell(i, j, k-1, state), 
+                    k_plus=get_cell(i, j, k+1, state),
                     **physics_params
                 )
                 local_stencil_list.append(block)
