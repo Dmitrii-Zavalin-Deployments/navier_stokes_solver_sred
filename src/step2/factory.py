@@ -4,7 +4,7 @@ from src.common.cell import Cell
 from src.common.solver_state import SolverState
 
 # Rule 7: Granular Traceability
-DEBUG = True
+DEBUG = False
 
 def build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """
