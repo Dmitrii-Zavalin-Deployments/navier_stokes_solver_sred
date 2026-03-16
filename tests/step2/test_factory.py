@@ -38,13 +38,15 @@ def test_factory_wiring_integrity():
     i, j, k = 2, 2, 2
     cell = get_cell(i, j, k, state)
     
-    # Use the actual buffer dimensions (nx+2, ny+2, nz+2)
+    # Use the actual buffer dimensions (nx+2, ny+2) for the stride calculation
     nx_buf, ny_buf = nx + 2, ny + 2
 
-    # Flattening formula: i + nx_buf * j + (nx_buf * ny_buf) * k
-    # With offsets (+1) for the ghost cell padding
+    # Flattening formula: i_buf + nx_buf * j_buf + (nx_buf * ny_buf) * k_buf
+    # With offsets (+1) for the ghost cell padding to map to the 0-indexed buffer
     i_buf, j_buf, k_buf = i + 1, j + 1, k + 1
-    expected_index = i_buf + nx_buf * j_buf + (nx_buf * ny_buf) * k_buf
+    
+    # The third dimension (nz) is implicitly handled by the (nx_buf * ny_buf) stride
+    expected_index = i_buf + (nx_buf * j_buf) + (nx_buf * ny_buf * k_buf)
 
     assert cell.index == expected_index
     assert cell.is_ghost is False
@@ -52,7 +54,7 @@ def test_factory_wiring_integrity():
 
     # Verify Memory Persistence
     cell.vx = 0.999
-    assert state.fields.data[cell.index, 0] == 0.999 
+    assert state.fields.data[cell.index, 0] == 0.999
 
 def test_exhaustive_field_integrity():
     nx, ny, nz = 4, 4, 4
