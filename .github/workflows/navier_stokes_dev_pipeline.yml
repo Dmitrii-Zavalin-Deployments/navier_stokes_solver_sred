@@ -71,7 +71,11 @@ jobs:
       - name: 🧪 Run Logic & Scientific Verification
         run: |
           # Pre-flight check: Verify buffer geometry against expectation
-          python3 -c "from src.common.solver_state import SolverState; from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy; state = make_step1_output_dummy(nx=4, ny=4, nz=4); print(f'Total buffer elements: {state.fields.data.shape[0]}')"
+          python3 -c "from src.step2.stencil_assembler import assemble_stencil_matrix; \
+          from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy; \
+          state = make_step1_output_dummy(nx=4, ny=4, nz=4); \
+          blocks = assemble_stencil_matrix(state); \
+          print('First 3 block center coords:', [(b.center.i, b.center.j, b.center.k) for b in blocks[:3]])"
 
           # Run the test suite
           # pytest -s tests/ -vv --cov=src --cov-report=term-missing
