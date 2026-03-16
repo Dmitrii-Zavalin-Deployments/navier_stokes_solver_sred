@@ -35,7 +35,7 @@ class TestStep2Initialization:
 
     def test_matrix_dimensions(self, assembled_state):
         """Rule 0 & 5: Matrix length must match the fluid volume."""
-        # 4x4x4 grid = 64 cells total.
-        expected_cells = assembled_state.grid.nx * assembled_state.grid.ny * assembled_state.grid.nz
+        # Buffered grid: (4+2)^3 = 216 cells total.
+        expected_cells = (assembled_state.grid.nx + 2) * (assembled_state.grid.ny + 2) * (assembled_state.grid.nz + 2)
         assert len(assembled_state.stencil_matrix) == expected_cells, \
             "Stencil matrix dimension mismatch with grid volume."
