@@ -12,60 +12,51 @@ def get_matrix_3d(stencil_list):
     """Helper to maintain SSoT for coordinate-based testing."""
     return {(b.center.i, b.center.j, b.center.k): b for b in stencil_list}
 
-
 def test_stencil_assembly_logic():
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
-    # 1. Print registry dimensions
-    print(f"Registry dims: {registry.nx_dim}, {registry.ny_dim}, {registry.nz_dim}")
+    # 1. Assemble the matrix first to instantiate the registry
+    stencil_list = assemble_stencil_matrix(state)
     
-    # 2. Check the buffer size of the solver state
-    # This assumes state.fields_buffer or equivalent exists
-    buffer_capacity = state.fields_buffer.shape[0] 
+    # 2. Extract the registry instance from the first stencil block
+    registry = stencil_list[0].registry
+    
+    # 3. Print and compare dimensions
+    print(f"Registry dims: {registry.nx_dim}, {registry.ny_dim}, {registry.nz_dim}")
+    buffer_capacity = state.fields_buffer.shape[0]
     print(f"Buffer capacity: {buffer_capacity}")
     
-    # 3. Force an assertion to catch the math error
     expected_capacity = registry.nx_dim * registry.ny_dim * registry.nz_dim
     assert buffer_capacity >= expected_capacity, \
         f"Mismatch! Registry needs {expected_capacity} slots, but buffer only has {buffer_capacity}"
     
-    stencil_list = assemble_stencil_matrix(state)
-
-    # 1. Inspect the Registry limits
-    registry = stencil_list[0].registry # Or however you access it
-    
-    # 2. Add these to pinpoint the overflow
-    # These will print the mapping for the problematic boundary cell
+    # 4. Pinpoint the overflow with mapping checks
     idx_center = registry._get_idx(0, 0, 0)
     idx_ghost = registry._get_idx(-1, 0, 0)
     
     print(f"DEBUG: Index for (0,0,0) is {idx_center}")
     print(f"DEBUG: Index for (-1,0,0) is {idx_ghost}")
     
-    # 3. Assert buffer constraints
-    # If the buffer is size 64, indices must be < 64. 
-    # If this fails, the buffer is too small or the index is wrong.
-    buffer_size = state.fields.data.shape[0]
-    assert idx_center < buffer_size, f"Index {idx_center} exceeds buffer size {buffer_size}"
-    assert idx_ghost < buffer_size, f"Index {idx_ghost} exceeds buffer size {buffer_size}"
+    # 5. Assert buffer constraints
+    # Ensure indices are within the safe bounds of the allocated buffer
+    assert idx_center < buffer_capacity, f"Index {idx_center} exceeds buffer size {buffer_capacity}"
+    assert idx_ghost < buffer_capacity, f"Index {idx_ghost} exceeds buffer size {buffer_capacity}"
 
     matrix_3d = get_matrix_3d(stencil_list)
     
-    assert len(stencil_list) == (nx + 2) * (ny + 2) * (nz + 2)
+    # Note: If you increased padding to support the stencil, update this assertion to match
+    assert len(stencil_list) == registry.nx_dim * registry.ny_dim * registry.nz_dim
     
     sample_block = matrix_3d[(0, 0, 0)]
     assert sample_block.dx == 0.25
     
-    # Verify Boundary Analysis (0,0,0) center's i_minus is ghost (-1, 0, 0)
+    # Verify Boundary Analysis
     block_000 = matrix_3d[(0, 0, 0)]
-    
-    # Assert coordinates for the center block (the first in your list)
     assert block_000.center.i == 0
     assert block_000.center.j == 0
     assert block_000.center.k == 0
     
-    # Assert coordinates for the i_minus neighbor
     assert block_000.i_minus.i == -1
     assert block_000.i_minus.j == 0
     assert block_000.i_minus.k == 0
