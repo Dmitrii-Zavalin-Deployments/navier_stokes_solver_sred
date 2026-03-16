@@ -34,19 +34,28 @@ def test_factory_wiring_integrity():
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
-    # Verify Core Wiring
+    # Target coordinate
     i, j, k = 2, 2, 2
     cell = get_cell(i, j, k, state)
     
-    # Use the actual buffer dimensions (nx+2, ny+2) for the stride calculation
-    nx_buf, ny_buf = nx + 2, ny + 2
-
-    # Flattening formula: i_buf + nx_buf * j_buf + (nx_buf * ny_buf) * k_buf
-    # With offsets (+1) for the ghost cell padding to map to the 0-indexed buffer
+    # 1. Assert factory knows its own dimensions (this validates your assumption of 6x6x6)
+    assert cell.nx_buf == nx + 2, f"Expected nx_buf=6, got {cell.nx_buf}"
+    assert cell.ny_buf == ny + 2, f"Expected ny_buf=6, got {cell.ny_buf}"
+    
+    # 2. Derive expected values based on validated dimensions
+    nx_buf, ny_buf = cell.nx_buf, cell.ny_buf
     i_buf, j_buf, k_buf = i + 1, j + 1, k + 1
     
-    # The third dimension (nz) is implicitly handled by the (nx_buf * ny_buf) stride
+    # 3. Calculate expected index
     expected_index = i_buf + (nx_buf * j_buf) + (nx_buf * ny_buf * k_buf)
+
+    # 4. Diagnostic print if it fails
+    if cell.index != expected_index:
+        print(f"\nDEBUG: i={i}, j={j}, k={k}")
+        print(f"DEBUG: nx_buf={nx_buf}, ny_buf={ny_buf}")
+        print(f"DEBUG: i_buf={i_buf}, j_buf={j_buf}, k_buf={k_buf}")
+        print(f"DEBUG: Calculated expected_index={expected_index}")
+        print(f"DEBUG: Actual cell.index={cell.index}")
 
     assert cell.index == expected_index
     assert cell.is_ghost is False
