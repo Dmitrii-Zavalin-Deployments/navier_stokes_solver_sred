@@ -27,7 +27,7 @@ class CellRegistry:
         """
         # No clamping: ghost cells and extended boundary cells map to unique indices.
         # Offset 2 maps the range starting at -2 to index 0.
-        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
+        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=2)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
