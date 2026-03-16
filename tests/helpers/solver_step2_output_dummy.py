@@ -9,7 +9,6 @@ Compliance:
 - Rule 9: Sentinel Integrity (Mocks must mirror pointer-to-buffer behavior).
 """
 
-import numpy as np
 from src.common.field_schema import FI
 from src.common.stencil_block import StencilBlock
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
