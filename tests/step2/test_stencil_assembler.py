@@ -18,6 +18,25 @@ def test_stencil_assembly_logic():
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
     stencil_list = assemble_stencil_matrix(state)
+
+    # 1. Inspect the Registry limits
+    registry = stencil_list[0].registry # Or however you access it
+    
+    # 2. Add these to pinpoint the overflow
+    # These will print the mapping for the problematic boundary cell
+    idx_center = registry._get_idx(0, 0, 0)
+    idx_ghost = registry._get_idx(-1, 0, 0)
+    
+    print(f"DEBUG: Index for (0,0,0) is {idx_center}")
+    print(f"DEBUG: Index for (-1,0,0) is {idx_ghost}")
+    
+    # 3. Assert buffer constraints
+    # If the buffer is size 64, indices must be < 64. 
+    # If this fails, the buffer is too small or the index is wrong.
+    buffer_size = state.fields.data.shape[0]
+    assert idx_center < buffer_size, f"Index {idx_center} exceeds buffer size {buffer_size}"
+    assert idx_ghost < buffer_size, f"Index {idx_ghost} exceeds buffer size {buffer_size}"
+
     matrix_3d = get_matrix_3d(stencil_list)
     
     assert len(stencil_list) == (nx + 2) * (ny + 2) * (nz + 2)
