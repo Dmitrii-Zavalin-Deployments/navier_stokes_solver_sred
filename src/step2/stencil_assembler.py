@@ -15,9 +15,9 @@ class CellRegistry:
     def __init__(self, nx: int, ny: int, nz: int):
         # Expansion: Add padding layers (2 on each side) to prevent IndexErrors
         # when querying neighbors of border cells.
-        self.nx_dim = nx + 2
-        self.ny_dim = ny + 2
-        self.nz_dim = nz + 2
+        self.nx_dim = nx + 4
+        self.ny_dim = ny + 4
+        self.nz_dim = nz + 4
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
