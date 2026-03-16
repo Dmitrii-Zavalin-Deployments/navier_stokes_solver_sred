@@ -1,3 +1,5 @@
+# src/step2/stencil_assembler.py
+
 from src.common.field_schema import FI
 from src.common.grid_math import get_flat_index
 from src.common.solver_state import SolverState
@@ -11,32 +13,34 @@ DEBUG = True
 class CellRegistry:
     """Manages cell lifecycle via a deterministic flat-index cache."""
     def __init__(self, nx: int, ny: int, nz: int):
-        # We account for 1 ghost layer on each side: range is [-1, nx], [-1, ny], [-1, nz]
-        # Total size per dimension is N + 2
-        self.nx_dim = nx + 2
-        self.ny_dim = ny + 2
-        self.nz_dim = nz + 2
+        # Expansion: Add padding layers (2 on each side) to prevent IndexErrors
+        # when querying neighbors of border cells.
+        self.nx_dim = nx + 4
+        self.ny_dim = ny + 4
+        self.nz_dim = nz + 4
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
         """
         Maps 3D coordinates to a 1D flat index.
-        The SSoT grid_math now correctly handles the 3D stride internally.
+        The offset ensures the range [-2, nx+1] is shifted into [0, nx+3].
         """
-        # No clamping: ghost cells (-1) map to index 0. 
-        # We use an offset of 1 to shift range [-1, nx] into [0, nx+1].
-        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
+        # No clamping: ghost cells and extended boundary cells map to unique indices.
+        # Offset 2 maps the range starting at -2 to index 0.
+        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=2)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
         if self._cache[idx] is None:
+            # We pass the original (i, j, k) to the factory 
+            # so the Cell object retains its actual grid position.
             self._cache[idx] = get_cell(i, j, k, state)
         return self._cache[idx]
 
 def assemble_stencil_matrix(state: SolverState) -> list:
     """
     Assembles a flattened list of StencilBlocks using a deterministic
-    Flat Index Engine. Loops are ordered K -> J -> I to match index monotonicity.
+    Flat Index Engine.
     """
     if state.fields.data.shape[-1] != FI.num_fields():
         raise RuntimeError(f"Foundation Mismatch: Buffer width {state.fields.data.shape[-1]} "
@@ -63,7 +67,6 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     local_stencil_list = []
     
     # Iterate through the Core domain in K-J-I order.
-    # This ensures that list index increments monotonically with get_flat_index.
     for k in range(-1, nz + 1):
         for j in range(-1, ny + 1):
             for i in range(-1, nx + 1):
