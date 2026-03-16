@@ -25,7 +25,7 @@ def test_lifecycle_grid_dimensions_match_fields(stage_name, factory):
     Robustness: Verifies buffer size allocation against grid cell count (nx * ny * nz).
     """
     nx, ny, nz = 8, 6, 4
-    n_cells = nx * ny * nz
+    n_cells = (nx + 2) * (ny + 2) * (nz + 2)
     state = factory(nx=nx, ny=ny, nz=nz)
     
     data = state.fields.data
@@ -39,7 +39,7 @@ def test_step3_intermediate_field_allocation():
     Validation: Predictor fields (VX_STAR, VY_STAR, VZ_STAR) exist and are allocated to n_cells.
     """
     nx, ny, nz = 5, 5, 5
-    n_cells = nx * ny * nz
+    n_cells = (nx + 2) * (ny + 2) * (nz + 2)
     state = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
     data = state.fields.data
     
