@@ -8,10 +8,19 @@ from src.step1.helpers import generate_3d_masks
 
 
 def create_test_grid(nx, ny, nz):
-    """Helper to populate the non-initializable GridInput container."""
     grid = GridInput()
-    grid.nx, grid.ny, grid.nz = nx, ny, nz
-    grid.dx, grid.dy, grid.dz = 1.0, 1.0, 1.0
+    
+    # 1. Set the grid resolution
+    grid.nx = nx
+    grid.ny = ny
+    grid.nz = nz
+    
+    # 2. Set the physical bounds (this automatically defines dx, dy, dz)
+    # Assuming a domain of [0, 1] for each axis for test purposes
+    grid.x_min, grid.x_max = 0.0, float(nx)
+    grid.y_min, grid.y_max = 0.0, float(ny)
+    grid.z_min, grid.z_max = 0.0, float(nz)
+    
     return grid
 
 def test_generate_3d_masks_basic():
