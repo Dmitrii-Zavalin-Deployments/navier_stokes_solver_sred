@@ -7,12 +7,17 @@ from src.step2.stencil_assembler import assemble_stencil_matrix
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 
+def get_matrix_3d(stencil_list):
+    """Helper to maintain SSoT for coordinate-based testing."""
+    return {(b.center.i, b.center.j, b.center.k): b for b in stencil_list}
+
 
 def test_stencil_assembly_logic():
     nx, ny, nz = 4, 4, 4
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
     stencil_list = assemble_stencil_matrix(state)
+    matrix_3d = get_matrix_3d(stencil_list)
     
     assert len(stencil_list) == (nx + 2) * (ny + 2) * (nz + 2)
     
@@ -44,6 +49,7 @@ def test_stencil_physics_consistency():
     state.external_forces.force_vector = np.array([0.1, 0.2, 0.3])
     
     stencil_list = assemble_stencil_matrix(state)
+    matrix_3d = get_matrix_3d(stencil_list)
     
     for block in stencil_list:
         assert block.dt == 0.0123
@@ -65,6 +71,7 @@ def test_stencil_caching_efficiency():
     state = make_step1_output_dummy(nx=nx, ny=ny, nz=nz)
     
     stencil_list = assemble_stencil_matrix(state)
+    matrix_3d = get_matrix_3d(stencil_list)
     
     # 1. Access the blocks (Assuming list is ordered by index, (0,0,0) is index 0)
     block = matrix_3d[(0, 0, 0)]          # Should be (0,0,0)
