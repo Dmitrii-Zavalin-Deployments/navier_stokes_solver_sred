@@ -23,7 +23,10 @@ class CellRegistry:
         Maps 3D coordinates to a 1D flat index.
         The SSoT grid_math now correctly handles the 3D stride internally.
         """
-        return get_flat_index(i + 1, j + 1, k + 1, self.nx_dim, self.ny_dim, offset=0)
+        clamped_i = max(0, min(i + 1, self.nx_dim - 1))
+        clamped_j = max(0, min(j + 1, self.ny_dim - 1))
+        clamped_k = max(0, min(k + 1, self.nz_dim - 1))
+        return get_flat_index(clamped_i, clamped_j, clamped_k, self.nx_dim, self.ny_dim, offset=0)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
