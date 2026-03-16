@@ -16,7 +16,7 @@ def test_stencil_assembly_logic():
     
     assert len(stencil_list) == nx * ny * nz
     
-    sample_block = stencil_list[0]
+    stencil_list[0]
     # assert sample_block.dx == 0.25
     
     # Verify Boundary Analysis (0,0,0) center's i_minus is ghost (-1, 0, 0)
