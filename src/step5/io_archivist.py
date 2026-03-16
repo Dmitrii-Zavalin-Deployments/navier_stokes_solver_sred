@@ -37,10 +37,10 @@ def save_snapshot(state) -> None:
 
     with h5py.File(filename, 'w') as h5f:
         # Physical Fields: Direct, schema-locked slicing (Rule 9)
-        h5f.create_dataset('vx', data=data[:, FI.VX].reshape(nx, ny, nz))
-        h5f.create_dataset('vy', data=data[:, FI.VY].reshape(nx, ny, nz))
-        h5f.create_dataset('vz', data=data[:, FI.VZ].reshape(nx, ny, nz))
-        h5f.create_dataset('p',  data=data[:, FI.P].reshape(nx, ny, nz))
+        h5f.create_dataset("vx", data=data[:, FI.VX].reshape(nx+2, ny+2, nz+2)[1:-1, 1:-1, 1:-1])
+        h5f.create_dataset("vy", data=data[:, FI.VY].reshape(nx+2, ny+2, nz+2)[1:-1, 1:-1, 1:-1])
+        h5f.create_dataset("vz", data=data[:, FI.VZ].reshape(nx+2, ny+2, nz+2)[1:-1, 1:-1, 1:-1])
+        h5f.create_dataset("p",  data=data[:, FI.P].reshape(nx+2, ny+2, nz+2)[1:-1, 1:-1, 1:-1])
         
         # Spatial metadata: Using computed arrays
         h5f.create_dataset('x', data=x)
