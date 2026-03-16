@@ -45,7 +45,7 @@ class TestStep5Initialization:
         state.simulation_parameters = params_manager
         
         fields = FieldManager()
-        fields.allocate(n_cells=64) 
+        fields.allocate(n_cells=216) 
         state.fields = fields
         
         grid = GridManager()
