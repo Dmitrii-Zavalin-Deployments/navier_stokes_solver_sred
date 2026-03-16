@@ -71,7 +71,7 @@ def orchestrate_step1(context: SimulationContext) -> SolverState:
     # --- 5. Topology & Foundation ---
     mask_3d, _, _ = generate_3d_masks(input_data.mask.data, input_data.grid)
     state.fields = FieldManager()
-    n_cells = state.grid.nx * state.grid.ny * state.grid.nz
+    n_cells = (state.grid.nx + 2) * (state.grid.ny + 2) * (state.grid.nz + 2)
     state.fields.allocate(n_cells)
     state.fields.data[:, FI.MASK] = mask_3d.flatten()
 
@@ -91,6 +91,6 @@ def orchestrate_step1(context: SimulationContext) -> SolverState:
 
     if DEBUG:
         print(f"DEBUG [Step 1]: State assembly complete.")
-        print(f"  > Foundation: {n_cells} cells allocated with {FI.num_fields()} fields.")
+        print(f"  > Foundation: {n_cells} cells allocated (Buffered) with {FI.num_fields()} fields.")
 
     return state
