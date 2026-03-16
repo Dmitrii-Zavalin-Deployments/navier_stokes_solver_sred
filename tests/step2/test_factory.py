@@ -39,7 +39,7 @@ def test_factory_wiring_integrity():
     cell = get_cell(i, j, k, state)
     
     # Use the actual buffer dimensions (nx+2, ny+2, nz+2)
-    nx_buf, ny_buf, nz_buf = nx + 2, ny + 2, nz + 2
+    nx_buf, ny_buf = nx + 2, ny + 2
 
     # Flattening formula: i + nx_buf * j + (nx_buf * ny_buf) * k
     # With offsets (+1) for the ghost cell padding
