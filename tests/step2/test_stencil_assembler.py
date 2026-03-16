@@ -21,6 +21,17 @@ def test_stencil_assembly_logic():
     
     # Verify Boundary Analysis (0,0,0) center's i_minus is ghost (-1, 0, 0)
     block_000 = stencil_list[0]
+    
+    # Assert coordinates for the center block (the first in your list)
+    assert block_000.center.i == 0
+    assert block_000.center.j == 0
+    assert block_000.center.k == 0
+    
+    # Assert coordinates for the i_minus neighbor
+    assert block_000.i_minus.i == -1
+    assert block_000.i_minus.j == 0
+    assert block_000.i_minus.k == 0
+    
     assert block_000.center.is_ghost is False
     assert block_000.i_minus.is_ghost is True
 
