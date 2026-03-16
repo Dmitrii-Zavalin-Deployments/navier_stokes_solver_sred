@@ -20,51 +20,49 @@ def verify_foundation_integrity(state):
         
     print("🚀 POST: Initiating Pre-Flight Memory Integrity Check...")
     
-    # 1. Identity Priming & Structural Synchronicity Check
+    # 1. Structural Synchronicity Check
+    # We allow the stencil_matrix to be smaller than the buffer (to accommodate 
+    # safety padding), but it must never overflow the foundation.
     num_cells = state.fields.data.shape[0]
     
-    if len(state.stencil_matrix) != num_cells:
+    if len(state.stencil_matrix) > num_cells:
         raise RuntimeError(
-            f"POST MISMATCH: Stencil count ({len(state.stencil_matrix)}) "
-            f"!= Buffer size ({num_cells}). Architecture integrity compromised."
+            f"POST OVERFLOW: Stencil count ({len(state.stencil_matrix)}) "
+            f"> Buffer size ({num_cells}). Architecture integrity compromised."
         )
         
     original_data = state.fields.data.copy()
     
+    # Prime the buffer: Value = Index + (Field_ID / 10.0)
+    # We prime the entire buffer to ensure all potential mappings are testable.
     for f in FI:
-        # Prime the buffer: Value = Index + (Field_ID / 10.0)
         state.fields.data[:, f] = np.arange(num_cells, dtype=float) + (float(f) / 10.0)
 
     # 2. The Inquisition: Verify pointer-to-buffer alignment
     try:
-        sample_indices = [0, num_cells // 2, num_cells - 1]
-        for idx in sample_indices:
-            block = state.stencil_matrix[idx]
+        # We sample representative blocks from the stencil_matrix.
+        # Since the matrix only covers the active domain, we only test those present.
+        for idx, block in enumerate(state.stencil_matrix):
             c = block.center
             
-            # RULE 9: Skip sentinel ghost cells as they do not have a 1-to-1 
-            # mapping in the primary foundation buffer.
+            # RULE 9: Sentinel Integrity - Ignore ghost cells for pointer-mapping validation
+            # as they may map to the padding foundation outside the standard simulation.
             if c.is_ghost:
                 continue
             
-            # Verify Pressure (FI.P = 6)
+            # Verify Pressure (FI.P) and Velocity (FI.VX)
+            # The indices must map accurately back to the primed buffer data.
             expected_p = float(c.index) + (float(FI.P) / 10.0)
-            print(f"DEBUG: Checking index {idx}, block.center.index={c.index}, num_cells={num_cells}")
-            if not np.isclose(c.p, expected_p):
-                raise RuntimeError(
-                    f"CRITICAL: Memory Swap! Cell {c.index} P-pointer sees {c.p}, "
-                    f"expected {expected_p}. Pointer drift or mapping error detected."
-                )
-
-            # Verify Velocity X (FI.VX = 0)
             expected_vx = float(c.index) + (float(FI.VX) / 10.0)
-            if not np.isclose(c.vx, expected_vx):
+            
+            if not np.isclose(c.p, expected_p) or not np.isclose(c.vx, expected_vx):
                 raise RuntimeError(
-                    f"CRITICAL: Memory Swap! Cell {c.index} VX-pointer sees {c.vx}, "
-                    f"expected {expected_vx}. Pointer drift or mapping error detected."
+                    f"CRITICAL: Memory Swap at Stencil Index {idx}! "
+                    f"Cell {c.index} pointers detected drift. "
+                    f"Expected P: {expected_p}, Got: {c.p}"
                 )
 
-        print("✅ POST SUCCESS: Foundation wiring is verified and 'Frozen'.")
+        print("✅ POST SUCCESS: Foundation wiring verified and 'Frozen'.")
 
     finally:
         # 3. Restore actual simulation data
