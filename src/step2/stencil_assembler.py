@@ -13,17 +13,17 @@ DEBUG = True
 class CellRegistry:
     """Manages cell lifecycle via a deterministic flat-index cache."""
     def __init__(self, nx: int, ny: int, nz: int):
-        # 2-Tier Architecture: Padding set to +2 (1 layer of ghosts on each side)
-        self.nx_dim = nx + 2
+        self.nx_dim = nx + 2 # Correct for coordinates -1 through nx
         self.ny_dim = ny + 2
         self.nz_dim = nz + 2
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
-        """
-        Maps 3D coordinates to a 1D flat index.
-        Offset 1 maps the coordinate range starting at -1 to index 0.
-        """
+        # If coordinates are outside [-1, nx], this is an invalid access
+        if not (-1 <= i < nx + 1 and -1 <= j < ny + 1 and -1 <= k < nz + 1):
+             # This indicates your stencil loop is trying to access a 
+             # second layer of ghost cells, which violates the 2-tier topology.
+             raise IndexError(f"Stencil accessing out-of-bounds ghost: ({i}, {j}, {k})")
         return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
@@ -32,6 +32,10 @@ class CellRegistry:
             # We pass the original (i, j, k) to the factory 
             # so the Cell object retains its actual grid position.
             self._cache[idx] = get_cell(i, j, k, state)
+        
+        # Insert this right before the line causing the error:
+        print(f"DEBUG: Requesting ({i}, {j}, {k}) -> Index {idx} (Cache size: {len(self._cache)})")
+
         return self._cache[idx]
 
 def assemble_stencil_matrix(state: SolverState) -> list:
