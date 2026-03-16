@@ -14,13 +14,13 @@ def test_stencil_assembly_logic():
     
     stencil_list = assemble_stencil_matrix(state)
     
-    assert len(stencil_list) == nx * ny * nz
+    assert len(stencil_list) == (nx + 2) * (ny + 2) * (nz + 2)
     
-    stencil_list[0]
-    # assert sample_block.dx == 0.25
+    sample_block = matrix_3d[(0, 0, 0)]
+    assert sample_block.dx == 0.25
     
     # Verify Boundary Analysis (0,0,0) center's i_minus is ghost (-1, 0, 0)
-    block_000 = stencil_list[0]
+    block_000 = matrix_3d[(0, 0, 0)]
     
     # Assert coordinates for the center block (the first in your list)
     assert block_000.center.i == 0
@@ -32,8 +32,8 @@ def test_stencil_assembly_logic():
     assert block_000.i_minus.j == 0
     assert block_000.i_minus.k == 0
     
-    # assert block_000.center.is_ghost is False
-    # assert block_000.i_minus.is_ghost is True
+    assert block_000.center.is_ghost is False
+    assert block_000.i_minus.is_ghost is True
 
 def test_stencil_physics_consistency():
     nx, ny, nz = 2, 2, 2
@@ -67,7 +67,7 @@ def test_stencil_caching_efficiency():
     stencil_list = assemble_stencil_matrix(state)
     
     # 1. Access the blocks (Assuming list is ordered by index, (0,0,0) is index 0)
-    block = stencil_list[0]          # Should be (0,0,0)
+    block = matrix_3d[(0, 0, 0)]          # Should be (0,0,0)
     right_neighbor = stencil_list[1] # Should be (1,0,0)
     
     # 2. Assert coordinates for the 'block' (0,0,0)
@@ -105,8 +105,8 @@ def test_stencil_matrix_topology():
             assert block.k_plus.index == matrix_3d[(i, j, k + 1)].center.index
             
         # Verify Flat Index calculation matches buffer index
-        nx_buf, ny_buf = nx + 2, ny + 2
-        expected_idx = (i + 1) + nx_buf * ((j + 1) + ny_buf * (k + 1))
+        nx_buf, ny_buf = nx + 2, ny + 2; offset = 1
+        expected_idx = (i + offset) + nx_buf * ((j + offset) + ny_buf * (k + offset))
         assert block.center.index == expected_idx
 
 def test_registry_cache_hit():
