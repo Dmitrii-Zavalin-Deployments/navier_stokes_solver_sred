@@ -40,7 +40,7 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     init = state.initial_conditions
     mask_grid = state.mask.mask
 
-    nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
+    nx_buf, ny_buf = grid.nx + 4, grid.ny + 4
     index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
     cell = Cell(index=index, fields_buffer=fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=False)
@@ -53,7 +53,7 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
 def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """Creates a View-based Ghost Cell."""
     grid = state.grid
-    nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
+    nx_buf, ny_buf = grid.nx + 4, grid.ny + 4
     
     index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
