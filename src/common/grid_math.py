@@ -1,23 +1,21 @@
 # src/common/grid_math.py
 
-def get_flat_index(i: int, j: int, k: int, nx: int, ny: int, offset: int = 0) -> int:
+def get_flat_index(i: int, j: int, k: int, nx: int, ny: int) -> int:
     """
     Computes a flat index from 3D coordinates. 
-    Use offset=1 for buffered grids (ghost cells), offset=0 for interior grids.
+    Assumes standard row-major order: index = i + nx * j + (nx * ny) * k
     """
-    # Stride is determined by the dimensions passed
-    return (i + offset) + nx * (j + offset) + (nx * ny) * (k + offset)
+    return i + (nx * j) + (nx * ny * k)
 
-def get_coords_from_index(index: int, nx: int, ny: int, offset: int = 0) -> tuple[int, int, int]:
+def get_coords_from_index(index: int, nx: int, ny: int) -> tuple[int, int, int]:
     """
-    SSoT Mapping: Converts flat index to (i, j, k).
-    Use offset=1 for buffered grids (ghost cells), offset=0 for interior grids.
+    SSoT Mapping: Converts flat index back to (i, j, k).
     """
     xy_plane = nx * ny
     
-    k = (index // xy_plane) - offset
+    k = index // xy_plane
     rem = index % xy_plane
-    j = (rem // nx) - offset
-    i = (rem % nx) - offset
+    j = rem // nx
+    i = rem % nx
     
     return i, j, k

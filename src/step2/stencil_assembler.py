@@ -1,5 +1,3 @@
-# src/step2/stencil_assembler.py
-
 from src.common.field_schema import FI
 from src.common.grid_math import get_flat_index
 from src.common.solver_state import SolverState
@@ -16,8 +14,7 @@ class CellRegistry:
         self.ny = ny
         self.nz = nz
         
-        # 2-Tier Architecture: Ghost layer at -1 and nx 
-        # Total dimension: (nx + 1) - (-1) + 1 = nx + 2
+        # Total dimension: nx + 2 (includes ghost cells at -1 and nx)
         self.nx_dim = nx + 2
         self.ny_dim = ny + 2
         self.nz_dim = nz + 2
@@ -25,11 +22,12 @@ class CellRegistry:
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
         # Per Section 7: Valid coordinate range is [-1, nx]
-        # Coordinates must be >= -1 AND <= nx
         if not (-1 <= i <= self.nx and -1 <= j <= self.ny and -1 <= k <= self.nz):
              raise IndexError(f"Stencil accessing out-of-bounds: ({i}, {j}, {k})")
-        # Offset 1 maps coordinate -1 to index 0
-        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
+             
+        # Explicit mapping: Shift [-1, N] to [0, N+1] for index calculation
+        # grid_math.py now handles pure geometry, we handle the buffer translation
+        return get_flat_index(i + 1, j + 1, k + 1, self.nx_dim, self.ny_dim)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
@@ -67,8 +65,6 @@ def assemble_stencil_matrix(state: SolverState) -> list:
 
     local_stencil_list = []
     
-    # Iterate ONLY over the Core Domain [0, nx-1]
-    # Registry lookups safely resolve neighbors in Ghost layer [-1, nx]
     for k in range(0, nz):
         for j in range(0, ny):
             for i in range(0, nx):

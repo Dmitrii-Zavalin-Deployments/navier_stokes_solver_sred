@@ -48,8 +48,8 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
 
     # Standardized: Core + 1 layer of ghosts on each side = +2
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
-    # Offset 1 maps index (-1, -1, -1) to (0, 0, 0)
-    index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
+
+    index = get_flat_index(i, j, k, nx_buf, ny_buf)
     
     cell = Cell(index=index, fields_buffer=fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=False)
     cell.vx, cell.vy, cell.vz = init.velocity
@@ -63,8 +63,7 @@ def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     grid = state.grid
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
     
-    # Matches the core offset for memory alignment
-    index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
+    index = get_flat_index(i, j, k, nx_buf, ny_buf)
     
     cell = Cell(index=index, fields_buffer=state.fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=True)
     cell.vx, cell.vy, cell.vz = GHOST_VELOCITY
