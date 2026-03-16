@@ -41,7 +41,7 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     mask_grid = state.mask.mask
 
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
-    index = get_flat_index(i, j, k, nx_buf, ny_buf)
+    index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
     cell = Cell(index=index, fields_buffer=fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=False)
     cell.vx, cell.vy, cell.vz = init.velocity
@@ -55,7 +55,7 @@ def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     grid = state.grid
     nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
     
-    index = get_flat_index(i, j, k, nx_buf, ny_buf)
+    index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
     cell = Cell(index=index, fields_buffer=state.fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=True)
     cell.vx, cell.vy, cell.vz = GHOST_VELOCITY
