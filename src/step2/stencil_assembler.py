@@ -12,39 +12,36 @@ DEBUG = True
 
 class CellRegistry:
     def __init__(self, nx: int, ny: int, nz: int):
-        # Store these as instance attributes
         self.nx = nx
         self.ny = ny
         self.nz = nz
         
-        # 2-Tier Architecture: Padding set to +2
+        # 2-Tier Architecture: Ghost layer at -1 and nx 
+        # Total dimension: (nx + 1) - (-1) + 1 = nx + 2
         self.nx_dim = nx + 2
         self.ny_dim = ny + 2
         self.nz_dim = nz + 2
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
-        # Access them via self.nx, self.ny, self.nz
-        if not (-1 <= i < self.nx + 1 and -1 <= j < self.ny + 1 and -1 <= k < self.nz + 1):
+        # Per Section 7: Valid coordinate range is [-1, nx]
+        # Coordinates must be >= -1 AND <= nx
+        if not (-1 <= i <= self.nx and -1 <= j <= self.ny and -1 <= k <= self.nz):
              raise IndexError(f"Stencil accessing out-of-bounds: ({i}, {j}, {k})")
+        # Offset 1 maps coordinate -1 to index 0
         return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
         if self._cache[idx] is None:
-            # We pass the original (i, j, k) to the factory 
-            # so the Cell object retains its actual grid position.
             self._cache[idx] = get_cell(i, j, k, state)
         
-        # Insert this right before the line causing the error:
-        print(f"DEBUG: Requesting ({i}, {j}, {k}) -> Index {idx} (Cache size: {len(self._cache)})")
-
         return self._cache[idx]
 
 def assemble_stencil_matrix(state: SolverState) -> list:
     """
-    Assembles a flattened list of StencilBlocks using a deterministic
-    Flat Index Engine.
+    Assembles a flattened list of StencilBlocks restricted to the Core Domain
+    [0, nx-1] while maintaining access to Ghost buffers [-1, nx].
     """
     if state.fields.data.shape[-1] != FI.num_fields():
         raise RuntimeError(f"Foundation Mismatch: Buffer width {state.fields.data.shape[-1]} "
@@ -66,14 +63,15 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     }
 
     if DEBUG:
-        print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Domain")
+        print(f"DEBUG [Step 2.2]: Stencil Assembly Started for {nx}x{ny}x{nz} Core Domain")
 
     local_stencil_list = []
     
-    # Iterate through the Core domain and its immediate Ghost layer.
-    for k in range(-1, nz + 1):
-        for j in range(-1, ny + 1):
-            for i in range(-1, nx + 1):
+    # Iterate ONLY over the Core Domain [0, nx-1]
+    # Registry lookups safely resolve neighbors in Ghost layer [-1, nx]
+    for k in range(0, nz):
+        for j in range(0, ny):
+            for i in range(0, nx):
                 block = StencilBlock(
                     center=registry.get_or_create(i, j, k, state),
                     i_minus=registry.get_or_create(i - 1, j, k, state),
@@ -87,6 +85,6 @@ def assemble_stencil_matrix(state: SolverState) -> list:
                 local_stencil_list.append(block)
     
     if DEBUG:
-        print(f"DEBUG [Step 2.2]: Successfully assembled {len(local_stencil_list)} StencilBlocks.")
+        print(f"DEBUG [Step 2.2]: Successfully assembled {len(local_stencil_list)} Core StencilBlocks.")
     
     return local_stencil_list

@@ -14,19 +14,24 @@ GHOST_MASK = 0
 
 def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """
-    Pure allocator: Creates a new Cell instance. 
-    Responsibility for caching/identity has been delegated to the Assembler.
+    Allocates a Cell instance with strict 2-Tier Topology validation.
     """
     grid = state.grid
     
-    # Core domain: [0, nx-1], [0, ny-1], [0, nz-1]
+    # 7.1 Compliance: Define the two valid operational zones
     is_core = (0 <= i < grid.nx) and (0 <= j < grid.ny) and (0 <= k < grid.nz)
+    
+    # Define Ghost Layer as valid coordinates that are NOT in the Core
+    is_ghost = ((-1 <= i <= grid.nx) and (-1 <= j <= grid.ny) and (-1 <= k <= grid.nz)) and not is_core
     
     if is_core:
         cell = _build_core_cell(i, j, k, state)
-    else:
-        # All other valid stencil requests are treated as Ghost cells
+    elif is_ghost:
         cell = _build_ghost_cell(i, j, k, state)
+    else:
+        # Defensive programming: Hard failure for any coordinate in the Padding Zone
+        raise IndexError(f"[FACTORY] Out-of-bounds access: Requested cell ({i}, {j}, {k}) "
+                         f"is in the illegal Padding Zone (Outside [-1, {grid.nx}]).")
     
     if DEBUG:
         print(f"DEBUG [Factory]: Allocated new {'Core' if is_core else 'Ghost'} "
