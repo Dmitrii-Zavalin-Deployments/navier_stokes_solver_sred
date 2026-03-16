@@ -26,7 +26,7 @@ def test_stencil_assembly_logic():
     
     # 2. COMPLIANT ACCESS: Extract dimensions from the state's own grid/fields
     # instead of creating a secondary registry.
-    buffer_capacity = state.fields_buffer.shape[0]
+    buffer_capacity = state.fields.data.shape[0]
     print(f"Buffer capacity: {buffer_capacity}")
     
     # 3. Structural Integrity Assertion (POST Validation)

@@ -67,9 +67,9 @@ def assemble_stencil_matrix(state: SolverState) -> list:
     local_stencil_list = []
     
     # Iterate through the Core domain in K-J-I order.
-    for k in range(-1, nz + 1):
-        for j in range(-1, ny + 1):
-            for i in range(-1, nx + 1):
+    for k in range(-2, nz + 2):
+        for j in range(-2, ny + 2):
+            for i in range(-2, nx + 2):
                 block = StencilBlock(
                     center=registry.get_or_create(i, j, k, state),
                     i_minus=registry.get_or_create(i - 1, j, k, state),
