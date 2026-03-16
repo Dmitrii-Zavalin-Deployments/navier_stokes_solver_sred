@@ -19,12 +19,13 @@ def get_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """
     grid = state.grid
     
-    # Identify if the coordinate is in the core domain or ghost region
+    # Core domain: [0, nx-1], [0, ny-1], [0, nz-1]
     is_core = (0 <= i < grid.nx) and (0 <= j < grid.ny) and (0 <= k < grid.nz)
     
     if is_core:
         cell = _build_core_cell(i, j, k, state)
     else:
+        # All other valid stencil requests are treated as Ghost cells
         cell = _build_ghost_cell(i, j, k, state)
     
     if DEBUG:
@@ -40,7 +41,9 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     init = state.initial_conditions
     mask_grid = state.mask.mask
 
-    nx_buf, ny_buf = grid.nx + 4, grid.ny + 4
+    # Standardized: Core + 1 layer of ghosts on each side = +2
+    nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
+    # Offset 1 maps index (-1, -1, -1) to (0, 0, 0)
     index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
     cell = Cell(index=index, fields_buffer=fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=False)
@@ -53,8 +56,9 @@ def _build_core_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
 def _build_ghost_cell(i: int, j: int, k: int, state: SolverState) -> Cell:
     """Creates a View-based Ghost Cell."""
     grid = state.grid
-    nx_buf, ny_buf = grid.nx + 4, grid.ny + 4
+    nx_buf, ny_buf = grid.nx + 2, grid.ny + 2
     
+    # Matches the core offset for memory alignment
     index = get_flat_index(i, j, k, nx_buf, ny_buf, offset=1)
     
     cell = Cell(index=index, fields_buffer=state.fields.data, nx_buf=nx_buf, ny_buf=ny_buf, is_ghost=True)

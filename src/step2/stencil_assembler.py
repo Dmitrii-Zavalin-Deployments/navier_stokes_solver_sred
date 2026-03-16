@@ -13,21 +13,18 @@ DEBUG = True
 class CellRegistry:
     """Manages cell lifecycle via a deterministic flat-index cache."""
     def __init__(self, nx: int, ny: int, nz: int):
-        # Expansion: Add padding layers (2 on each side) to prevent IndexErrors
-        # when querying neighbors of border cells.
-        self.nx_dim = nx + 4
-        self.ny_dim = ny + 4
-        self.nz_dim = nz + 4
+        # 2-Tier Architecture: Padding set to +2 (1 layer of ghosts on each side)
+        self.nx_dim = nx + 2
+        self.ny_dim = ny + 2
+        self.nz_dim = nz + 2
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
         """
         Maps 3D coordinates to a 1D flat index.
-        The offset ensures the range [-2, nx+1] is shifted into [0, nx+3].
+        Offset 1 maps the coordinate range starting at -1 to index 0.
         """
-        # No clamping: ghost cells and extended boundary cells map to unique indices.
-        # Offset 2 maps the range starting at -2 to index 0.
-        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=2)
+        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
@@ -66,7 +63,7 @@ def assemble_stencil_matrix(state: SolverState) -> list:
 
     local_stencil_list = []
     
-    # Iterate through the Core domain in K-J-I order.
+    # Iterate through the Core domain and its immediate Ghost layer.
     for k in range(-1, nz + 1):
         for j in range(-1, ny + 1):
             for i in range(-1, nx + 1):
