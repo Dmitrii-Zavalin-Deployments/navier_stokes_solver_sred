@@ -15,9 +15,9 @@ class CellRegistry:
     def __init__(self, nx: int, ny: int, nz: int):
         # Expansion: Add padding layers (2 on each side) to prevent IndexErrors
         # when querying neighbors of border cells.
-        self.nx_dim = nx + 4
-        self.ny_dim = ny + 4
-        self.nz_dim = nz + 4
+        self.nx_dim = nx + 2
+        self.ny_dim = ny + 2
+        self.nz_dim = nz + 2
         self._cache = [None] * (self.nx_dim * self.ny_dim * self.nz_dim)
 
     def _get_idx(self, i: int, j: int, k: int) -> int:
@@ -27,7 +27,7 @@ class CellRegistry:
         """
         # No clamping: ghost cells and extended boundary cells map to unique indices.
         # Offset 2 maps the range starting at -2 to index 0.
-        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=2)
+        return get_flat_index(i, j, k, self.nx_dim, self.ny_dim, offset=1)
 
     def get_or_create(self, i: int, j: int, k: int, state: SolverState):
         idx = self._get_idx(i, j, k)
