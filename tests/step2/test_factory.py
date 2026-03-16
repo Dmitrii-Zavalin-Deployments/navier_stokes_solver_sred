@@ -25,9 +25,9 @@ def test_factory_topology_zones():
     assert ghost_cell_max.is_ghost is True
     
     # 3. Padding Zone (Illegal Territory)
-    with pytest.raises(IndexError, match="\[FACTORY\] Out-of-bounds"):
+    with pytest.raises(IndexError, match=r"\[FACTORY\] Out-of-bounds"):
         get_cell(-2, 0, 0, state)
-    with pytest.raises(IndexError, match="\[FACTORY\] Out-of-bounds"):
+    with pytest.raises(IndexError, match=r"\[FACTORY\] Out-of-bounds"):
         get_cell(nx + 1, 0, 0, state)
 
 def test_factory_wiring_integrity():
