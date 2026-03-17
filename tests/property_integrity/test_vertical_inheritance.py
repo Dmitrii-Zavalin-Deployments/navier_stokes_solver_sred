@@ -6,11 +6,13 @@ from src.common.simulation_context import SimulationContext
 from src.common.solver_config import SolverConfig
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
+from src.step3.orchestrate_step3 import orchestrate_step3
 
 # Factory Functions (The "Recipes")
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 
 # Mock Config Data (Rule 5: Explicit numerical settings)
 MOCK_CONFIG = {
@@ -94,3 +96,41 @@ class TestVerticalIntegrity:
         print(f"AUDIT: Step 1 -> Step 2 ({NX}x{NY}x{NZ})")
         assert_structural_parity(actual_state.to_dict(), expected_dummy.to_dict())
         print("✅ Step 2 Structural Parity Secured")
+    
+    def test_step2_to_step3_pipeline(self):
+        """
+        Phase 3: Validates Step 2 -> Step 3 Orchestration.
+        Verifies that a StencilBlock can be processed for the Predictor Pass.
+        """
+        NX, NY, NZ = 4, 4, 4
+        
+        # 1. Setup Context (Needed for Step 3's physics parameters)
+        input_dummy = create_validated_input(nx=NX, ny=NY, nz=NZ)
+        config_obj = SolverConfig(**MOCK_CONFIG)
+        context = SimulationContext(input_data=input_dummy, config=config_obj)
+        
+        # 2. Setup Dummies
+        step2_state_dummy = make_step2_output_dummy(nx=NX, ny=NY, nz=NZ)
+        expected_block_dummy = make_step3_output_dummy() # Usually represents one block
+        
+        # 3. Target a single block from the Step 2 Stencil Matrix
+        # Step 3 operates on blocks, so we test the first one in the list
+        sample_block = step2_state_dummy.stencil_matrix[0]
+        
+        # 4. Execute Step 3 Orchestrator (Predictor Pass / is_first_pass=True)
+        # Based on main_solver.py: orchestrate_step3(block, context, is_first_pass)
+        actual_block, delta = orchestrate_step3(
+            block=sample_block, 
+            context=context, 
+            is_first_pass=True
+        )
+        
+        print(f"\n" + "-"*30)
+        print(f"AUDIT: Step 2 -> Step 3 Block Integrity")
+        print(f"Initial Convergence Delta: {delta}")
+        
+        # 5. Structural Assertion
+        # Verify the block returned from Step 3 matches the Step 3 Dummy structure
+        assert_structural_parity(actual_block.to_dict(), expected_block_dummy.to_dict())
+        
+        print("✅ Step 3 Structural Parity Secured (Predictor Pass)")
