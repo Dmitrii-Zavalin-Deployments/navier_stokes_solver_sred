@@ -1,6 +1,5 @@
 # tests/property_integrity/test_vertical_inheritance.py
 
-import pytest
 
 # Core Logic
 from src.common.simulation_context import SimulationContext
