@@ -1,11 +1,9 @@
 # tests/property_integrity/test_vertical_inheritance.py
 
-import pytest
-import json
 
 # Core Logic
-from src.step1.orchestrate_step1 import orchestrate_step1
 from src.common.simulation_context import SimulationContext
+from src.step1.orchestrate_step1 import orchestrate_step1
 
 # Factory Functions (The "Recipes")
 from tests.helpers.solver_input_schema_dummy import create_validated_input
