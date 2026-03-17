@@ -43,13 +43,13 @@ def test_mask_mapping_integrity_roundtrip():
         for j in range(ny):
             for k in range(nz):
                 # Calculate flat index in the buffered system
-                buf_idx = get_flat_index(i, j, k, buf_nx, buf_ny, offset=1)
+                buf_idx = get_flat_index(i + 1, j + 1, k + 1, buf_nx, buf_ny)
                 foundation_buffer[buf_idx] = mask_3d[i, j, k]
 
     # 4. Assert: Verify the "Round Trip" identity
     for (i, j, k) in test_coords:
         # Find index in buffered array
-        idx_in_buffer = get_flat_index(i, j, k, buf_nx, buf_ny, offset=1)
+        idx_in_buffer = get_flat_index(i + 1, j + 1, k + 1, buf_nx, buf_ny)
         
         # Verify value matches the original mask_3d
         assert foundation_buffer[idx_in_buffer] == mask_3d[i, j, k], \
