@@ -7,12 +7,14 @@ from src.common.solver_config import SolverConfig
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
+from src.step4.orchestrate_step4 import orchestrate_step4
 
 # Factory Functions (The "Recipes")
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 
 # Mock Config Data (Rule 5: Explicit numerical settings)
 MOCK_CONFIG = {
