@@ -87,8 +87,8 @@ jobs:
           # "
 
           # Run the test suite
-          pytest -s tests/ -vv --cov=src --cov-report=term-missing
-          # pytest -s tests/step2/test_factory.py::test_factory_mask_alignment_drift_simulation -vv
+          # pytest -s tests/ -vv --cov=src --cov-report=term-missing
+          pytest -s tests/property_integrity/test_grid_mapping_integrity.py::test_mask_mapping_integrity_roundtrip -vv
           
       - name: 📊 Audit Performance & Update Ledger
         if: always()
