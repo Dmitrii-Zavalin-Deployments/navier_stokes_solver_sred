@@ -137,7 +137,7 @@ class TestVerticalIntegrity:
         
         print("✅ Step 3 Structural Parity Secured (Predictor Pass)")
 
-def test_step3_to_step4_pipeline(self):
+    def test_step3_to_step4_pipeline(self):
         """
         Phase 4: Validates Step 3 -> Step 4 Orchestration (Boundary Enforcement).
         Ensures the micro-level StencilBlock maintains schema parity after 
