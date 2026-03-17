@@ -32,5 +32,5 @@ class TestVerticalIntegrity:
         print(f"Expected Iteration: {expected_state.iteration}")
         
         # 5. The "Full-Tree" Parity Check
-        # Using to_dict() for a quick high-level deep comparison
+        # Using to_dict() for a quick high-level deep comparison.
         assert actual_state.to_dict() == expected_state.to_dict()
