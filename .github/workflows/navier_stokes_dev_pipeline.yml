@@ -70,25 +70,25 @@ jobs:
 
       - name: 🧪 Run Logic & Scientific Verification
         run: |
-          # Pre-flight check: Verify buffer geometry against expectation
-          # 1. Compare the index calculation for (0,0,0) between the two stride systems
-          python3 -c "
-          from src.common.grid_math import get_flat_index
-          nx = 4; ny = 4
+          # # Pre-flight check: Verify buffer geometry against expectation
+          # # 1. Compare the index calculation for (0,0,0) between the two stride systems
+          # python3 -c "
+          # from src.common.grid_math import get_flat_index
+          # nx = 4; ny = 4
 
-          # What the Registry/Factory uses:
-          idx_registry = get_flat_index(0+1, 0+1, 0+1, nx+2, ny+2)
+          # # What the Registry/Factory uses:
+          # idx_registry = get_flat_index(0+1, 0+1, 0+1, nx+2, ny+2)
 
-          # What the Buffer was actually allocated with (per dummy helper):
-          idx_buffer   = get_flat_index(0+1, 0+1, 0+1, nx+4, ny+4)
+          # # What the Buffer was actually allocated with (per dummy helper):
+          # idx_buffer   = get_flat_index(0+1, 0+1, 0+1, nx+4, ny+4)
 
-          print(f'Registry Index (Stride 6): {idx_registry}')
-          print(f'Buffer Index   (Stride 8): {idx_buffer}')
-          "
+          # print(f'Registry Index (Stride 6): {idx_registry}')
+          # print(f'Buffer Index   (Stride 8): {idx_buffer}')
+          # "
 
           # Run the test suite
           # pytest -s tests/ -vv --cov=src --cov-report=term-missing
-          pytest -s tests/step2/factory.py::test_factory_internal_obstacle_sync -vv
+          pytest -s tests/step2/factory.py:: -vv
           
       - name: 📊 Audit Performance & Update Ledger
         if: always()
