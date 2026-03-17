@@ -57,7 +57,8 @@ def test_mask_mapping_integrity_roundtrip():
             
         # Verify inverse math returns the original interior coordinate
         # Note: We pass offset=1 because the buffer has ghosts
-        coords_back = get_coords_from_index(idx_in_buffer, buf_nx, buf_ny, offset=1)
+        abs_i, abs_j, abs_k = get_coords_from_index(idx_in_buffer, buf_nx, buf_ny)
+        coords_back = (abs_i - 1, abs_j - 1, abs_k - 1)
         assert coords_back == (i, j, k), f"Coordinate drift at {i,j,k}"
 
     print("\n✅ Integrity Check: Mapping passed all round-trip validations.")
