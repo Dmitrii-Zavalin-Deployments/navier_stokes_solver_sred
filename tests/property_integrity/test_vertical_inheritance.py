@@ -146,21 +146,17 @@ class TestVerticalIntegrity:
         NX, NY, NZ = 4, 4, 4
         
         # 1. Setup Context (Rule 4: SSoT)
-        # We need the full context to provide the BC definitions and domain type
         input_dummy = create_validated_input(nx=NX, ny=NY, nz=NZ)
         config_obj = SolverConfig(**MOCK_CONFIG)
         context = SimulationContext(input_data=input_dummy, config=config_obj)
         
         # 2. Assemble State up to Step 2
-        # This gives us the live 'grid' and 'boundary_conditions' manager objects
         state = orchestrate_step2(orchestrate_step1(context))
         
         # 3. Target: Select the first StencilBlock
-        # In the real solver, this happens inside the 'for block in state.stencil_matrix' loop
         sample_block = state.stencil_matrix[0]
         
         # 4. EXECUTE: Step 4 Orchestrator
-        # This triggers the Dispatcher and Applier logic (Rule 9: In-place mutation)
         actual_block = orchestrate_step4(
             block=sample_block,
             context=context,
@@ -174,15 +170,21 @@ class TestVerticalIntegrity:
         
         expected_block_dummy = make_step4_output_dummy(nx=NX, ny=NY, nz=NZ, block_index=0)
         
-        # Verification: Both should be StencilBlock dictionaries with identical keys/slots
-        # Convert both to dicts, then manually ensure the nested 'center' is also a dict
+        # Convert actual results to dict (standard serialization)
         actual_dict = actual_block.to_dict()
+        
+        # Prepare the expected dict and force recursion for all neighbor cells
+        # This prevents "SimpleCellMock vs dict" type mismatches
         expected_dict = expected_block_dummy.to_dict()
+        cell_keys = ['center', 'i_minus', 'i_plus', 'j_minus', 'j_plus', 'k_minus', 'k_plus']
+        
+        for key in cell_keys:
+            if key in expected_dict:
+                cell_obj = getattr(expected_block_dummy, key)
+                if hasattr(cell_obj, 'to_dict'):
+                    expected_dict[key] = cell_obj.to_dict()
 
-        # If the mock didn't self-serialize, force it now
-        if not isinstance(expected_dict['center'], dict):
-            expected_dict['center'] = expected_block_dummy.center.to_dict()
-
+        # Final structural validation
         assert_structural_parity(actual_dict, expected_dict)
         
         print("✅ Step 4 Structural Parity Secured")
