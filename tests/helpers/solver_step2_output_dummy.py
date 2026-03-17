@@ -14,6 +14,7 @@ from src.common.stencil_block import StencilBlock
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 
 
+# Around line 17 in tests/helpers/solver_step2_output_dummy.py
 class SimpleCellMock:
     """
     Lightweight Mock Cell that mimics the pointer-behavior of the real Cell class.
@@ -22,12 +23,14 @@ class SimpleCellMock:
     - Rule 0: __slots__ mandatory for memory footprint parity.
     - Rule 9: Hybrid Memory Foundation (Pointer-to-Buffer).
     """
-    __slots__ = ['index', 'is_ghost', 'fields_buffer']
+    __slots__ = ['index', 'is_ghost', 'fields_buffer', 'nx_buf', 'ny_buf']
 
-    def __init__(self, index, is_ghost, fields_buffer):
+    def __init__(self, index, is_ghost, fields_buffer, nx_buf=6, ny_buf=6):
         self.index = index
         self.is_ghost = is_ghost
         self.fields_buffer = fields_buffer
+        self.nx_buf = nx_buf
+        self.ny_buf = ny_buf
 
     def set_field(self, field_idx, value): 
         self.fields_buffer[self.index, field_idx] = value 
@@ -60,11 +63,12 @@ class SimpleCellMock:
     def mask(self, val): self.fields_buffer[self.index, FI.MASK] = val
 
     def to_dict(self):
-        """Converts the mock to a dict to match the real Cell.to_dict() behavior."""
         return {
             "index": self.index,
             "is_ghost": self.is_ghost,
-            "fields_buffer": self.fields_buffer.tolist() # Rule 9: Ensure serializable
+            "fields_buffer": self.fields_buffer.tolist(),
+            "nx_buf": self.nx_buf,
+            "ny_buf": self.ny_buf
         }
 
 def make_step2_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):

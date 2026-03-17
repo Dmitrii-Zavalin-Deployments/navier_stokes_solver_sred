@@ -70,21 +70,8 @@ jobs:
 
       - name: 🧪 Run Logic & Scientific Verification
         run: |
-          # # Pre-flight check: Verify buffer geometry against expectation
-          # # 1. Compare the index calculation for (0,0,0) between the two stride systems
-          # python3 -c "
-          # from src.common.grid_math import get_flat_index
-          # nx = 4; ny = 4
-
-          # # What the Registry/Factory uses:
-          # idx_registry = get_flat_index(0+1, 0+1, 0+1, nx+2, ny+2)
-
-          # # What the Buffer was actually allocated with (per dummy helper):
-          # idx_buffer   = get_flat_index(0+1, 0+1, 0+1, nx+4, ny+4)
-
-          # print(f'Registry Index (Stride 6): {idx_registry}')
-          # print(f'Buffer Index   (Stride 8): {idx_buffer}')
-          # "
+          # Pre-flight check: Verify buffer geometry against expectation
+          python3 -c "from tests.helpers.solver_step2_output_dummy import SimpleCellMock; import numpy as np; m = SimpleCellMock(0, False, np.zeros((1,5))); print('Has __dict__:', hasattr(m, '__dict__'))"
 
           # Run the test suite
           # pytest -s tests/ -vv --cov=src --cov-report=term-missing
