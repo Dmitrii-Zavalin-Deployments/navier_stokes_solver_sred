@@ -175,6 +175,14 @@ class TestVerticalIntegrity:
         expected_block_dummy = make_step4_output_dummy(nx=NX, ny=NY, nz=NZ, block_index=0)
         
         # Verification: Both should be StencilBlock dictionaries with identical keys/slots
-        assert_structural_parity(actual_block.to_dict(), expected_block_dummy.to_dict())
+        # Convert both to dicts, then manually ensure the nested 'center' is also a dict
+        actual_dict = actual_block.to_dict()
+        expected_dict = expected_block_dummy.to_dict()
+
+        # If the mock didn't self-serialize, force it now
+        if not isinstance(expected_dict['center'], dict):
+            expected_dict['center'] = expected_block_dummy.center.to_dict()
+
+        assert_structural_parity(actual_dict, expected_dict)
         
         print("✅ Step 4 Structural Parity Secured")
