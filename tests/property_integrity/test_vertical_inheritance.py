@@ -188,3 +188,53 @@ class TestVerticalIntegrity:
         assert_structural_parity(actual_dict, expected_dict)
         
         print("✅ Step 4 Structural Parity Secured")
+    
+    def test_step4_to_step5_pipeline(self):
+        """
+        Phase 5: Validates Step 4 -> Step 5 Orchestration (State Integration).
+        Ensures that after Math (Step 3) and Boundaries (Step 4), 
+        Step 5 can correctly consolidate the StencilMatrix back into Global Fields.
+        """
+        from src.step5.orchestrate_step5 import orchestrate_step5
+        from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
+
+        NX, NY, NZ = 4, 4, 4
+        
+        # 1. Setup Context & Base State
+        input_dummy = create_validated_input(nx=NX, ny=NY, nz=NZ)
+        config_obj = SolverConfig(**MOCK_CONFIG)
+        context = SimulationContext(input_data=input_dummy, config=config_obj)
+        
+        # Assemble via Step 1 & 2
+        state = orchestrate_step2(orchestrate_step1(context))
+        
+        # 2. SIMULATE ONE TIME-LOOP ITERATION (Rule 9: In-place mutation)
+        # We process the entire matrix through Step 3 AND Step 4
+        for block in state.stencil_matrix:
+            # A. Predictor Pass (Step 3)
+            block, _ = orchestrate_step3(block, context=context, is_first_pass=True)
+            
+            # B. Boundary Enforcement (Step 4)
+            orchestrate_step4(
+                block=block, 
+                context=context, 
+                state_grid=state.grid, 
+                state_bc_manager=state.boundary_conditions
+            )
+        
+        # 3. EXECUTE: Step 5 (Global Integration)
+        # Step 5 takes the mutated state and updates the global field buffers
+        actual_final_state = orchestrate_step5(state, context)
+        
+        # 4. AUDIT
+        print(f"\n" + "-"*30)
+        print(f"AUDIT: Step 4 -> Step 5 (Global Integration Integrity)")
+        
+        expected_state_dummy = make_step5_output_dummy(nx=NX, ny=NY, nz=NZ)
+        
+        assert_structural_parity(
+            actual_final_state.to_dict(), 
+            expected_state_dummy.to_dict()
+        )
+        
+        print("✅ Step 5 Structural Parity Secured")

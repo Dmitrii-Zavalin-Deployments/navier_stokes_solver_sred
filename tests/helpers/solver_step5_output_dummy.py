@@ -1,30 +1,61 @@
 # tests/helpers/solver_step5_output_dummy.py
 
-from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
-
+from src.common.solver_config import SolverConfig
+from src.common.simulation_context import SimulationContext
+from src.common.field_schema import FI
+from src.step1.orchestrate_step1 import orchestrate_step1
+from src.step2.orchestrate_step2 import orchestrate_step2
+from tests.helpers.solver_input_schema_dummy import create_validated_input
 
 def make_step5_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
     """
-    Returns a 'frozen' prototype representing the system state after 
-    at least one iteration of the Step 5 archival process.
+    Returns a 'frozen' prototype representing the global system state 
+    after Step 3 (Math) and Step 4 (Boundaries) have mutated the memory.
     """
-    # 1. Hydrate foundation
-    state = make_step4_output_dummy(nx=nx, ny=ny, nz=nz)
+    # 1. Reconstruct global foundation
+    MOCK_CONFIG = {
+        "ppe_tolerance": 1e-6,
+        "ppe_atol": 1e-10,
+        "ppe_max_iter": 1000,
+        "ppe_omega": 1.5
+    }
     
-    # 2. Set Iteration/Time context
+    input_dummy = create_validated_input(nx=nx, ny=ny, nz=nz)
+    config_obj = SolverConfig(**MOCK_CONFIG)
+    context = SimulationContext(input_data=input_dummy, config=config_obj)
+    
+    # Assembly via Step 1 & 2 (Allocates the Hybrid Memory Foundation)
+    state = orchestrate_step2(orchestrate_step1(context))
+    
+    # 2. Populate Foundation (Rule 9: Hybrid Memory Foundation)
+    # This mimics the outcome of Step 3 + Step 4 loop
+    data = state.fields.data
+    
+    # Set Primary Velocities (Result of Step 4 boundary enforcement)
+    data[:, FI.VX] = 0.5
+    data[:, FI.VY] = 0.5
+    data[:, FI.VZ] = 0.5
+    
+    # Set Intermediate Velocities (Predictor results from Step 3)
+    data[:, FI.VX_STAR] = 0.51
+    data[:, FI.VY_STAR] = 0.51
+    data[:, FI.VZ_STAR] = 0.51
+    
+    # Set Pressure Fields (Post-PPE synchronization)
+    data[:, FI.P] = 0.01
+    data[:, FI.P_NEXT] = 0.01
+
+    # 3. Set Iteration/Time context
     state.iteration = 1
-    state.time = 0.01 
+    state.time = input_dummy.simulation_parameters.time_step 
     
-    # 3. Manifest Integrity (Correctly appending to mimic main_solver loop)
+    # 4. Manifest Integrity (Archival State)
     if not hasattr(state, 'manifest'):
-        raise RuntimeError("CRITICAL: Manifest container missing from state.")
+        class ManifestDummy: pass
+        state.manifest = ManifestDummy()
     
-    # Ensure initialized as an empty list if not already
-    if not hasattr(state.manifest, 'saved_snapshots'):
-        state.manifest.saved_snapshots = []
-        
-    # Use append to reflect the actual iterative history build-up
-    state.manifest.saved_snapshots.append("output/snapshot_0000.h5")
+    state.manifest.saved_snapshots = ["output/snapshot_0000.h5"]
     state.manifest.output_directory = "output/"
+    state.ready_for_time_loop = True
     
     return state
