@@ -2,11 +2,10 @@
 
 import json
 import os
-import zipfile
-from pathlib import Path
 import shutil
-import src.main_solver
+from pathlib import Path
 
+import src.main_solver
 from src.main_solver import run_solver
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 
