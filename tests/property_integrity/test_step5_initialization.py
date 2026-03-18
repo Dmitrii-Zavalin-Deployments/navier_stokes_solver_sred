@@ -81,3 +81,37 @@ class TestStep5Initialization:
         state.iteration = 10
         orchestrate_step5(state, context)
         assert any("snapshot_0010.h5" in s for s in state.manifest.saved_snapshots), "Missing snapshot in manifest."
+    
+    # --- TRANSITION & TERMINAL STATE CHECKS ---
+
+    def test_bridge_step5_to_output_integrity(self):
+        """
+        Rule 9: Continuity Check.
+        Verifies consistency between math-validated state (Step 5) and terminal state.
+        """
+        nx, ny, nz = 4, 4, 4
+        intermediate_state = make_step5_output_dummy(nx=nx, ny=ny, nz=nz)
+        terminal_state = make_output_schema_dummy(nx=nx, ny=ny, nz=nz)
+
+        # 1. Physical Field Continuity
+        assert (intermediate_state.fields.data == terminal_state.fields.data).all(), \
+            "Data corruption: Terminal fields drifted from Step 5."
+
+        # 2. Manifest Evolution
+        assert len(terminal_state.manifest.saved_snapshots) >= len(intermediate_state.manifest.saved_snapshots), \
+            "Terminal manifest lost snapshot records."
+        
+        # 3. Path Rooting Safety
+        root = terminal_state.manifest.output_directory
+        for path in terminal_state.manifest.saved_snapshots:
+            assert path.startswith(root), f"Path {path} escaped output root {root}"
+
+    def test_final_state_exit_contract(self):
+        """Verify the state correctly recognizes when the simulation is finished."""
+        target = 1.0
+        state = make_output_schema_dummy(nx=4, ny=4, nz=4)
+        state._simulation_parameters.total_time = target
+        state._time = target 
+        
+        assert state._time >= state._simulation_parameters.total_time
+        assert state._ready_for_time_loop is False, "Final state failed to lock 'ready_for_time_loop' to False."

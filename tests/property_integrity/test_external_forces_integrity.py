@@ -9,61 +9,59 @@ from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
 
-# Per Property Tracking Matrix: External forces are the primary accelerative 
-# source term. Integrity must hold through to the final output.
-FORCE_ACTIVE_STAGES = [
+# Consolidated tracking matrix for all stages
+ALL_STAGES = [
+    ("Step 1", make_step1_output_dummy),
     ("Step 3", make_step3_output_dummy),
     ("Step 4", make_step4_output_dummy),
     ("Step 5", make_step5_output_dummy),
     ("Final Output", make_output_schema_dummy),
 ]
 
-def test_external_force_vector_presence_and_dimension():
+def get_force_vector(obj):
     """
-    Physics: Ensure external forces are defined as a 3D vector.
+    Architecture Bridge: Extracts the force vector regardless of whether 
+    the object is a SolverState (manager-based) or StencilBlock (scalar-based).
     """
-    state = make_step3_output_dummy()
-    
-    # Structural check for existence in the force manager
-    assert hasattr(state, "external_forces"), "Step 3: external_forces department missing"
-    
-    # Type and dimension validation
-    force_vector = state.external_forces.force_vector
-    assert isinstance(force_vector, np.ndarray), "Force vector must be a NumPy array"
-    assert force_vector.shape == (3,), "External force must be a 3D vector [x, y, z]"
+    if hasattr(obj, "external_forces"):
+        return obj.external_forces.force_vector
+    # Fallback for StencilBlocks which often store gx, gy, gz directly
+    if hasattr(obj, "_gx"):
+        return np.array([obj._gx, obj._gy, obj._gz])
+    return None
 
-@pytest.mark.parametrize("stage_name, factory", FORCE_ACTIVE_STAGES)
-def test_force_term_persistence(stage_name, factory):
+@pytest.mark.parametrize("stage_name, factory", ALL_STAGES)
+def test_external_force_integrity_and_persistence(stage_name, factory):
     """
-    Integrity: Verify force terms are present in the ExternalForceManager across all stages.
+    Physics & Integrity: Verifies force vector existence, dimensions, 
+    and numeric validity (no NaN/Inf) across the entire lifecycle.
     """
     state = factory()
+    force_vector = get_force_vector(state)
     
-    # Strict container access per Rule 4 (SSoT)
-    assert hasattr(state, "external_forces"), f"{stage_name}: ExternalForceManager missing"
-    assert state.external_forces.force_vector is not None, \
-        f"{stage_name}: Force vector record is None"
-
-def test_force_vector_magnitude_validity():
-    """
-    Physics Check: Ensure the force vector has been initialized with valid values.
-    """
-    state = make_step3_output_dummy()
-    force_vector = state.external_forces.force_vector
+    # 1. Existence Check
+    assert force_vector is not None, f"{stage_name}: External force data missing from object."
     
-    # Scientific integrity: Validate against non-finite values to prevent propagation
-    assert not np.any(np.isnan(force_vector)), "Force vector contains NaN values"
-    assert not np.any(np.isinf(force_vector)), "Force vector contains Inf values"
+    # 2. Structural/Dimension Check
+    assert isinstance(force_vector, np.ndarray), f"{stage_name}: Force must be a NumPy array."
+    assert force_vector.shape == (3,), f"{stage_name}: Force must be a 3D vector [x, y, z]."
+    
+    # 3. Scientific Validity Check (Preventing Divergence)
+    assert not np.any(np.isnan(force_vector)), f"{stage_name}: Force vector contains NaN."
+    assert not np.any(np.isinf(force_vector)), f"{stage_name}: Force vector contains Inf."
 
 def test_external_forces_immutability_logic():
     """
-    Theory: Ensure the force vector does not change value from start to finish.
+    Theory: Ensure the force vector (e.g., Gravity) remains constant 
+    and does not diverge or mutate between initialization and final output.
     """
     s1 = make_step1_output_dummy()
     s_final = make_output_schema_dummy()
     
+    v1 = get_force_vector(s1)
+    v_final = get_force_vector(s_final)
+    
     np.testing.assert_array_equal(
-        s1.external_forces.force_vector, 
-        s_final.external_forces.force_vector,
-        err_msg="External forces diverged between Step 1 and Final Output."
+        v1, v_final,
+        err_msg="External forces mutated/diverged between Step 1 and Final Output."
     )
