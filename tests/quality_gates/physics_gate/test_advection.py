@@ -1,13 +1,15 @@
 # tests/quality_gates/physics_gate/test_advection.py
 
 import copy
+
 from src.common.field_schema import FI
 from src.step3.ops.advection import (
     compute_local_advection,
     compute_local_advection_vector,
 )
-from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step2_output_dummy import SimpleCellMock
+from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+
 
 # --- RULE 9 BRIDGE: Monkeypatch missing interface into Mock ---
 def get_field(self, field_idx):
