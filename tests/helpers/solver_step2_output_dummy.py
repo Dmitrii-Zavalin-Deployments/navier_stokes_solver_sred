@@ -96,23 +96,22 @@ def make_step2_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
     
     state.stencil_matrix = []
     # Rule 7.2: 4x4x4 core maps to 6x6x6 memory structure
-    nx_buf, ny_buf, nz_buf = nx + 2, ny + 2, nz + 2
+    # nz_buf is unused in index calculation but defined for architectural clarity
+    nx_buf, ny_buf, _ = nx + 2, ny + 2, nz + 2
     buffer = state.fields.data
     
     def get_idx(i, j, k):
+        # Flattening logic: i + (j * width) + (k * width * height)
         return i + nx_buf * (j + ny_buf * k)
 
-    # We iterate ONLY over the CORE cells (Memory Indices 1 to nx)
-    # This aligns with Rule 7.3: Memory Index 1 is Coordinate 0.
+    # Core loop: Memory Indices 1 to nx
     for k in range(1, nz + 1):
         for j in range(1, ny + 1):
             for i in range(1, nx + 1):
                 
-                # Center is always a Core cell in this loop
                 cell_c = SimpleCellMock(get_idx(i, j, k), False, buffer)
                 
-                # Neighbors pull from the Unified Foundation
-                # If i-1 == 0, it correctly hits the Ghost at Coordinate -1
+                # Neighbors pull from the Unified Foundation (Ghosts at 0 and n+1)
                 cell_im = SimpleCellMock(get_idx(i-1, j, k), (i-1 == 0), buffer)
                 cell_ip = SimpleCellMock(get_idx(i+1, j, k), (i+1 == nx+1), buffer)
                 
