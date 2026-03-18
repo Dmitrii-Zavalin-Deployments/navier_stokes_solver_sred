@@ -73,7 +73,7 @@ jobs:
       - name: 🧪 Run Logic & Scientific Verification
         run: |
           # Structural Audit (Rule 4 Compliance)
-          echo "--- [DEBUG] Current Directory ---"
+          echo "--- [DEBUG] Python test ---"
           python3 -c "from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy; \
           from src.step3.ops.gradient import compute_local_gradient_p; \
           from src.common.field_schema import FI; \
@@ -83,9 +83,22 @@ jobs:
           object.__setattr__(block, '_dx', 1.0); \
           print(f'Calculated Gradient: {compute_local_gradient_p(block, FI.P_NEXT)}')"
 
+          python3 -c "from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy; \
+          from src.step3.corrector import apply_local_velocity_correction; \
+          from src.common.field_schema import FI; \
+          block = make_step3_output_dummy(); \
+          block.center.fields_buffer.fill(0.0); \
+          object.__setattr__(block, '_dt', 0.1); \
+          object.__setattr__(block, '_rho', 1.0); \
+          object.__setattr__(block, '_dx', 1.0); \
+          block.center.set_field(FI.VX_STAR, 1.0); \
+          block.i_plus.set_field(FI.P_NEXT, 2.0); \
+          apply_local_velocity_correction(block); \
+          print(f'Final VX: {block.center.get_field(FI.VX)}')"
+
           # Run the test suite
-          pytest -s tests/ -vv --cov=src --cov-report=term-missing
-          # pytest -s tests/quality_gates/physics_gate/test_corrector.py -vv
+          # pytest -s tests/ -vv --cov=src --cov-report=term-missing
+          pytest -s tests/quality_gates/physics_gate/test_corrector.py -vv
 
       - name: 📊 Audit Performance & Update Ledger
         if: always()
