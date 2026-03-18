@@ -1,11 +1,12 @@
 # tests/quality_gates/physics_gate/test_divergence.py
 
-import pytest
 import copy
+
 from src.common.field_schema import FI
 from src.step3.ops.divergence import compute_local_divergence_v_star
 from tests.helpers.solver_step2_output_dummy import SimpleCellMock
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+
 
 # --- RULE 9 BRIDGE: Alignment with existing Advection Test Pattern ---
 def get_field(self, field_idx):
