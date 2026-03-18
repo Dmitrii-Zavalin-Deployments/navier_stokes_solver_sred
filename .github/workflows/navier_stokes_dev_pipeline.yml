@@ -102,6 +102,14 @@ jobs:
           print(f'I+ Index: {b.i_plus.index}'); \
           print(f'I- Index: {b.i_minus.index}')"
 
+          python3 -c "from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy; \
+          from src.common.field_schema import FI; \
+          b = make_step3_output_dummy(); \
+          b.i_plus.index = 11; b.center.index = 10; \
+          b.i_plus.set_field(FI.P_NEXT, 2.0); \
+          print(f'I+ Value: {b.i_plus.get_field(FI.P_NEXT)}'); \
+          print(f'Buffer raw at index 11: {b.center.fields_buffer[11, FI.P_NEXT]}')"
+
           # Run the test suite
           # pytest -s tests/ -vv --cov=src --cov-report=term-missing
           pytest -s tests/quality_gates/physics_gate/test_corrector.py -vv
