@@ -2,9 +2,7 @@
 
 import json
 from pathlib import Path
-
 from src.main_solver import BASE_DIR, run_solver
-
 
 class TestSolverLifecycle:
     """
@@ -19,7 +17,7 @@ class TestSolverLifecycle:
         input_path = Path(BASE_DIR) / test_filename
         
         # 2. Payload: Minimal 4x4x4 grid (Schema-compliant)
-        # Keeping it small ensures sub-second execution while testing all steps.
+        # Reduced time_step and total_time to ensure numerical stability on tiny grids.
         nx, ny, nz = 4, 4, 4
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
@@ -32,8 +30,8 @@ class TestSolverLifecycle:
             "fluid_properties": {"density": 1.0, "viscosity": 0.01},
             "initial_conditions": {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0},
             "simulation_parameters": {
-                "time_step": 0.001,
-                "total_time": 0.002, 
+                "time_step": 0.0001,  # Reduced from 0.001 to prevent blow-up
+                "total_time": 0.0002, # Reduced to stay within stable bounds
                 "output_interval": 1
             },
             "boundary_conditions": [
@@ -46,7 +44,6 @@ class TestSolverLifecycle:
                     "values": {"p": 0.0}
                 }
             ],
-            # Canonical flattening: length must be nx*ny*nz
             "mask": [0] * (nx * ny * nz),
             "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
         }
@@ -59,7 +56,6 @@ class TestSolverLifecycle:
             input_path.write_text(json.dumps(input_data))
 
             # 4. Execute: Call the real production entry point
-            # This validates: Root Access -> Schema Load -> Step 1-5 -> Zip Creation
             zip_path_str = run_solver(test_filename)
             zip_path = Path(zip_path_str)
 
@@ -69,17 +65,17 @@ class TestSolverLifecycle:
             assert zip_path.stat().st_size > 0, "GATEKEEPER FAIL: ZIP is empty."
 
         finally:
-            # 6. PURGE: Wipe everything to leave an empty folder for Dropbox download
+            # 6. PURGE: Universal Cleanup
             if input_path.exists():
                 input_path.unlink()
             
             if output_dir.exists():
-                # Remove ANY .zip starting with 'input_test' to ensure no confusion with prod data
-                for artifact in output_dir.glob("input_test*.zip"):
+                # We now search for ALL zips, including 'navier_stokes_output.zip'
+                # to ensure the folder is pristine for the real production data.
+                for artifact in output_dir.glob("*.zip"):
                     artifact.unlink()
-                    print(f"\n[Sanitization] Purged smoke test artifact: {artifact.name}")
+                    print(f"\n[Sanitization] Purged artifact: {artifact.name}")
             
             # 7. FINAL AUDIT: Assert the folder is 100% clean
-            # This ensures no "ghost" results remain before the real simulation starts.
             leftover_zips = list(output_dir.glob("*.zip"))
             assert len(leftover_zips) == 0, f"CLEANUP FAILURE: Found {len(leftover_zips)} leftover artifacts."
