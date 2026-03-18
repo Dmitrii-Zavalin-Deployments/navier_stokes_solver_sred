@@ -1,13 +1,20 @@
-# tests/ quality_gates/physics_gate/test_advection.py
+# tests/quality_gates/physics_gate/test_advection.py
 
 import copy
-
 from src.common.field_schema import FI
 from src.step3.ops.advection import (
     compute_local_advection,
     compute_local_advection_vector,
 )
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+from tests.helpers.solver_step2_output_dummy import SimpleCellMock
+
+# --- RULE 9 BRIDGE: Monkeypatch missing interface into Mock ---
+def get_field(self, field_idx):
+    """Bypasses missing get_field in SimpleCellMock to satisfy physics operators."""
+    return self.fields_buffer[self.index, field_idx]
+
+SimpleCellMock.get_field = get_field
 
 
 def setup_stencil_data(block):
@@ -16,6 +23,7 @@ def setup_stencil_data(block):
     and mathematically distinct for finite difference testing.
     """
     def force_set(obj, attr, val):
+        # Targets protected slots in ValidatedContainer
         object.__setattr__(obj, f"_{attr}", val)
 
     # 1. Clone cells and force-set them into StencilBlock slots (bypass read-only properties)
@@ -37,10 +45,11 @@ def setup_stencil_data(block):
     
     return block
 
+
 def set_linear_field(block, velocity_vec, scalar_func):
     """
     Helper to apply analytical fields to the stencil without needing cell.i/j/k properties.
-    scalar_func takes (relative_i, relative_j, relative_k)
+    scalar_func takes (relative_i, relative_j, relative_k).
     """
     # Mapping of cells to their relative logical coordinates for this test
     layout = {
@@ -56,10 +65,11 @@ def set_linear_field(block, velocity_vec, scalar_func):
         cell.set_field(FI.VZ, velocity_vec[2])
         # Apply the scalar field (e.g., P = i + j + k)
         cell.set_field(FI.P, float(scalar_func(i, j, k)))
-        # For vector advection tests
+        # For vector advection tests (Rule 9 pointers)
         cell.set_field(FI.VX_STAR, float(i)) 
         cell.set_field(FI.VY_STAR, 0.0)
         cell.set_field(FI.VZ_STAR, 0.0)
+
 
 # --- Scenario 1: Null Field (The Zero-Gate) ---
 def test_advection_zero_velocity():
@@ -70,6 +80,7 @@ def test_advection_zero_velocity():
     result = compute_local_advection(block, FI.P)
     assert result == 0.0
 
+
 # --- Scenario 2: Uniform Velocity & Linear Gradient ---
 def test_advection_linear_fidelity():
     block = setup_stencil_data(make_step3_output_dummy())
@@ -78,6 +89,7 @@ def test_advection_linear_fidelity():
     
     result = compute_local_advection(block, FI.P)
     assert abs(result - 3.0) < 1e-12
+
 
 # --- Scenario 3: Staggered Velocity Alignment (Vector Test) ---
 def test_advection_vector_component_isolation():
@@ -89,6 +101,7 @@ def test_advection_vector_component_isolation():
     assert adv_vec[0] == 2.0
     assert adv_vec[1] == 0.0
     assert adv_vec[2] == 0.0
+
 
 # --- Scenario 4: Edge Case - High Gradient Reversal ---
 def test_advection_opposite_directions():
