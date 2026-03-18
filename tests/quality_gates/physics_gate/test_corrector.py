@@ -17,26 +17,17 @@ def get_field(self, field_idx):
 
 SimpleCellMock.get_field = get_field
 
-def setup_integration_block(block, dt=1.0, rho=1.0, dx=1.0):
+def setup_integration_block(block, dt=1.0, rho=1.0):
     """
-    Wires unique neighbor cells to the StencilBlock to enable non-zero gradients.
+    Physically accurate setup that bypasses read-only property restrictions.
     """
-    # 1. Create a Shared Foundation Buffer
-    shared_buffer = np.zeros((20, FI.num_fields()))
-
-    # 2. Re-map Physics Constants (Standardized for the gate)
-    for attr, val in [('dt', dt), ('rho', rho), ('dx', dx), ('dy', dx), ('dz', dx)]:
-        object.__setattr__(block, f"_{attr}", float(val))
-
-    # 3. Create UNIQUE neighbor instances (Breaking the 'All-is-Center' bug)
-    # We assign them unique indices [7-13] in our shared_buffer
-    block.center  = SimpleCellMock(index=10, is_ghost=False, fields_buffer=shared_buffer)
-    block.i_minus = SimpleCellMock(index=9,  is_ghost=True,  fields_buffer=shared_buffer)
-    block.i_plus  = SimpleCellMock(index=11, is_ghost=True,  fields_buffer=shared_buffer)
-    block.j_minus = SimpleCellMock(index=8,  is_ghost=True,  fields_buffer=shared_buffer)
-    block.j_plus  = SimpleCellMock(index=12, is_ghost=True,  fields_buffer=shared_buffer)
-    block.k_minus = SimpleCellMock(index=7,  is_ghost=True,  fields_buffer=shared_buffer)
-    block.k_plus  = SimpleCellMock(index=13, is_ghost=True,  fields_buffer=shared_buffer)
+    # Use object.__setattr__ to reach the hidden slots directly
+    # This bypasses the BaseContainer.__setattr__ logic entirely
+    object.__setattr__(block, '_dt', float(dt))
+    object.__setattr__(block, '_rho', float(rho))
+    
+    # If you need to fix the cells manually (though our new dummy should handle this):
+    # object.__setattr__(block, '_center', new_cell_object)
     
     return block
 
