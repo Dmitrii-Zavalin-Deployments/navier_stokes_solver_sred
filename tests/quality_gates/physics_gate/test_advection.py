@@ -1,9 +1,8 @@
 # tests/ quality_gates/physics_gate/test_advection.py
 
-import pytest
-import numpy as np
 from src.common.field_schema import FI
-from src.step3.ops.advection import compute_local_advection, compute_local_advection_vector
+from src.step3.ops.advection import compute_local_advection
+
 
 # --- Scenario 1: Null Field (The Zero-Gate) ---
 def test_advection_zero_velocity(mock_stencil_block):
