@@ -2,9 +2,11 @@
 
 import jsonschema
 import pytest
+
 from src.step1.schema_utils import load_schema
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
+
 
 class TestSchemaContracts:
     """
