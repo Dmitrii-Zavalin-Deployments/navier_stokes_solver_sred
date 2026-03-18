@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import jsonschema
-import pytest
-from pathlib import Path
 import numpy as np
+import pytest
+
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
