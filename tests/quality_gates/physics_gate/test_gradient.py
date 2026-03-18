@@ -1,11 +1,14 @@
 # tests/quality_gates/physics_gate/test_gradient.py
 
-import pytest
 import copy
+
+import pytest
+
 from src.common.field_schema import FI
 from src.step3.ops.gradient import compute_local_gradient_p
 from tests.helpers.solver_step2_output_dummy import SimpleCellMock
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
+
 
 # --- RULE 9 BRIDGE: Alignment with existing Physics Gate Pattern ---
 def get_field(self, field_idx):
