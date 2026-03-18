@@ -1,6 +1,5 @@
 # tests/quality_gates/physics_gate/test_corrector.py
 
-import numpy as np
 import pytest
 
 from src.common.field_schema import FI
