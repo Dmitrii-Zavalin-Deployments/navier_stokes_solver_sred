@@ -31,9 +31,9 @@ def compute_local_advection(block: StencilBlock, field_id: FI) -> float:
     
     # 2. Compute cell-centered velocities
     # Accessing velocity Foundation buffers via FI schema constants
-    u_c = (block.i_plus.get_field(FI.VX) + block.i_minus.get_field(FI.VX)) / 2.0
-    v_c = (block.j_plus.get_field(FI.VY) + block.j_minus.get_field(FI.VY)) / 2.0
-    w_c = (block.k_plus.get_field(FI.VZ) + block.k_minus.get_field(FI.VZ)) / 2.0
+    u_c = block.center.get_field(FI.VX)
+    v_c = block.center.get_field(FI.VY)
+    w_c = block.center.get_field(FI.VZ)
     
     # 3. Assemble advection term: (v ⋅ ∇)f
     return u_c * df_dx + v_c * df_dy + w_c * df_dz
