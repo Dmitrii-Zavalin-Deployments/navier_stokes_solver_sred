@@ -5,7 +5,8 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-
+from pathlib import Path
+import numpy as np
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 
@@ -40,11 +41,30 @@ class TestSchemaContracts:
             pytest.fail(f"Input Contract Violation: {e.message}")
 
     def test_output_dummy_matches_schema(self):
+        # 1. Load the Output Schema
         schema = load_schema("solver_output_schema.json")
-        state = make_output_schema_dummy(nx=4, ny=4, nz=4)
-        payload = state.to_json_safe()
         
+        # 2. Generate the Output Dummy (SolverState)
+        state = make_output_schema_dummy(nx=4, ny=4, nz=4)
+        
+        # 3. Transform to dict using the correct method
+        payload = state.to_dict()
+        
+        # 4. MANUALLY SANITIZE NUMPY (Since to_json_safe is missing)
+        # We must convert any numpy arrays to lists for jsonschema to read them
+        def sanitize(obj):
+            if isinstance(obj, dict):
+                return {k: sanitize(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [sanitize(i) for i in obj]
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return obj
+
+        json_safe_payload = sanitize(payload)
+        
+        # 5. Validate Contract
         try:
-            jsonschema.validate(instance=payload, schema=schema)
+            jsonschema.validate(instance=json_safe_payload, schema=schema)
         except jsonschema.exceptions.ValidationError as e:
             pytest.fail(f"Output Contract Violation: {e.message}")
