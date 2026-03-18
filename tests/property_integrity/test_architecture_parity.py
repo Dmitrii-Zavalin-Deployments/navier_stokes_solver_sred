@@ -73,7 +73,7 @@ def test_block_allocation_integrity(stage_name, factory):
     (nx + 2) * (ny + 2) * (nz + 2)
     block = factory(nx=nx, ny=ny, nz=nz)
     
-    for attr in ["u", "v", "w", "p"]:
+    for attr in ["vx", "vy", "vz", "p"]:
         val = getattr(block.center, attr)
         assert val is not None, f"{stage_name}: {attr} size mismatch"
 

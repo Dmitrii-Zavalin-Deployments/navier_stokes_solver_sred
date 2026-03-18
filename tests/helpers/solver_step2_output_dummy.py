@@ -62,6 +62,13 @@ class SimpleCellMock:
     @mask.setter
     def mask(self, val): self.fields_buffer[self.index, FI.MASK] = val
 
+    @property
+    def vx_star(self): return self.get_field(FI.VX_STAR)
+    @property
+    def vy_star(self): return self.get_field(FI.VY_STAR)
+    @property
+    def vz_star(self): return self.get_field(FI.VZ_STAR)
+
     def to_dict(self):
         return {
             "index": self.index,
