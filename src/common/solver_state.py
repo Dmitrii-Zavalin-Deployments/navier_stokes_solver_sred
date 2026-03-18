@@ -473,5 +473,6 @@ class SolverState(ValidatedContainer):
             "simulation_parameters": self.simulation_parameters.to_dict(),
             "boundary_conditions": self.boundary_conditions.to_dict(),
             "mask": self.mask.to_dict(),
-            "external_forces": self.external_forces.to_dict()
+            "external_forces": self.external_forces.to_dict(),
+            "manifest": self.manifest.to_dict()
         }
