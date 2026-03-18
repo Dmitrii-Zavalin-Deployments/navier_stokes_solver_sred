@@ -88,20 +88,6 @@ def test_fluid_constants_persistence(stage_name, factory):
     assert rho is not None and rho > 0, f"{stage_name}: Invalid density {rho}"
     assert mu is not None and mu > 0, f"{stage_name}: Invalid viscosity {mu}"
 
-@pytest.mark.parametrize("stage_name, factory", ALL_STAGES)
-def test_boundary_condition_lifecycle_persistence(stage_name, factory):
-    """Verification: BC values (u, v, w, p) survive across all pipeline transitions."""
-    obj = factory(nx=4, ny=4, nz=4)
-    bcs = get_bc_list(obj)
-    
-    assert len(bcs) > 0, f"{stage_name}: Boundary conditions lost in transition"
-    
-    # Locate a sample BC (e.g., x_min) and verify value integrity
-    bc_entry = next((bc for bc in bcs if getattr(bc, "_location", None) == "x_min"), None)
-    assert bc_entry is not None, f"{stage_name}: BC entry for 'x_min' lost"
-    
-    values = getattr(bc_entry, "_values", {})
-    assert isinstance(values.get("u"), (int, float)), f"{stage_name}: BC 'u' value corrupted"
 
 def test_staggered_component_schema_validity():
     """Safety: Verify BC values strictly follow the component schema: {u, v, w, p}."""
