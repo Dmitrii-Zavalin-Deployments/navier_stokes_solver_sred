@@ -3,13 +3,12 @@
 import numpy as np
 import pytest
 
+# Importing StencilBlock to perform type checking for adaptive access
+from src.common.stencil_block import StencilBlock
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step3_output_dummy import make_step3_output_dummy
 from tests.helpers.solver_step4_output_dummy import make_step4_output_dummy
 from tests.helpers.solver_step5_output_dummy import make_step5_output_dummy
-
-# Importing StencilBlock to perform type checking for adaptive access
-from src.common.stencil_block import StencilBlock
 
 PHYSICS_ACTIVE_STAGES = [
     ("Step 3", make_step3_output_dummy),

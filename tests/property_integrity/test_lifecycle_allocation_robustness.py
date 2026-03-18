@@ -1,10 +1,8 @@
 # tests/property_integrity/test_lifecycle_allocation_robustness.py
 
 import pytest
-import numpy as np
 
 from src.common.field_schema import FI
-from src.common.stencil_block import StencilBlock
 from tests.helpers.solver_output_schema_dummy import make_output_schema_dummy
 from tests.helpers.solver_step1_output_dummy import make_step1_output_dummy
 from tests.helpers.solver_step2_output_dummy import make_step2_output_dummy
