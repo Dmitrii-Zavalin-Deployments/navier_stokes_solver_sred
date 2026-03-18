@@ -12,15 +12,15 @@ jobs:
 
     env:
       PYTHONPATH: ${{ github.workspace }}
+      # This is the "Magic Switch" to clear the warning:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
       APP_KEY: ${{ secrets.APP_KEY }}
       APP_SECRET: ${{ secrets.APP_SECRET }}
       REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-      # Opt-in to Node.js 24 runtime now to clear deprecation warnings
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
     steps:
       - name: 🗂️ Checkout Repository
-        uses: actions/checkout@v4  # Updated from v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
