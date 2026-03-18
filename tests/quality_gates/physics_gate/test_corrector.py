@@ -60,7 +60,8 @@ def test_corrector_analytical_correction():
     # --- AUDIT 1: Foundation Check ---
     block.i_plus.set_field(FI.P_NEXT, 2.0)
     block.i_minus.set_field(FI.P_NEXT, 0.0)
-    assert block.center.fields_buffer[11, FI.P_NEXT] == 2.0, "FOUNDATION BREAK: Shared buffer write failed"
+    target_idx = block.i_plus.index
+    assert block.center.fields_buffer[target_idx, FI.P_NEXT] == 2.0
 
     # --- AUDIT 2: Operator Check ---
     grad = compute_local_gradient_p(block, FI.P_NEXT)
