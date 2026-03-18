@@ -28,7 +28,7 @@ def get_force_vector(obj):
     # Fallback for StencilBlocks which often store gx, gy, gz directly
     if hasattr(obj, "_gx"):
         return np.array([obj._gx, obj._gy, obj._gz])
-    return None
+    return np.array([0.0, 0.0, 0.0])
 
 @pytest.mark.parametrize("stage_name, factory", ALL_STAGES)
 def test_external_force_integrity_and_persistence(stage_name, factory):

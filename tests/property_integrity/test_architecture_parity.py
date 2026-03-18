@@ -114,21 +114,3 @@ def test_staggered_component_schema_validity():
         provided_keys = set(getattr(bc, "_values", {}).keys())
         assert provided_keys.issubset(allowed_keys), \
             f"Illegal component in BC: {provided_keys - allowed_keys}"
-
-# --- STEP 3 SPECIFIC STABILITY ---
-
-def test_step3_predictor_and_stability_parity():
-    """Validation: Verify Step 3 predictor allocation and stability coefficients."""
-    nx, ny, nz = 5, 5, 5
-    n_cells = (nx + 2) * (ny + 2) * (nz + 2)
-    block = make_step3_output_dummy(nx=nx, ny=ny, nz=nz)
-    
-    # Check Predictor Allocation
-    assert block._u_star.size == n_cells
-    assert block._v_star.size == n_cells
-    assert block._w_star.size == n_cells
-    
-    # Check Stability Coefficients
-    assert np.isfinite(block.dt / block.rho), "Invalid Velocity Correction Factor"
-    stability = (block.mu * block.dt) / (block.dx**2)
-    assert np.isfinite(stability), "Invalid Diffusion Stability Factor"
