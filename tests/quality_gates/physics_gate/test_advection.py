@@ -1,7 +1,7 @@
 # tests/quality_gates/physics_gate/test_advection.py
 
 import copy
-import numpy as np
+
 from src.common.field_schema import FI
 from src.step3.ops.advection import (
     compute_local_advection,
