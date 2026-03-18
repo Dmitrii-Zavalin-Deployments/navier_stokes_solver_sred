@@ -8,18 +8,18 @@ from src.main_solver import BASE_DIR, run_solver
 
 class TestSolverLifecycle:
     """
-    SYSTEM AUDITOR: Verifies the full pipeline flow using a 'Smoke Test'.
-    Injects a tiny valid input into the real repo root, runs the full solver,
-    verifies the ZIP in the real output folder, and cleans up immediately.
+    SYSTEM AUDITOR: High-Fidelity Smoke Test.
+    Uses the EXACT production filename 'input_test.json'.
+    Ensures the 'Plumbing' is ready for the real Dropbox download.
     """
 
-    def test_live_plumbing_smoke_test(self):
-        # 1. Configuration (Salted name to ensure no production collision)
-        test_filename = "input_SMOKE_TEST_INTEGRITY.json"
-        # We use the real BASE_DIR from the solver's own logic
+    def test_production_plumbing_gatekeeper(self):
+        # 1. Target: The exact production filename
+        test_filename = "input_test.json"
         input_path = Path(BASE_DIR) / test_filename
         
-        # Tiny 4x4x4 grid for a sub-second execution (Rule 9 compliant)
+        # 2. Payload: Minimal 4x4x4 grid (Schema-compliant)
+        # Keeping it small ensures sub-second execution while testing all steps.
         nx, ny, nz = 4, 4, 4
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
@@ -33,7 +33,7 @@ class TestSolverLifecycle:
             "initial_conditions": {"velocity": [0.0, 0.0, 0.0], "pressure": 0.0},
             "simulation_parameters": {
                 "time_step": 0.001,
-                "total_time": 0.002,  # Minimal time steps
+                "total_time": 0.002, 
                 "output_interval": 1
             },
             "boundary_conditions": [
@@ -46,30 +46,40 @@ class TestSolverLifecycle:
                     "values": {"p": 0.0}
                 }
             ],
+            # Canonical flattening: length must be nx*ny*nz
             "mask": [0] * (nx * ny * nz),
             "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
         }
 
         zip_path = None
+        output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+
         try:
-            # 2. Inject: Write directly to repo root where solver expects it
+            # 3. Inject: Create the file in the repo root
             input_path.write_text(json.dumps(input_data))
 
-            # 3. Execute: Run the real production pipeline
-            # This uses the real config.json and real schema/ folder
+            # 4. Execute: Call the real production entry point
+            # This validates: Root Access -> Schema Load -> Step 1-5 -> Zip Creation
             zip_path_str = run_solver(test_filename)
             zip_path = Path(zip_path_str)
 
-            # 4. Verify: Ensure the plumbing actually connected to the output folder
-            assert zip_path.exists(), "ERROR: Solver finished but ZIP was not created."
-            assert zip_path.suffix == ".zip", "ERROR: Output is not a ZIP file."
-            assert "testing-input-output" in str(zip_path), "ERROR: ZIP saved in wrong directory."
+            # 5. Assert: Verify the plumbing success
+            assert zip_path.exists(), "GATEKEEPER FAIL: ZIP not created."
+            assert zip_path.parent == output_dir, f"GATEKEEPER FAIL: Wrong output dir. Expected {output_dir}"
+            assert zip_path.stat().st_size > 0, "GATEKEEPER FAIL: ZIP is empty."
 
         finally:
-            # 5. Leave No Trace: Cleanup both input and output artifacts
+            # 6. PURGE: Wipe everything to leave an empty folder for Dropbox download
             if input_path.exists():
                 input_path.unlink()
             
-            if zip_path and zip_path.exists():
-                zip_path.unlink()
-                print(f"\n[Audit] Cleanup successful: Removed {zip_path.name}")
+            if output_dir.exists():
+                # Remove ANY .zip starting with 'input_test' to ensure no confusion with prod data
+                for artifact in output_dir.glob("input_test*.zip"):
+                    artifact.unlink()
+                    print(f"\n[Sanitization] Purged smoke test artifact: {artifact.name}")
+            
+            # 7. FINAL AUDIT: Assert the folder is 100% clean
+            # This ensures no "ghost" results remain before the real simulation starts.
+            leftover_zips = list(output_dir.glob("*.zip"))
+            assert len(leftover_zips) == 0, f"CLEANUP FAILURE: Found {len(leftover_zips)} leftover artifacts."
