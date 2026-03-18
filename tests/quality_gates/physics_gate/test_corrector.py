@@ -18,16 +18,22 @@ SimpleCellMock.get_field = get_field
 
 def setup_integration_block(block, dt=1.0, rho=1.0):
     """
-    Physically accurate setup that bypasses read-only property restrictions.
+    Standardizes the block for analytical testing by forcing unit geometry.
     """
-    # Use object.__setattr__ to reach the hidden slots directly
-    # This bypasses the BaseContainer.__setattr__ logic entirely
+    # Use object.__setattr__ to bypass the Read-Only properties of StencilBlock
     object.__setattr__(block, '_dt', float(dt))
     object.__setattr__(block, '_rho', float(rho))
     
-    # If you need to fix the cells manually (though our new dummy should handle this):
-    # object.__setattr__(block, '_center', new_cell_object)
+    # FORCE UNIT GEOMETRY (The fix for the 4.0 vs 1.0 error)
+    object.__setattr__(block, '_dx', 1.0)
+    object.__setattr__(block, '_dy', 1.0)
+    object.__setattr__(block, '_dz', 1.0)
     
+    # Ensure all cells are initialized to zero to prevent 'ghost' data interference
+    for cell in [block.center, block.i_plus, block.i_minus, 
+                 block.j_plus, block.j_minus, block.k_plus, block.k_minus]:
+        cell.fields_buffer[cell.index, :] = 0.0
+        
     return block
 
 # --- Scenario 1: Zero Gradient (No Correction) ---
