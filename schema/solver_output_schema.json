@@ -2,63 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Final Solver Output Schema",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
-    "time",
-    "iteration",
-    "ready_for_time_loop",
-    "config",
-    "grid",
-    "fields",
-    "masks",
     "manifest"
   ],
   "properties": {
-    "time": {
-      "type": "number"
-    },
-    "iteration": {
-      "type": "integer"
-    },
-    "ready_for_time_loop": {
-      "type": "boolean"
-    },
-    "config": {
-      "type": "object"
-    },
-    "grid": {
-      "type": "object"
-    },
-    "fields": {
-      "type": "object",
-      "required": [
-        "data"
-      ],
-      "description": "The Foundation Buffer state at the current iteration.",
-      "properties": {
-        "data": {
-          "type": "array",
-          "description": "Monolithic NumPy buffer shaped (N_CELLS, FI.num_fields())"
-        }
-      }
-    },
-    "masks": {
-      "type": "object",
-      "required": [
-        "mask"
-      ],
-      "properties": {
-        "mask": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        }
-      }
-    },
-    "fluid": {
-      "type": "object"
-    },
     "manifest": {
       "type": "object",
       "required": [
