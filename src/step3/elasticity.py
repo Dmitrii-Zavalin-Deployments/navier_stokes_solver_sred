@@ -2,6 +2,7 @@
 
 import logging
 
+
 class ElasticManager:
     """
     The 'Nervous System' of the solver. 
