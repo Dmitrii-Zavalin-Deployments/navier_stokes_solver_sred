@@ -9,90 +9,72 @@ from src.common.field_schema import FI
 
 class ElasticManager:
     """
-    The 'Nervous System' and 'Validator' of the solver. 
-    Manages physical stability and handles the RAM-Git 'Commit' of trial fields.
-    
-    Compliance:
-    - Rule 4 (SSoT): Acts as the sole authority on time-step scaling.
-    - Rule 9 (Hybrid Memory): Performs vectorized commits directly on Foundation.
+    The 'Nervous System' of the solver. 
+    Acts as a Smart Proxy for numerical parameters (dt, omega, max_iter).
     """
-    def __init__(self, base_config):
-        # Anchor Points (User-defined targets)
-        self.base_dt = base_config.dt
-        self.base_max_iter = base_config.ppe_max_iter
-        self.base_omega = base_config.ppe_omega
+    def __init__(self, context):
+        self.config = context.config
+        self.logger = logging.getLogger("Elasticity")
         
-        # Current Operating State (The 'Elastic' values)
-        self.current_dt = base_config.dt
-        self.current_max_iter = base_config.ppe_max_iter
-        self.current_omega = base_config.ppe_omega
+        # Internal Elastic State (The 'Tunable' values)
+        self._dt = self.config.dt
+        self._omega = self.config.ppe_omega
+        self._max_iter = self.config.ppe_max_iter
         
+        # Stability Tracking
         self.is_in_panic = False
         self.stable_streak = 0
         self.cooldown_limit = 5
-        self.logger = logging.getLogger("Elasticity")
+
+    @property
+    def dt(self) -> float:
+        return self._dt
+
+    @property
+    def omega(self) -> float:
+        return self._omega
+
+    @property
+    def max_iter(self) -> int:
+        return self._max_iter
 
     def validate_and_commit(self, state) -> bool:
-        """
-        The 'Pull Request' Merge. 
-        Audits the VX_STAR and P_NEXT fields. If sane, commits to VX and P.
-        
-        Args:
-            state: The SimulationState object containing the fields_buffer.
-        Returns:
-            bool: True if audit passed and commit succeeded, False otherwise.
-        """
-        # 1. Audit for NaNs or Infs in the workspace (Vectorized Check)
-        # We check all star velocities and the next pressure field in one go.
+        """Audits trial buffers and merges them into the Foundation."""
+        # Check for NaNs/Infs in Predictor (Star) and Solver (P_Next)
         audit_fields = [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR, FI.P_NEXT]
         if not np.isfinite(state.fields_buffer[:, audit_fields]).all():
-            self.logger.error("Numerical explosion (NaN/Inf) detected in workspace.")
             return False
 
-        # 2. Physical Sanity Check
-        # Threshold (1e5) prevents 'silent' divergence before it becomes a NaN.
-        if np.max(np.abs(state.fields_buffer[:, FI.VX_STAR])) > 1e5:
-            self.logger.error("Physical velocity limit exceeded. Triggering Panic.")
+        # Physical limit check (Velocity magnitude)
+        if np.max(np.abs(state.fields_buffer[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]])) > 1e5:
             return False
 
-        # 3. THE COMMIT (The RAM-Git Merge)
-        # Data is moved from 'Trial' columns to 'Truth' columns.
-        state.fields_buffer[:, FI.VX] = state.fields_buffer[:, FI.VX_STAR]
-        state.fields_buffer[:, FI.VY] = state.fields_buffer[:, FI.VY_STAR]
-        state.fields_buffer[:, FI.VZ] = state.fields_buffer[:, FI.VZ_STAR]
-        state.fields_buffer[:, FI.P]  = state.fields_buffer[:, FI.P_NEXT]
-        
+        # COMMIT: Merge Trial -> Truth
+        state.fields_buffer[:, [FI.VX, FI.VY, FI.VZ]] = state.fields_buffer[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]]
+        state.fields_buffer[:, FI.P] = state.fields_buffer[:, FI.P_NEXT]
         return True
 
     def apply_panic_mode(self):
-        """Reduces solver aggressiveness to stabilize the system."""
+        """Reduces aggressiveness immediately."""
         self.is_in_panic = True
         self.stable_streak = 0
-        
-        # Aggressive reduction to stop the 'fire'
-        self.current_dt *= 0.5
-        self.current_omega = max(0.5, self.current_omega - 0.2)
-        self.current_max_iter = 5000 
-        
-        self.logger.warning(f"Panic Mode: dt reduced to {self.current_dt:.2e}, omega to {self.current_omega}")
+        self._dt *= 0.5
+        self._omega = max(0.5, self._omega - 0.2)
+        self._max_iter = 5000
+        self.logger.warning(f"PANIC: Scaling dt to {self._dt:.2e}")
 
     def gradual_recovery(self):
-        """Slowly heals the simulation parameters toward base configuration."""
-        if not self.is_in_panic:
-            return
-
+        """Heals parameters back toward base config."""
+        if not self.is_in_panic: return
+        
         self.stable_streak += 1
         if self.stable_streak >= self.cooldown_limit:
-            # Heal DT (5% growth toward target)
-            if self.current_dt < self.base_dt:
-                self.current_dt = min(self.base_dt, self.current_dt * 1.05)
+            if self._dt < self.config.dt:
+                self._dt = min(self.config.dt, self._dt * 1.05)
+            if self._omega < self.config.ppe_omega:
+                self._omega = min(self.config.ppe_omega, self._omega + 0.05)
             
-            # Heal Omega (Step increase)
-            if self.current_omega < self.base_omega:
-                self.current_omega = min(self.base_omega, self.current_omega + 0.05)
-            
-            # Check if fully recovered
-            if self.current_dt >= self.base_dt and self.current_omega >= self.base_omega:
+            if self._dt == self.config.dt and self._omega == self.config.ppe_omega:
                 self.is_in_panic = False
-                self.current_max_iter = self.base_max_iter
-                self.logger.info("Simulation health fully restored.")
+                self._max_iter = self.config.ppe_max_iter
+                self.logger.info("Simulation Health Recovered.")

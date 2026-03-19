@@ -77,52 +77,46 @@ def run_solver(input_path: str) -> str:
         raise
     
     # 4. ELASTICITY ENGINE
-    elastic = ElasticManager(context.config)
+    elastic = ElasticManager(context)
 
     # 5. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
         try:
             # Source elastic parameters for this specific 'Attempt'
             run_dt = elastic.current_dt
-            elastic.current_omega
+            run_omega = elastic.current_omega
             run_max_iter = elastic.current_max_iter
 
             # A. PREDICTOR PASS
             for block in state.stencil_matrix:
-                block, _ = orchestrate_step3(block, context=context, is_first_pass=True)
-                block = orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+                orchestrate_step3(block, elastic, is_first_pass=True)
+                # Step 4 stays clean—doesn't need to know about elasticity
+                orchestrate_step4(block, context, state.grid, state.boundary_conditions)
             
-            # B. ITERATIVE SOLVER & BOUNDARY PASS
-            for _ in range(run_max_iter):
+            # B. ITERATIVE SOLVER (Uses elastic.max_iter)
+            for _ in range(elastic.max_iter):
                 max_delta = 0.0
                 for block in state.stencil_matrix:
-                    block, delta = orchestrate_step3(block, context=context, is_first_pass=False)
-                    block = orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+                    _, delta = orchestrate_step3(block, elastic, is_first_pass=False)
+                    orchestrate_step4(block, context, state.grid, state.boundary_conditions)
                     max_delta = max(max_delta, delta)
                 
                 if max_delta < context.config.ppe_tolerance:
                     break
             
-            # --- PHASE C: VALIDATE & COMMIT (The RAM-Git Gate) ---
-            # We only move Trial Fields -> Foundation if the math is sane
+            # C. VALIDATE & COMMIT (Transactional Gate)
             if not elastic.validate_and_commit(state):
-                raise ArithmeticError("Instability detected in block calculations.")
+                raise ArithmeticError("Numerical instability.")
         
-            # --- PHASE D: ADVANCE ---
+            # D. ADVANCE
             state.iteration += 1
-            state.time += run_dt
+            state.time += elastic.dt 
             state = orchestrate_step5(state, context)
-            
-            # Heal parameters if previously in panic
             elastic.gradual_recovery()
 
-        except (ArithmeticError, ValueError) as e:
-            # ROLLBACK: If it failed, we never called validate_and_commit.
-            # state.vx and state.p are still safe.
-            if DEBUG:
-                print(f"DEBUG [Main]: ⚠️  Stability failure. Scaling down. Reason: {e}")
+        except ArithmeticError:
             elastic.apply_panic_mode()
-            continue
+            continue # Retry time-step
         
         if state.time >= state.simulation_parameters.total_time:
             state.ready_for_time_loop = False
