@@ -84,7 +84,7 @@ def run_solver(input_path: str) -> str:
         try:
             # Source elastic parameters for this specific 'Attempt'
             run_dt = elastic.current_dt
-            run_omega = elastic.current_omega
+            elastic.current_omega
             run_max_iter = elastic.current_max_iter
 
             # A. PREDICTOR PASS
