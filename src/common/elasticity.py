@@ -40,12 +40,12 @@ class ElasticManager:
     def validate_and_commit(self, state) -> bool:
         """Audits trial fields. Returns True if math is sane and committed."""
         audit_fields = [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR, FI.P_NEXT]
-        if not np.isfinite(state.fields_buffer[:, audit_fields]).all():
+        if not np.isfinite(state.fields.data[:, audit_fields]).all():
             return False
 
         # COMMIT: Star -> Foundation
-        state.fields_buffer[:, [FI.VX, FI.VY, FI.VZ]] = state.fields_buffer[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]]
-        state.fields_buffer[:, FI.P] = state.fields_buffer[:, FI.P_NEXT]
+        state.fields.data[:, [FI.VX, FI.VY, FI.VZ]] = state.fields.data[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]]
+        state.fields.data[:, FI.P] = state.fields.data[:, FI.P_NEXT]
         return True
 
     def apply_panic_mode(self):
