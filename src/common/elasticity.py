@@ -40,7 +40,19 @@ class ElasticManager:
     def validate_and_commit(self, state) -> bool:
         """Audits trial fields. Returns True if math is sane and committed."""
         audit_fields = [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR, FI.P_NEXT]
-        if not np.isfinite(state.fields.data[:, audit_fields]).all():
+        data_slice = state.fields.data[:, audit_fields]
+        
+        # Access threshold via SSoT (Rule 4 & 5)
+        # If the config doesn't have it, Rule 5 mandates we crash with an AttributeError
+        limit = self.config.divergence_threshold 
+
+        # Use a more direct check if memory is a concern at scale:
+        if not np.isfinite(data_slice).all():
+            return False
+
+        # Use the absolute maximum to avoid creating a full boolean mask array
+        # Slightly better: find max and min separately to avoid the abs() allocation
+        if data_slice.max() > limit or data_slice.min() < -limit:
             return False
 
         # COMMIT: Star -> Foundation

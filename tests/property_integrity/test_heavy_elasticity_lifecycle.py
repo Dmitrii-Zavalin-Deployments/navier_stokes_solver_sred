@@ -39,7 +39,7 @@ class TestHeavyElasticityLifecycle:
                 "nx": nx, "ny": ny, "nz": nz
             },
             "fluid_properties": {"density": 1.0, "viscosity": 0.001},
-            "initial_conditions": {"velocity": [50.0, 50.0, 50.0], "pressure": 1.0},
+            "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
             "simulation_parameters": {
                 "time_step": 0.5,
                 "total_time": 1.0, 
