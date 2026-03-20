@@ -55,6 +55,7 @@ class ElasticManager:
         self._omega = max(0.5, self._omega - 0.2)
         self._max_iter = 5000
         self.logger.warning(f"PANIC: dt reduced to {self._dt:.2e}")
+        print("!!! ACTUAL LOG TRIGGERED !!!")
 
     def gradual_recovery(self):
         if not self.is_in_panic: return
