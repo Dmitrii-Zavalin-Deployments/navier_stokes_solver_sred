@@ -1,5 +1,6 @@
 # tests/integration/test_heavy_elasticity_lifecycle.py
 
+import pytest
 import json
 import logging
 import zipfile
