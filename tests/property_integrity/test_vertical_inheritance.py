@@ -8,6 +8,7 @@ from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
+from src.common.elasticity import ElasticManager
 
 # Factory Functions (The "Recipes")
 from tests.helpers.solver_input_schema_dummy import create_validated_input
@@ -111,6 +112,7 @@ class TestVerticalIntegrity:
         input_dummy = create_validated_input(nx=NX, ny=NY, nz=NZ)
         config_obj = SolverConfig(**MOCK_CONFIG)
         context = SimulationContext(input_data=input_dummy, config=config_obj)
+        elasticity_mgr = ElasticManager(config_obj)
         
         # 2. Setup Dummies
         step2_state_dummy = make_step2_output_dummy(nx=NX, ny=NY, nz=NZ)
@@ -125,7 +127,7 @@ class TestVerticalIntegrity:
         actual_block, delta = orchestrate_step3(
             block=sample_block,
             context=context,
-            elasticity=step2_state_dummy.elasticity,
+            elasticity=elasticity_mgr,
             is_first_pass=True
         )
         
@@ -205,6 +207,7 @@ class TestVerticalIntegrity:
         # 1. Setup Context & Base State
         input_dummy = create_validated_input(nx=NX, ny=NY, nz=NZ)
         config_obj = SolverConfig(**MOCK_CONFIG)
+        elasticity_mgr = ElasticManager(config_obj)
         context = SimulationContext(input_data=input_dummy, config=config_obj)
         
         # Assemble via Step 1 & 2
@@ -213,8 +216,9 @@ class TestVerticalIntegrity:
         # 2. SIMULATE ONE TIME-LOOP ITERATION (Rule 9: In-place mutation)
         # We process the entire matrix through Step 3 AND Step 4
         for block in state.stencil_matrix:
-            block, _ = orchestrate_step3(block, context=context, elasticity=state.elasticity, is_first_pass=True)
-            block, _ = orchestrate_step3(block, context=context, is_first_pass=True)
+            
+            # A. Navier-Stokes equations (Step 3)
+            block, _ = orchestrate_step3(block, context=context, elasticity=elasticity_mgr, is_first_pass=True)
             
             # B. Boundary Enforcement (Step 4)
             orchestrate_step4(
