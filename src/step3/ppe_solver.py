@@ -1,5 +1,6 @@
 # src/step3/ppe_solver.py
 
+import math
 from src.common.field_schema import FI
 from src.common.stencil_block import StencilBlock
 from src.step3.ops.divergence import compute_local_divergence_v_star
@@ -8,18 +9,23 @@ from src.step3.ops.scaling import get_rho_over_dt
 
 def solve_pressure_poisson_step(block: StencilBlock, omega: float) -> float:
     """
-    Consolidated PPE Solver using SOR iteration.
+    Consolidated PPE Solver using SOR iteration with Fail-Fast Math.
     
     Compliance:
+    - Rule 7: Immediate math audit. If p_new or delta is non-finite, 
+      raises ArithmeticError to signal Elasticity Manager for a retry.
     - Rule 9: Performs in-place updates via schema-locked accessors.
-    - Rule 4: Uses block-local geometry and configuration contexts.
     """
     # 1. Geometry Setup
     dx2, dy2, dz2 = block.dx**2, block.dy**2, block.dz**2
+    
+    # Guard against ZeroDivision in geometry (Physical/Code Bug)
+    if dx2 == 0 or dy2 == 0 or dz2 == 0:
+        raise ValueError("Grid spacing (dx, dy, or dz) cannot be zero.")
+
     stencil_denom = 2.0 * (1.0/dx2 + 1.0/dy2 + 1.0/dz2)
     
-    # 2. Compute Rhie-Chow Stabilization
-    # Access P via FI.P (Foundation Buffer)
+    # 2. Compute Rhie-Chow Stabilization (Access FI.P Foundation)
     lap_p_n = (
         (block.i_plus.get_field(FI.P) - 2.0 * block.center.get_field(FI.P) + block.i_minus.get_field(FI.P)) / dx2 +
         (block.j_plus.get_field(FI.P) - 2.0 * block.center.get_field(FI.P) + block.j_minus.get_field(FI.P)) / dy2 +
@@ -31,7 +37,7 @@ def solve_pressure_poisson_step(block: StencilBlock, omega: float) -> float:
     div_v_star = compute_local_divergence_v_star(block)
     rhs = get_rho_over_dt(block) * (div_v_star - rhie_chow_term)
     
-    # 4. SOR Update (using FI.P_NEXT)
+    # 4. SOR Update (using FI.P_NEXT Trial Buffer)
     sum_neighbors = (
         (block.i_plus.get_field(FI.P_NEXT) + block.i_minus.get_field(FI.P_NEXT)) / dx2 +
         (block.j_plus.get_field(FI.P_NEXT) + block.j_minus.get_field(FI.P_NEXT)) / dy2 +
@@ -39,9 +45,20 @@ def solve_pressure_poisson_step(block: StencilBlock, omega: float) -> float:
     )
     
     p_old = block.center.get_field(FI.P_NEXT)
-    p_new = (1.0 - omega) * p_old + (omega / stencil_denom) * (sum_neighbors - rhs)
     
-    # Direct write-back via schema-locked accessor
+    # Calculate Trial Pressure
+    p_new = (1.0 - omega) * p_old + (omega / stencil_denom) * (sum_neighbors - rhs)
+    delta = abs(p_new - p_old)
+
+    # 5. Rule 7: Numerical Integrity Audit
+    # We check both p_new (stability) and delta (convergence health)
+    if not math.isfinite(p_new) or not math.isfinite(delta):
+        raise ArithmeticError(
+            f"PPE Divergence: p_new={p_new}, delta={delta} "
+            f"at cell ({block.center.i}, {block.center.j}, {block.center.k})"
+        )
+    
+    # 6. Direct write-back via schema-locked accessor
     block.center.set_field(FI.P_NEXT, p_new)
     
-    return abs(p_new - p_old)
+    return delta

@@ -1,5 +1,6 @@
 # src/step3/ops/laplacian.py
 
+import math
 from src.common.field_schema import FI
 from src.common.stencil_block import StencilBlock
 
@@ -7,27 +8,44 @@ from src.common.stencil_block import StencilBlock
 def compute_local_laplacian(block: StencilBlock, field_id: FI) -> float:
     """
     Computes the discrete Laplacian ∇²f = ∂²f/∂x² + ∂²f/∂y² + ∂²f/∂z²
-    for a given field_id using the Foundation buffer.
     
     Compliance:
-    - Uses get_field(FI) for O(1) buffer access (Rule 0).
-    - Single implementation for all fields prevents logic drift (Rule 8).
+    - Rule 7: Fail-Fast math audit. Catching division by zero or non-finite 
+      results immediately to prevent "poisoning" the predictor/solver.
+    - Rule 8: Centralized logic prevents drift between velocity and pressure ops.
     """
-    # Access neighbors via the wiring layer (StencilBlock) and Foundation (Buffer)
+    # 1. Access center and neighbors via Foundation schema (Rule 9)
     f_c = block.center.get_field(field_id)
     
     f_ip, f_im = block.i_plus.get_field(field_id), block.i_minus.get_field(field_id)
     f_jp, f_jm = block.j_plus.get_field(field_id), block.j_minus.get_field(field_id)
     f_kp, f_km = block.k_plus.get_field(field_id), block.k_minus.get_field(field_id)
     
-    return (
-        (f_ip - 2.0 * f_c + f_im) / (block.dx**2) +
-        (f_jp - 2.0 * f_c + f_jm) / (block.dy**2) +
-        (f_kp - 2.0 * f_c + f_km) / (block.dz**2)
+    # 2. Geometry Setup (Rule 4: SSoT from block)
+    dx2, dy2, dz2 = block.dx**2, block.dy**2, block.dz**2
+    
+    # Rule 7: Guard against division by zero in geometry
+    if dx2 == 0 or dy2 == 0 or dz2 == 0:
+        raise ValueError(f"Zero grid spacing squared at ({block.center.i}, {block.center.j})")
+
+    # 3. Discrete Laplacian Calculation
+    lap_val = (
+        (f_ip - 2.0 * f_c + f_im) / dx2 +
+        (f_jp - 2.0 * f_c + f_jm) / dy2 +
+        (f_kp - 2.0 * f_c + f_km) / dz2
     )
 
-def compute_local_laplacian_v_n(block: StencilBlock) -> tuple:
-    """Computes Laplacian for primary velocity components."""
+    # 4. Rule 7: Numerical Integrity Audit
+    if not math.isfinite(lap_val):
+        raise ArithmeticError(
+            f"Laplacian explosion for {field_id.name}: val={lap_val} | "
+            f"Cell: ({block.center.i}, {block.center.j}, {block.center.k})"
+        )
+
+    return lap_val
+
+def compute_local_laplacian_v_n(block: StencilBlock) -> tuple[float, float, float]:
+    """Computes Laplacian for primary velocity components (v^n)."""
     return (
         compute_local_laplacian(block, FI.VX),
         compute_local_laplacian(block, FI.VY),
@@ -35,5 +53,5 @@ def compute_local_laplacian_v_n(block: StencilBlock) -> tuple:
     )
 
 def compute_local_laplacian_p_next(block: StencilBlock) -> float:
-    """Computes Laplacian for pressure p^{n+1}."""
+    """Computes Laplacian for trial pressure p^{n+1}."""
     return compute_local_laplacian(block, FI.P_NEXT)
