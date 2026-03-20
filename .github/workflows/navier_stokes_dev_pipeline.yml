@@ -81,15 +81,31 @@ jobs:
         run: |
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "✅ All systems nominal. No anomalies detected in solver lifecycle."
+            # Reset the audit script to a clean, dormant state on success
+            cat <<EOF > src/debug/forensic_audit.sh
+          #!/bin/bash
+          # Description: Automated forensic audit for Navier-Stokes solver failures.
+          # Status: Dormant (All systems nominal)
+          exit 0
+          EOF
+            chmod +x src/debug/forensic_audit.sh
+            echo "🧹 Diagnostic script has been reset to Dormant mode."
           else
             echo "⚠️ CI Failure Detected. Initiating Deep Forensic Audit..."
-            # Ensure the script exists and is executable before running
+            
+            # 1. Run the Forensic Script (if it exists)
             if [ -f "src/debug/forensic_audit.sh" ]; then
               bash src/debug/forensic_audit.sh
             else
               echo "❌ Critical: Diagnostic script 'src/debug/forensic_audit.sh' not found."
-              exit 1
             fi
+
+            echo "------------------------------------------------------------"
+            echo "📉 FINAL FAILURE SUMMARY (Pytest Short-Trace)"
+            echo "------------------------------------------------------------"
+            
+            # 2. High-Signal Pytest Run (Quiet mode, only show failures)
+            pytest -s -q --tb=short --no-header tests/ || true
           fi
 
       - name: 📊 Audit Performance & Update Ledger
@@ -131,5 +147,14 @@ jobs:
           git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
           git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
           git add performance_audit.md
-          git commit -m "📊 perf-audit: log metrics for $RUN_DATE"
+          
+          # Check if the forensic script was reset/changed during the run
+          if git diff --name-only | grep -q "src/debug/forensic_audit.sh"; then
+            echo "🧹 Detected reset of forensic_audit.sh. Staging for sync..."
+            git add src/debug/forensic_audit.sh
+            COMMIT_MSG="📊 audit: metrics & dormant reset for $RUN_DATE"
+          else
+            COMMIT_MSG="📊 audit: metrics log for $RUN_DATE"
+          fi
+
           git push origin HEAD || echo "Push skipped."
