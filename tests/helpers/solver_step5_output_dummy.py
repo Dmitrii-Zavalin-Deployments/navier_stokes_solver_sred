@@ -8,7 +8,7 @@ from src.step2.orchestrate_step2 import orchestrate_step2
 from tests.helpers.solver_input_schema_dummy import create_validated_input
 
 
-def make_step5_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
+def make_step5_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4, dt: float = 0.001):
     """
     Returns a 'frozen' prototype representing the global system state 
     after Step 3 (Math) and Step 4 (Boundaries) have mutated the memory.
@@ -18,7 +18,8 @@ def make_step5_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4):
         "ppe_tolerance": 1e-6,
         "ppe_atol": 1e-10,
         "ppe_max_iter": 1000,
-        "ppe_omega": 1.5
+        "ppe_omega": 1.5,
+        "dt": 0.001
     }
     
     input_dummy = create_validated_input(nx=nx, ny=ny, nz=nz)
