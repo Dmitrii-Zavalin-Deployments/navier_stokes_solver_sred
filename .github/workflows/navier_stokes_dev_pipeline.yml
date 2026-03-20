@@ -132,15 +132,22 @@ jobs:
           git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
           git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
           
-          # 2. Gather Metrics
-          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4 "%"}')
-          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB" }')
-          
-          # 3. Update Performance Ledger (Happens on ALL branches)
-          echo -e "### Audit: $RUN_DATE\n- **Status:** ${{ job.status }}\n- **CPU:** $CPU_LOAD\n- **Mem:** $MEM_USAGE\n" > new_entry.tmp
-          [ -f performance_audit.md ] && cat performance_audit.md >> new_entry.tmp
-          mv new_entry.tmp performance_audit.md
+          # 2. Create the new entry block
+          NEW_ENTRY=$(cat <<EOF
+          ### Audit: $RUN_DATE
+          - **Status:** $STATUS
+          - **Duration:** ${DURATION_SEC}s
+          - **CPU Load:** $CPU_LOAD
+          - **Memory Usage:** $MEM_USAGE
+          EOF
+          )
+
+          # 3. Prepend to file (Newest on top)
+          # We keep the Header, then inject the new entry, then append the old content
+          echo "# 🌊 Navier–Stokes Performance Audit Ledger" > performance_audit.md
+          echo "$NEW_ENTRY" >> performance_audit.md
+          # Append everything after the first line of the old file (skipping the old header)
+          [ -f old_audit.md ] && tail -n +2 old_audit.md >> performance_audit.md
           git add performance_audit.md
 
           # 4. Handle Branch-Specific Logic
