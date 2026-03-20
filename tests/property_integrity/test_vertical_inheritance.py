@@ -21,7 +21,8 @@ MOCK_CONFIG = {
     "ppe_tolerance": 1e-6,
     "ppe_atol": 1e-10,
     "ppe_max_iter": 1000,
-    "ppe_omega": 1.5
+    "ppe_omega": 1.5,
+    "dt": 0.01
 }
 
 def assert_structural_parity(actual, expected, path=""):
