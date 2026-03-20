@@ -132,9 +132,20 @@ jobs:
           git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
           git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
           
-          # 2. Create the new entry block
+          # 2. Define the new entry & identify branch
+          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          STATUS="${{ job.status }}"
+          CURRENT_BRANCH=${GITHUB_REF##*/}  # Extracts 'development' from 'refs/heads/development'
+
+          # Note: We calculate duration more reliably here
+          DURATION_SEC=$(( $(date +%s) - $(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || date +%s) ))
+          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4 "%"}')
+          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB" }')
+
+          # 3. Create the new entry block (Now with Branch Name)
           NEW_ENTRY=$(cat <<EOF
           ### Audit: $RUN_DATE
+          - **Branch:** \`$CURRENT_BRANCH\`
           - **Status:** $STATUS
           - **Duration:** ${DURATION_SEC}s
           - **CPU Load:** $CPU_LOAD
@@ -142,7 +153,7 @@ jobs:
           EOF
           )
 
-          # 3. Prepend to file (Newest on top)
+          # 4. Prepend to file (Newest on top)
           # We keep the Header, then inject the new entry, then append the old content
           echo "# 🌊 Navier–Stokes Performance Audit Ledger" > performance_audit.md
           echo "$NEW_ENTRY" >> performance_audit.md
@@ -150,7 +161,7 @@ jobs:
           [ -f old_audit.md ] && tail -n +2 old_audit.md >> performance_audit.md
           git add performance_audit.md
 
-          # 4. Handle Branch-Specific Logic
+          # 5. Handle Branch-Specific Logic
           CURRENT_BRANCH=${GITHUB_REF##*/}
           
           if [ "$CURRENT_BRANCH" == "$AUTO_COMMIT_BRANCH" ]; then
