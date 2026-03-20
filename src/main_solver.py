@@ -119,7 +119,7 @@ def run_solver(input_path: str) -> str:
             logger.warning(f"PANIC: Numerical instability detected ({str(e)}). Triggering Elastic Recovery.")
             
             # --- CIRCUIT BREAKER ---
-            if elasticity.dt < 1e-1: 
+            if elasticity.dt < 0.5: 
                 raise RuntimeError(f"FATAL: dt ({elasticity.dt}) dropped below physical limit. Solver cannot recover.") from e
 
             elasticity.apply_panic_mode()

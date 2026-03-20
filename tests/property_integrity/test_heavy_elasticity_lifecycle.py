@@ -45,7 +45,7 @@ class TestHeavyElasticityLifecycle:
             "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
             "simulation_parameters": {
                 "time_step": 0.5,
-                "total_time": 1.0, 
+                "total_time": 10.0, 
                 "output_interval": 1
             },
             "boundary_conditions": [
