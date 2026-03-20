@@ -120,53 +120,50 @@ jobs:
             exit 1
           fi
 
-      - name: 📊 Audit Performance & Update Ledger
+      - name: 📊 Audit Performance & Sync State
         if: always()
         env:
+          # Define your "Magic Switch" branch here:
+          AUTO_COMMIT_BRANCH: "automatic" 
           GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
           GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
         run: |
-          # 1. Define the new entry
-          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          STATUS="${{ job.status }}"
-          # Note: We calculate duration more reliably here
-          DURATION_SEC=$(( $(date +%s) - $(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || date +%s) ))
-          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4 "%"}')
-          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB" }')
-          FAILURE_POINT="N/A"
-          [ "$STATUS" != "success" ] && FAILURE_POINT="Check GitHub Action logs for failure details"
-
-          # 2. Create the new entry block
-          NEW_ENTRY=$(cat <<EOF
-          ### Audit: $RUN_DATE
-          - **Status:** $STATUS
-          - **Duration:** ${DURATION_SEC}s
-          - **CPU Load:** $CPU_LOAD
-          - **Memory Usage:** $MEM_USAGE
-          - **Failure Point:** $FAILURE_POINT
-          
-          EOF
-          )
-
-          # 3. Prepend to file (Newest on top)
-          # We keep the Header, then inject the new entry, then append the old content
-          echo "# 🌊 Navier–Stokes Performance Audit Ledger" > performance_audit.md
-          echo "$NEW_ENTRY" >> performance_audit.md
-          # Append everything after the first line of the old file (skipping the old header)
-          [ -f old_audit.md ] && tail -n +2 old_audit.md >> performance_audit.md
-          
-          # 4. Commit and Push
+          # 1. Setup Identity
           git config --global user.name "${GIT_USER_NAME:-'github-actions[bot]'}"
           git config --global user.email "${GIT_USER_EMAIL:-'github-actions[bot]@users.noreply.github.com'}"
-          git add performance_audit.md
           
-          # Check if the forensic script was reset/changed during the run
-          if git diff --name-only | grep -q "src/debug/forensic_audit.sh"; then
-            echo "🧹 Detected reset of forensic_audit.sh. Staging for sync..."
-            git add src/debug/forensic_audit.sh
-            git commit -m "📊 audit: metrics & dormant reset for $RUN_DATE"
-          else
-            git commit -m "📊 audit: metrics log for $RUN_DATE"
-          fi
+          # 2. Gather Metrics
+          RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4 "%"}')
+          MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB" }')
+          
+          # 3. Update Performance Ledger (Happens on ALL branches)
+          echo -e "### Audit: $RUN_DATE\n- **Status:** ${{ job.status }}\n- **CPU:** $CPU_LOAD\n- **Mem:** $MEM_USAGE\n" > new_entry.tmp
+          [ -f performance_audit.md ] && cat performance_audit.md >> new_entry.tmp
+          mv new_entry.tmp performance_audit.md
+          git add performance_audit.md
 
-          git push origin HEAD || echo "Push skipped."
+          # 4. Handle Branch-Specific Logic
+          CURRENT_BRANCH=${GITHUB_REF##*/}
+          
+          if [ "$CURRENT_BRANCH" == "$AUTO_COMMIT_BRANCH" ]; then
+            echo "⚡ AUTO-SYNC ACTIVE: Staging all repository changes on '$CURRENT_BRANCH'..."
+            
+            # Identify all changed files for the commit message
+            UPDATED_FILES=$(git status --porcelain | awk '{print $2}' | tr '\n' ' ')
+            
+            if [ -n "$UPDATED_FILES" ]; then
+              git add .
+              git commit -m "📊 audit & sync: [${{ job.status }}] updated files: $UPDATED_FILES"
+              git push origin HEAD || echo "Push skipped: Concurrent push detected."
+            else
+              echo "✅ No changes to sync."
+            fi
+          else
+            echo "🛡️ SAFE MODE: Only committing Performance Ledger on '$CURRENT_BRANCH'."
+            
+            if [ -n "$(git status --porcelain performance_audit.md)" ]; then
+              git commit -m "📊 audit: update performance ledger"
+              git push origin HEAD || echo "Push skipped: Concurrent push detected."
+            fi
+          fi
