@@ -120,7 +120,7 @@ def run_solver(input_path: str) -> str:
             
             # --- CIRCUIT BREAKER ---
             if elasticity.dt < 1e-12: 
-                raise RuntimeError(f"FATAL: dt ({elasticity.dt}) dropped below physical limit. Solver cannot recover.")
+                raise RuntimeError(f"FATAL: dt ({elasticity.dt}) dropped below physical limit. Solver cannot recover.") from e
 
             elasticity.apply_panic_mode()
             continue # Retry the same time-step with safer parameters
