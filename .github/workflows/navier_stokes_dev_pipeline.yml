@@ -163,9 +163,9 @@ jobs:
           if git diff --name-only | grep -q "src/debug/forensic_audit.sh"; then
             echo "🧹 Detected reset of forensic_audit.sh. Staging for sync..."
             git add src/debug/forensic_audit.sh
-            COMMIT_MSG="📊 audit: metrics & dormant reset for $RUN_DATE"
+            git commit -m "📊 audit: metrics & dormant reset for $RUN_DATE"
           else
-            COMMIT_MSG="📊 audit: metrics log for $RUN_DATE"
+            git commit -m "📊 audit: metrics log for $RUN_DATE"
           fi
 
           git push origin HEAD || echo "Push skipped."

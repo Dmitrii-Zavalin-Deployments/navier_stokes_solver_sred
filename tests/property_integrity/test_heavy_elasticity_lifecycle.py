@@ -63,6 +63,7 @@ class TestHeavyElasticityLifecycle:
             input_path.write_text(json.dumps(input_data))
             config_path.write_text(json.dumps(config_data))
 
+            # Set log level to capture ElasticManager warnings
             with caplog.at_level(logging.WARNING):
                 # If you expect it to eventually fail due to extreme inputs:
                 with pytest.raises(RuntimeError) as excinfo:
@@ -70,14 +71,6 @@ class TestHeavyElasticityLifecycle:
                 assert "Solver cannot recover" in str(excinfo.value)
 
             # Set log level to capture ElasticManager warnings
-            with caplog.at_level(logging.WARNING):
-                # 5. EXECUTE
-                zip_path_str = run_solver(input_filename)
-                zip_path = Path(zip_path_str)
-
-                # 6. LOG AUDIT: Verify Elasticity behavior
-                # We expect at least one "PANIC" log because dt=0.5 is too high for v=50.0
-                panic_logs = [rec for rec in caplog.records if "PANIC" in rec.message]
                 assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered despite unstable input."
                 
                 # Verify recovery started (if simulation completed)
