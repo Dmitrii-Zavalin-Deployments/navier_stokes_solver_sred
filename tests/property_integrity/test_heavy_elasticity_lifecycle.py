@@ -70,7 +70,6 @@ class TestHeavyElasticityLifecycle:
                     run_solver(input_filename)
                 assert "Solver cannot recover" in str(excinfo.value)
 
-            # Set log level to capture ElasticManager warnings
                 assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered despite unstable input."
                 
                 # Verify recovery started (if simulation completed)
