@@ -1,23 +1,20 @@
-echo "--- 1. PROOF OF SUCCESSFUL COMPLETION ---"
-# If the solver reached the end, it should have a 'time' near 1.0. 
-# We audit the source to see where it prints its progress.
-grep -n "print(f\"DEBUG" src/main_solver.py || echo "DEBUG prints are disabled in source."
+echo "--- 1. THE NAMING SMOKING GUN ---"
+# Check the test file to see what filename it expects
+grep "integration_input.zip" tests/property_integrity/test_heavy_elasticity_lifecycle.py || echo "❌ Test is looking for a different filename than the archiver produces."
 
-echo "--- 2. AUDIT THE LOOP TERMINATION ---"
-# Let's see exactly what happens when state.time >= total_time
-# This shows if the solver simply 'finishes' and returns to the test.
-sed -n '120,135p' src/main_solver.py
+echo "--- 2. THE ARCHIVER FILENAME PROOF ---"
+# Check the archiver to see what it actually names the file
+grep "final_destination =" src/common/archive_service.py
 
-echo "--- 3. ARCHIVER LOGIC CHECK ---"
-# Since the test failed to find a ZIP, we check if the archiver actually does anything.
-cat src/common/archive_service.py
+echo "--- 3. LOCATE THE 'GHOST' ZIP ---"
+# Find where the zip actually went during the last run
+find . -name "*.zip"
 
-echo "--- 4. DATA DIRECTORY RECONNAISSANCE ---"
-# Check if Step 5 actually wrote the state files before the archiver was called.
-python3 -c "import os; from pathlib import Path; from src.main_solver import BASE_DIR; \
-p = Path(BASE_DIR) / 'data' / 'testing-input-output'; \
-print(f'Path: {p}'); print(f'Files found: {os.listdir(p) if p.exists() else \"DIR NOT FOUND\"}')"
+echo "--- 4. SIMULATION FINAL STATE AUDIT ---"
+# Prove the solver finished and reached the return statement
+# We look for the 'ready_for_time_loop = False' trigger
+grep -n "ready_for_time_loop = False" src/main_solver.py
 
-echo "--- 5. RECOVERY THRESHOLD VERIFICATION ---"
-# Check the current dt floor. If 6.25e-2 is > floor, the exception is never raised.
-grep "if elasticity.dt <" src/main_solver.py
+echo "--- 5. DIRECTORY CONTENT AT TERMINATION ---"
+# See if 'navier_stokes_output' directory was created before being zipped
+ls -ld navier_stokes_output || echo "❌ Staging directory not found."
