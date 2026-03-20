@@ -11,33 +11,42 @@ class SolverConfig(ValidatedContainer):
     Static numerical configuration for the Navier-Stokes solver.
     Uses VerifiedContainer accessors to enforce deterministic initialization.
     """
-    # Rule 4: Explicit slots for memory efficiency and structural rigor.
-    # Note: _dt is included as the reference target for Elasticity.
-    __slots__ = ['_ppe_tolerance', '_ppe_atol', '_ppe_max_iter', '_ppe_omega', '_dt', '_divergence_threshold']
+    # Rule 4: dt is removed from here because it's injected from Simulation Input
+    __slots__ = [
+        '_ppe_tolerance', '_ppe_atol', '_ppe_max_iter', 
+        '_ppe_omega', '_dt_min_limit', '_divergence_threshold'
+    ]
 
     def __init__(self, **kwargs):
-        """
-        Constructor implements Deterministic Initialization via _set_safe.
-        This triggers the property setters and validation logic, ensuring
-        that the object is valid from the moment of instantiation.
-        """
         # Assign directly using the validated setters to ensure 
         # type-checking and value-range constraints are enforced.
         self.dt = kwargs.get('dt')
+        self.dt_min_limit = kwargs.get('dt_min_limit')
         self.ppe_tolerance = kwargs.get('ppe_tolerance')
         self.ppe_atol = kwargs.get('ppe_atol')
         self.ppe_max_iter = kwargs.get('ppe_max_iter')
         self.ppe_omega = kwargs.get('ppe_omega')
         self.divergence_threshold = kwargs.get('divergence_threshold')
         
-        # Post-initialization check: Ensure no fields were left as None
-        # Rule 5: Explicit or Error. No fallbacks/defaults allowed here.
-        required_fields = ['dt', 'ppe_tolerance', 'ppe_atol', 'ppe_max_iter', 'ppe_omega', 'divergence_threshold']
+        # Rule 5 check: Ensure the floor is defined
+        required_fields = [
+            'dt', 'dt_min_limit', 'ppe_tolerance', 'ppe_atol', 
+            'ppe_max_iter', 'ppe_omega', 'divergence_threshold'
+        ]
         for field in required_fields:
             if getattr(self, field) is None:
-                raise AttributeError(f"CONTRACT VIOLATION: '{field}' must be explicitly defined in config.")
+                raise AttributeError(f"CONTRACT VIOLATION: '{field}' must be in JSON.")
 
     @property
+    def dt_min_limit(self) -> float: 
+        return self._get_safe("dt_min_limit")
+
+    @dt_min_limit.setter
+    def dt_min_limit(self, v: float):
+        if v is not None and v <= 0: raise ValueError("dt_min_limit must be > 0")
+        self._set_safe("dt_min_limit", v, float)
+    
+     @property
     def dt(self) -> float:
         return self._get_safe("dt")
 

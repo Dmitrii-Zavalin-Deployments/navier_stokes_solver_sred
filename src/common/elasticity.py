@@ -12,12 +12,21 @@ class ElasticManager:
     SSoT for Numerical Stability. 
     Acts as the dynamic authority for dt, omega, and max_iter.
     """
-    def __init__(self, config):
-        self.config = config # SimulationConfig object
+    __slots__ = [
+        'config', 'logger', '_dt', '_omega', '_max_iter', 
+        'is_in_panic', 'stable_streak', 'cooldown_limit', 'dt_floor'
+    ]
+
+    def __init__(self, config, initial_dt: float):
+        self.config = config
         self.logger = logging.getLogger("Elasticity")
         
-        # Internal Elastic State
-        self._dt = self.config.dt
+        # SSoT: _dt comes from the simulation input, NOT the solver config
+        self._dt = initial_dt 
+        
+        # RULE 5: dt_floor comes from the solver config JSON
+        self.dt_floor = self.config.dt_min_limit 
+        
         self._omega = self.config.ppe_omega
         self._max_iter = self.config.ppe_max_iter
         

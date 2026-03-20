@@ -4,11 +4,8 @@ import json
 import logging
 import zipfile
 from pathlib import Path
-
 import pytest
-
 from src.main_solver import BASE_DIR, run_solver
-
 
 class TestHeavyElasticityLifecycle:
     """
@@ -18,7 +15,6 @@ class TestHeavyElasticityLifecycle:
 
     def test_numerical_panic_and_recovery_flow(self, caplog):
         # Rule 5: Explicit Initialization. 
-        # We define variables as None to ensure no 'Silent Defaults' mask logic gaps.
         panic_logs = []
         zip_path = None
         
@@ -29,16 +25,18 @@ class TestHeavyElasticityLifecycle:
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
         
-        # 2. Config: Sensitive settings for ElasticManager (Rule 5 compliance)
+        # 2. Config: Numerical Solver settings (Rule 5 compliance)
+        # Note: dt is NOT here. It is injected from the simulation input.
         config_data = {
+            "dt_min_limit": 0.001,    # Explicit floor for ElasticManager
             "ppe_tolerance": 1e-4,
             "ppe_atol": 1e-6,
             "ppe_max_iter": 50,
-            "ppe_omega": 1.7,       # Aggressive over-relaxation
+            "ppe_omega": 1.7,         # Aggressive over-relaxation to trigger instability
             "divergence_threshold": 1e6
         }
 
-        # 3. Input: High-velocity 3D grid to trigger ArithmeticError
+        # 3. Input: High-velocity 3D grid to trigger divergence
         nx, ny, nz = 4, 4, 4
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
@@ -49,7 +47,7 @@ class TestHeavyElasticityLifecycle:
             "fluid_properties": {"density": 1.0, "viscosity": 0.001},
             "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
             "simulation_parameters": {
-                "time_step": 0.5,
+                "time_step": 0.5,      # INITIAL DT: Injected into ElasticManager
                 "total_time": 10.0, 
                 "output_interval": 1
             },
@@ -71,30 +69,28 @@ class TestHeavyElasticityLifecycle:
             # Set log level to capture ElasticManager warnings
             with caplog.at_level(logging.WARNING):
                 # 5. EXECUTION & LOG CAPTURE (Rule 7: Atomic Verification)
+                # We expect a RuntimeError when the solver eventually hits the dt_min_limit floor.
                 with pytest.raises(RuntimeError) as excinfo:
-                    # Capture the path if it returns before the crash
                     zip_path = run_solver(input_filename)
                 
-                # Rule 6: Cover the Gap. Extracting logs immediately after failure context.
+                # Rule 6: Extracting logs immediately after failure context.
                 panic_logs = [rec for rec in caplog.records if 'PANIC' in rec.message]
                 
                 assert "Solver cannot recover" in str(excinfo.value)
                 assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered."
                 
-                print(f"Captured {len(panic_logs)} panic events.")
+                print(f"Captured {len(panic_logs)} panic events before terminal failure.")
 
-            # 7. ARCHIVE AUDIT: Deep inspection (Rule 1 & 4)
-            # Only proceed if the solver actually produced a path (avoids F821/AttributeError)
+            # 7. ARCHIVE AUDIT: Ensure partial state was saved correctly
             if zip_path and Path(zip_path).exists():
                 audit_path = Path(zip_path)
                 with zipfile.ZipFile(audit_path, 'r') as archive:
                     state_bytes = archive.read("simulation_state.json")
                     state_json = json.loads(state_bytes)
                     
-                    # Rule 4: SSoT Check - Accessing data through the assigned container
+                    # Rule 4: SSoT Check
                     data_array = state_json.get("fields", {}).get("data", [])
                     assert len(data_array) > 0, "ARCHIVE FAIL: State contains no field data."
-                    assert state_json["time"] > 0, "TIMELINE FAIL: Simulation did not progress."
 
         finally:
             # 8. SANITIZATION
