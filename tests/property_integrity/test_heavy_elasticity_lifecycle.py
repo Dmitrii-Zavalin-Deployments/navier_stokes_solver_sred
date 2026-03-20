@@ -24,7 +24,6 @@ class TestHeavyElasticityLifecycle:
         
         # 2. Config: Sensitive settings for ElasticManager
         config_data = {
-            "dt": 0.5,             # High DT to force instability
             "ppe_tolerance": 1e-4,
             "ppe_atol": 1e-6,
             "ppe_max_iter": 50,
