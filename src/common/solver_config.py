@@ -1,9 +1,7 @@
 # src/common/solver_config.py
 
 from dataclasses import dataclass
-
 from src.common.base_container import ValidatedContainer
-
 
 @dataclass
 class SolverConfig(ValidatedContainer):
@@ -11,7 +9,9 @@ class SolverConfig(ValidatedContainer):
     Static numerical configuration for the Navier-Stokes solver.
     Uses VerifiedContainer accessors to enforce deterministic initialization.
     """
-    __slots__ = ['_ppe_tolerance', '_ppe_atol', '_ppe_max_iter', '_ppe_omega']
+    # Rule 4: Explicit slots for memory efficiency and structural rigor.
+    # Note: _dt is included as the reference target for Elasticity.
+    __slots__ = ['_ppe_tolerance', '_ppe_atol', '_ppe_max_iter', '_ppe_omega', '_dt']
 
     def __init__(self, **kwargs):
         """
@@ -21,16 +21,28 @@ class SolverConfig(ValidatedContainer):
         """
         # Assign directly using the validated setters to ensure 
         # type-checking and value-range constraints are enforced.
+        self.dt = kwargs.get('dt')
         self.ppe_tolerance = kwargs.get('ppe_tolerance')
         self.ppe_atol = kwargs.get('ppe_atol')
         self.ppe_max_iter = kwargs.get('ppe_max_iter')
         self.ppe_omega = kwargs.get('ppe_omega')
         
         # Post-initialization check: Ensure no fields were left as None
-        # This catches missing keys from the config_dict.
-        for field in ['ppe_tolerance', 'ppe_atol', 'ppe_max_iter', 'ppe_omega']:
+        # Rule 5: Explicit or Error. No fallbacks/defaults allowed here.
+        required_fields = ['dt', 'ppe_tolerance', 'ppe_atol', 'ppe_max_iter', 'ppe_omega']
+        for field in required_fields:
             if getattr(self, field) is None:
-                raise AttributeError(f"Coding Error: '{field}' must be explicitly defined.")
+                raise AttributeError(f"CONTRACT VIOLATION: '{field}' must be explicitly defined in config.")
+
+    @property
+    def dt(self) -> float:
+        return self._get_safe("dt")
+
+    @dt.setter
+    def dt(self, v: float):
+        if v is not None and v <= 0:
+            raise ValueError(f"dt must be > 0, got {v}")
+        self._set_safe("dt", v, float)
 
     @property
     def ppe_tolerance(self) -> float: 
