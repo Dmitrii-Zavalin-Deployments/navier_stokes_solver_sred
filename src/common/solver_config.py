@@ -46,7 +46,7 @@ class SolverConfig(ValidatedContainer):
         if v is not None and v <= 0: raise ValueError("dt_min_limit must be > 0")
         self._set_safe("dt_min_limit", v, float)
     
-     @property
+    @property
     def dt(self) -> float:
         return self._get_safe("dt")
 
