@@ -97,34 +97,36 @@ class TestHeavyElasticityLifecycle:
                     data_array = state_json.get("fields", {}).get("data", [])
                     assert len(data_array) > 0, "ARCHIVE FAIL: State contains no field data."
 
-        finally:
+                finally:
             # 7. PURGE: Universal Cleanup (Rule 2: Zero Debt)
             if input_path.exists():
                 input_path.unlink()
-            
+
             if config_path.exists():
                 config_path.unlink()
-            
+
             if output_dir.exists():
                 output_path = Path(output_dir)
-                    for item in output_path.iterdir():
-                        if item.name == ".gitkeep":
-                            continue
+                for item in output_path.iterdir():
+                    if item.name == ".gitkeep":
+                        continue
 
-                        if item.is_dir():
-                            shutil.rmtree(item)
-                        else:
-                            item.unlink()
+                    if item.is_dir():
+                        shutil.rmtree(item)
+                    else:
+                        item.unlink()
 
                 print(f"\n[Sanitization] Purged directory: {output_dir.name}")
 
-           if temporary_output_dir.exists():
+            if temporary_output_dir.exists():
                 shutil.rmtree(temporary_output_dir)
                 print(f"\n[Sanitization] Removed directory and all contents: {temporary_output_dir.name}")
-            
-            # 8. FINAL AUDIT: Assert the folder is 100% clean
 
-            remaining = [p for p in temporary_output_dir.iterdir() if p.name != ".gitkeep"]
+            # 8. FINAL AUDIT: Assert the folder is 100% clean
+            # (This block must be aligned with the previous statements)
+
+            remaining = [p for p in temporary_output_dir.iterdir() if p.name != ".gitkeep"] \
+                if temporary_output_dir.exists() else []
             assert not remaining, (
                 f"CLEANUP FAILURE: unexpected items in {temporary_output_dir}: "
                 f"{[p.name for p in remaining]}"
