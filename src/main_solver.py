@@ -9,8 +9,8 @@ import numpy as np
 np.seterr(all="raise")
 from pathlib import Path
 
-import numpy as np
 import jsonschema
+import numpy as np
 
 from src.common.archive_service import archive_simulation_artifacts
 from src.common.elasticity import ElasticManager
