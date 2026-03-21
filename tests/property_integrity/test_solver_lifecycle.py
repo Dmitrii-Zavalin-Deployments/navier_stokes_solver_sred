@@ -18,6 +18,8 @@ class TestSolverLifecycle:
         
         input_path = Path(BASE_DIR) / test_filename
         config_path = Path(BASE_DIR) / config_filename
+
+        production_output_dir = Path(BASE_DIR) / "output"
         
         # 2. Payload A: Numerical Configuration (Required for Elasticity)
         # These parameters prevent the AttributeError: 'SolverConfig' object has no attribute 'dt'
@@ -88,6 +90,13 @@ class TestSolverLifecycle:
                     artifact.unlink()
                     print(f"\n[Sanitization] Purged artifact: {artifact.name}")
             
+            if production_output_dir.exists():
+                shutil.rmtree(production_output_dir)
+                print(f"\n[Sanitization] Purged rogue directory: {production_output_dir.name}")
+            
             # 8. FINAL AUDIT: Assert the folder is 100% clean
             leftover_zips = list(output_dir.glob("*.zip"))
             assert len(leftover_zips) == 0, f"CLEANUP FAILURE: Found {len(leftover_zips)} leftover artifacts."
+
+            assert not production_output_dir.exists(), f"CLEANUP FAILURE: {production_output_dir} still exists."
+            assert not test_data_dir.exists(), f"CLEANUP FAILURE: {test_data_dir} still exists."
