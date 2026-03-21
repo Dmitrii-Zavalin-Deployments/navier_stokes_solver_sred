@@ -1,6 +1,5 @@
 import logging
-import numpy as np
-from src.common.field_schema import FI
+
 
 class ElasticManager:
     __slots__ = ['config', 'logger', '_dt', 'dt_floor', '_iteration', '_runs', '_dt_range', '_omega']
