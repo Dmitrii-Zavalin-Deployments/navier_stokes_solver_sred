@@ -1,32 +1,24 @@
 from dataclasses import dataclass
-
 from src.common.base_container import ValidatedContainer
-
 
 @dataclass
 class SolverConfig(ValidatedContainer):
     """
-    Static numerical configuration for the Navier-Stokes solver.
-    Rule 4 & 0: ONLY solver-static limits. NO 'dt' here.
+    Static numerical configuration. No dynamic state allowed.
     """
     __slots__ = [
-        '_ppe_tolerance', '_ppe_atol', '_ppe_max_iter', 
-        '_ppe_omega', '_dt_min_limit', '_divergence_threshold'
+        '_dt_min_limit', '_ppe_tolerance', '_ppe_atol', 
+        '_ppe_max_iter', '_ppe_omega', '_divergence_threshold'
     ]
 
     def __init__(self, **kwargs):
-        # We explicitly ignore 'dt' if it is passed in the kwargs
+        # Map JSON keys to slots
         self.dt_min_limit = kwargs.get('dt_min_limit')
         self.ppe_tolerance = kwargs.get('ppe_tolerance')
         self.ppe_atol = kwargs.get('ppe_atol')
         self.ppe_max_iter = kwargs.get('ppe_max_iter')
         self.ppe_omega = kwargs.get('ppe_omega')
         self.divergence_threshold = kwargs.get('divergence_threshold')
-        
-        # Rule 5: Explicit validation
-        for field in [f.strip('_') for f in self.__slots__]:
-            if getattr(self, field) is None:
-                raise AttributeError(f"CONTRACT VIOLATION: '{field}' missing in JSON.")
 
     @property
     def dt_min_limit(self) -> float: return self._get_safe("dt_min_limit")

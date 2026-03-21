@@ -76,7 +76,7 @@ def run_solver(input_path: str) -> str:
     
     # 4. ELASTICITY ENGINE (Numerical SSoT)
     # We pass context.config directly as elasticity manages numerical behavior
-    elasticity = ElasticManager(context.config)
+    elasticity = ElasticManager(context.config, context.input_data.simulation_parameters.time_step)
 
     # 5. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
