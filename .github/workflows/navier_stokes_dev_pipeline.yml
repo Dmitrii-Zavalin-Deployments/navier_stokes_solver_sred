@@ -94,7 +94,12 @@ jobs:
           else
             echo "⚠️ CI Failure Detected. Initiating Deep Forensic Audit..."
             
-            # 1. Run the Forensic Script (if it exists)
+            echo "------------------------------------------------------------"
+            echo "ls -R output: "
+            ls -R
+            echo "------------------------------------------------------------"
+            
+            # Run the Forensic Script (if it exists)
             if [ -f "src/debug/forensic_audit.sh" ]; then
               bash src/debug/forensic_audit.sh
             else

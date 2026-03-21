@@ -14,7 +14,8 @@ class ElasticManager:
     """
     __slots__ = [
         'config', 'logger', '_dt', '_omega', '_max_iter', 
-        'is_in_panic', 'stable_streak', 'cooldown_limit', 'dt_floor'
+        'is_in_panic', 'stable_streak', 'cooldown_limit',
+        'dt_floor', '_target_dt'
     ]
 
     def __init__(self, config, initial_dt: float):
@@ -23,6 +24,7 @@ class ElasticManager:
         
         # SSoT: _dt comes from the simulation input, NOT the solver config
         self._dt = initial_dt 
+        self._target_dt = initial_dt
         
         # RULE 5: dt_floor comes from the solver config JSON
         self.dt_floor = self.config.dt_min_limit 
@@ -82,8 +84,8 @@ class ElasticManager:
         if not self.is_in_panic: return
         self.stable_streak += 1
         if self.stable_streak >= self.cooldown_limit:
-            self._dt = min(self.config.dt, self._dt * 1.1)
+            self._dt = min(self._target_dt, self._dt * 1.1)
             self._omega = min(self.config.ppe_omega, self._omega + 0.05)
-            if self._dt == self.config.dt and self._omega == self.config.ppe_omega:
+            if self._dt >= self._target_dt and self._omega >= self.config.ppe_omega:
                 self.is_in_panic = False
                 self._max_iter = self.config.ppe_max_iter
