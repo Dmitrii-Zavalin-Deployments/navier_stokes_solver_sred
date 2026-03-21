@@ -103,11 +103,11 @@ def run_solver(input_path: str) -> str:
                 raise ArithmeticError("Numerical instability detected in trial buffers.")
 
             # D. ADVANCE
+            elasticity.gradual_recovery()
             state.iteration += 1
             state.time += elasticity.dt
             state = orchestrate_step5(state, context)
 
-            elasticity.gradual_recovery()
 
             if DEBUG and state.iteration % 10 == 0:
                 print(
