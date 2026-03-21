@@ -115,15 +115,14 @@ def run_solver(input_path: str) -> str:
             if DEBUG and state.iteration % 10 == 0:
                 print(f"DEBUG [Main]: Step {state.iteration} | Time {state.time:.4f} | dt {elasticity.dt:.2e}")
 
-        except ArithmeticError as e:
-            logger.warning(f"PANIC: Numerical instability detected ({str(e)}). Triggering Elastic Recovery.")
-            
-            # --- CIRCUIT BREAKER ---
-            if elasticity.dt < elasticity.dt_floor: 
-                raise RuntimeError(f"FATAL: dt ({elasticity.dt}) dropped below limit.") from e
-
-            elasticity.apply_panic_mode()
-            continue # Retry the same time-step with safer parameters
+            except ArithmeticError as e:
+                logger.warning(f"PANIC: Numerical instability detected ({str(e)}). Triggering Elastic Recovery.")
+                try:
+                    elasticity.apply_panic_mode()
+                except RuntimeError as fatal_e:
+                    logger.error(f"ABORT: {str(fatal_e)}")
+                    raise
+                continue
         
         # Termination check
         if state.time >= context.input_data.simulation_parameters.total_time:

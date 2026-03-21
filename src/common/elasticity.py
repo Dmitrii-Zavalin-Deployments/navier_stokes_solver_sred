@@ -75,10 +75,11 @@ class ElasticManager:
         self.is_in_panic = True
         self.stable_streak = 0
         self._dt *= 0.5
+        if self._dt < self.dt_floor:
+            raise RuntimeError(f"FATAL: dt ({self._dt:.2e}) dropped below floor {self.dt_floor:.2e}")
         self._omega = max(0.5, self._omega - 0.2)
         self._max_iter = 5000
         self.logger.warning(f"PANIC: dt reduced to {self._dt:.2e}")
-        print("!!! ACTUAL LOG TRIGGERED !!!")
 
     def gradual_recovery(self):
         if not self.is_in_panic: return
