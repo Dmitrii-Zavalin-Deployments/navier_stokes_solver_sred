@@ -29,8 +29,8 @@ class TestHeavyElasticityLifecycle:
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
 
-        test_data_dir = Path(BASE_DIR) / "data" / "testing-input-output"
-        production_output_dir = Path(BASE_DIR) / "output"
+        production_output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+        temporary_output_dir = Path(BASE_DIR) / "output"
         
         # 2. Config: Numerical Solver settings (Rule 5 compliance)
         # Note: dt is NOT here. It is injected from the simulation input.
@@ -65,8 +65,6 @@ class TestHeavyElasticityLifecycle:
             "mask": [0] * (nx * ny * nz),
             "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
         }
-
-        output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
 
         try:
             # 4. Inject
@@ -108,17 +106,30 @@ class TestHeavyElasticityLifecycle:
                 config_path.unlink()
             
             if output_dir.exists():
-                for artifact in output_dir.glob("*.zip"):
-                    artifact.unlink()
-                    print(f"\n[Sanitization] Purged artifact: {artifact.name}")
-            
-            if production_output_dir.exists():
-                shutil.rmtree(production_output_dir)
-                print(f"\n[Sanitization] Purged rogue directory: {production_output_dir.name}")
+                output_path = Path(output_dir)
+                    for item in output_path.iterdir():
+                        if item.name == ".gitkeep":
+                            continue
+
+                        if item.is_dir():
+                            shutil.rmtree(item)
+                        else:
+                            item.unlink()
+
+                print(f"\n[Sanitization] Purged directory: {output_dir.name}")
+
+           if temporary_output_dir.exists():
+                shutil.rmtree(temporary_output_dir)
+                print(f"\n[Sanitization] Removed directory and all contents: {temporary_output_dir.name}")
             
             # 8. FINAL AUDIT: Assert the folder is 100% clean
-            leftover_zips = list(output_dir.glob("*.zip"))
-            assert len(leftover_zips) == 0, f"CLEANUP FAILURE: Found {len(leftover_zips)} leftover artifacts."
 
-            assert not production_output_dir.exists(), f"CLEANUP FAILURE: {production_output_dir} still exists."
-            assert not test_data_dir.exists(), f"CLEANUP FAILURE: {test_data_dir} still exists."
+            remaining = [p for p in temporary_output_dir.iterdir() if p.name != ".gitkeep"]
+            assert not remaining, (
+                f"CLEANUP FAILURE: unexpected items in {temporary_output_dir}: "
+                f"{[p.name for p in remaining]}"
+            )
+
+            assert not temporary_output_dir.exists(), (
+                f"CLEANUP FAILURE: directory was not deleted: {temporary_output_dir}"
+            )
