@@ -43,7 +43,7 @@ def _load_simulation_context(input_path: str) -> SimulationContext:
 
 
 def run_solver(input_path: str) -> str:
-    """Main Orchestrator with Elastic Stability."""
+    """Main Orchestrator with Unified Elastic Stability."""
 
     context = _load_simulation_context(input_path)
 
@@ -81,51 +81,38 @@ def run_solver(input_path: str) -> str:
 
     # 5. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
-        try:
-            # A. PREDICTOR PASS
+        # A. PREDICTOR PASS
+        for block in state.stencil_matrix:
+            orchestrate_step3(block, context, elasticity, is_first_pass=True)
+            orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+
+        # B. PPE ITERATION
+        for _ in range(elasticity.max_iter):
+            max_delta = 0.0
             for block in state.stencil_matrix:
-                orchestrate_step3(block, context, elasticity, is_first_pass=True)
+                _, delta = orchestrate_step3(block, context, elasticity, is_first_pass=False)
                 orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+                max_delta = max(max_delta, delta)
 
-            # B. PPE ITERATION
-            for _ in range(elasticity.max_iter):
-                max_delta = 0.0
-                for block in state.stencil_matrix:
-                    _, delta = orchestrate_step3(block, context, elasticity, is_first_pass=False)
-                    orchestrate_step4(block, context, state.grid, state.boundary_conditions)
-                    max_delta = max(max_delta, delta)
+            if max_delta < context.config.ppe_tolerance:
+                break
 
-                if max_delta < context.config.ppe_tolerance:
-                    break
-
-            # C. VALIDATE & COMMIT
-            if not elasticity.validate_and_commit(state):
-                raise ArithmeticError("Numerical instability detected in trial buffers.")
-
-            # D. ADVANCE
-            elasticity.gradual_recovery()
-            state.iteration += 1
-            state.time += elasticity.dt
-            state = orchestrate_step5(state, context)
-
-
-            if DEBUG and state.iteration % 10 == 0:
-                print(
-                    f"DEBUG [Main]: Step {state.iteration} | "
-                    f"Time {state.time:.4f} | dt {elasticity.dt:.2e}"
-                )
-
-        except ArithmeticError as e:
-            logger.warning(
-                f"PANIC: Numerical instability detected ({str(e)}). "
-                "Triggering Elastic Recovery."
-            )
-            try:
-                elasticity.apply_panic_mode()
-            except RuntimeError as fatal_e:
-                logger.error(f"ABORT: {str(fatal_e)}")
-                raise
+        # C. UNIFIED GOVERNOR: Validate, Commit, and Recovery Logic
+        # Returns True to advance, False to retry (after internal apply_panic_mode)
+        # Raises RuntimeError internally if dt hits floor.
+        if not elasticity.sync_state(state):
             continue
+
+        # D. ADVANCE (Reached only on valid success path)
+        state.iteration += 1
+        state.time += elasticity.dt
+        state = orchestrate_step5(state, context)
+
+        if DEBUG and state.iteration % 10 == 0:
+            print(
+                f"DEBUG [Main]: Step {state.iteration} | "
+                f"Time {state.time:.4f} | dt {elasticity.dt:.2e}"
+            )
 
         # Termination check
         if state.time >= context.input_data.simulation_parameters.total_time:

@@ -40,42 +40,49 @@ class ElasticManager:
     def max_iter(self) -> int:
         return self._max_iter
 
-    def validate_and_commit(self, state) -> bool:
+    def sync_state(self, state) -> bool:
+        """
+        The UNIFIED GOVERNOR. 
+        Returns True to ADVANCE (Success), False to RETRY (Panic).
+        Raises RuntimeError if dt_floor is hit.
+        """
         limit = self.config.divergence_threshold 
         audit_fields = [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR, FI.P_NEXT]
         data_slice = state.fields.data[:, audit_fields]
         
-        if not np.isfinite(data_slice).all():
-            return False
-        if data_slice.max() > limit or data_slice.min() < -limit:
-            return False
+        # 1. VALIDATE
+        is_sane = np.isfinite(data_slice).all() and \
+                  data_slice.max() <= limit and \
+                  data_slice.min() >= -limit
 
+        if not is_sane:
+            # 2. TRIGGER PANIC (Internal handling)
+            self.is_in_panic = True
+            self._iteration = 0 
+            self._dt *= 0.5
+            
+            if self._dt < self.dt_floor:
+                raise RuntimeError(f"FATAL: dt ({self._dt:.2e}) dropped below floor {self.dt_floor:.2e}")
+            
+            self._omega = max(0.5, self._omega - 0.2)
+            self._max_iter = 5000
+            self.logger.warning(f"PANIC: dt reduced to {self._dt:.2e}. Retrying step...")
+            return False # Signal a RETRY
+
+        # 3. COMMIT (Success Path)
         state.fields.data[:, [FI.VX, FI.VY, FI.VZ]] = state.fields.data[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]]
         state.fields.data[:, FI.P] = state.fields.data[:, FI.P_NEXT]
         
-        # Only increment success counter on valid commit
         self._iteration += 1
-        return True
-    
-    def apply_panic_mode(self):
-        self.is_in_panic = True
-        self._iteration = 0  # Reset success streak on panic
-        self._dt *= 0.5
-        if self._dt < self.dt_floor:
-            raise RuntimeError(f"FATAL: dt ({self._dt:.2e}) dropped below floor {self.dt_floor:.2e}")
-        self._omega = max(0.5, self._omega - 0.2)
-        self._max_iter = 5000
-        self.logger.warning(f"PANIC: dt reduced to {self._dt:.2e}")
-
-    def gradual_recovery(self):
-        # Only attempt recovery every 5 successful steps to ensure true stability
-        if not self.is_in_panic or self._iteration < 5: 
-            return
         
-        if self._dt < self._target_dt:
-            self._dt = min(self._target_dt, self._dt * 1.1)
-            self._omega = min(self.config.ppe_omega, self._omega + 0.05)
-            self._iteration = 0 # Require 5 more steps before next increment
-        else:
-            self.is_in_panic = False
-            self._max_iter = self.config.ppe_max_iter
+        # 4. GRADUAL RECOVERY (Logic inside the success gate)
+        if self.is_in_panic and self._iteration >= 5:
+            if self._dt < self._target_dt:
+                self._dt = min(self._target_dt, self._dt * 1.1)
+                self._omega = min(self.config.ppe_omega, self._omega + 0.05)
+                self._iteration = 0 
+            else:
+                self.is_in_panic = False
+                self._max_iter = self.config.ppe_max_iter
+        
+        return True # Signal ADVANCE
