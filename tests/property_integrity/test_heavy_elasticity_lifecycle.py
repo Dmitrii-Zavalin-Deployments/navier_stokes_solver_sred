@@ -4,75 +4,78 @@ import json
 import logging
 import zipfile
 from pathlib import Path
-
 import pytest
 
 from src.main_solver import BASE_DIR, run_solver
 
-
 class TestHeavyElasticityLifecycle:
-    def test_numerical_panic_and_recovery_flow(self, caplog):
+    def test_numerical_stabilization_and_terminal_failure(self, caplog):
+        """
+        Validates the new Elasticity Range-Sweep logic:
+        1. Triggers ArithmeticError via extreme initial velocity.
+        2. Verifies the solver attempts to stabilize by reducing dt.
+        3. Verifies terminal failure when the dt_floor is reached.
+        """
         input_filename = "integration_input.json"
         config_filename = "config.json"
         
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
         
-        Path(BASE_DIR) / "data" / "testing-input-output"
-        production_output_dir = Path(BASE_DIR) / "output"
-        
+        # Define 10 steps in config to match ElasticManager._runs
         config_data = {
-            "dt_min_limit": 0.001,
-            "ppe_tolerance": 1e-4, "ppe_atol": 1e-6,
-            "ppe_max_iter": 50, "ppe_omega": 1.7,
-            "divergence_threshold": 1e6
+            "dt_min_limit": 0.0001,
+            "ppe_tolerance": 1e-4, 
+            "ppe_max_iter": 50, 
+            "ppe_omega": 1.7
         }
 
+        # Force immediate explosion with 1e10 velocity
         nx, ny, nz = 4, 4, 4
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
-            "grid": {"x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0, "nx": nx, "ny": ny, "nz": nz},
+            "grid": {
+                "x_min": 0.0, "x_max": 1.0, 
+                "y_min": 0.0, "y_max": 1.0, 
+                "z_min": 0.0, "z_max": 1.0, 
+                "nx": nx, "ny": ny, "nz": nz
+            },
             "fluid_properties": {"density": 1.0, "viscosity": 0.001},
             "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
             "simulation_parameters": {"time_step": 0.5, "total_time": 10.0, "output_interval": 1},
-            "boundary_conditions": [{"location": "x_min", "type": "inflow", "values": {"u": 50.0, "v": 0.0, "w": 0.0}}, {"location": "x_max", "type": "outflow", "values": {"p": 0.0}}],
+            "boundary_conditions": [
+                {"location": "x_min", "type": "inflow", "values": {"u": 50.0, "v": 0.0, "w": 0.0}}, 
+                {"location": "x_max", "type": "outflow", "values": {"p": 0.0}}
+            ],
             "mask": [0] * (nx * ny * nz),
             "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
         }
 
         try:
+            # Setup environment
             input_path.write_text(json.dumps(input_data))
             config_path.write_text(json.dumps(config_data))
 
             with caplog.at_level(logging.WARNING):
-                # 5. EXECUTION & LOG CAPTURE
+                # We expect the solver to eventually give up after 10 attempts
                 with pytest.raises(RuntimeError) as excinfo:
-                    # We capture the path returned before the crash
-                    zip_path = run_solver(input_filename)
-
-                panic_logs = [rec for rec in caplog.records if "PANIC" in rec.message]
+                    run_solver(input_filename)
 
                 # --- FORENSIC AUDIT ---
-                print(f"\n[Forensics] Error caught: {excinfo.value}")
-                print(f"\n[Forensics] production_output_dir exists: {production_output_dir.exists()}")
-                if production_output_dir.exists():
-                    print(f"[Forensics] Contents of output/: {[p.name for p in production_output_dir.iterdir()]}")
+                error_msg = str(excinfo.value)
+                print(f"\n[Forensics] Error caught: {error_msg}")
 
-                assert "Solver cannot recover" in str(excinfo.value)
-                assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered."
-                print(f"Captured {len(panic_logs)} panic events before terminal failure.")
+                # Verify the error comes from our ElasticManager stabilization logic
+                assert "Not found stable run" in error_msg
+                assert "dt_floor" in error_msg
 
-            # 7. ARCHIVE AUDIT
-            if zip_path and Path(zip_path).exists():
-                audit_path = Path(zip_path)
-                print(f"[Forensics] Found ZIP at: {audit_path}")
-                with zipfile.ZipFile(audit_path, "r") as archive:
-                    state_bytes = archive.read("simulation_state.json")
-                    state_json = json.loads(state_bytes)
-                    data_array = state_json.get("fields", {}).get("data", [])
-                    assert len(data_array) > 0, "ARCHIVE FAIL: State contains no field data."
-            else:
-                print("[Forensics] WARNING: zip_path is None or does not exist.")
+                # Verify that stabilization attempts were logged
+                stabilization_logs = [rec for rec in caplog.records if "Instability detected" in rec.message]
+                print(f"[Forensics] Captured {len(stabilization_logs)} stabilization retry events.")
+                
+                # It should have tried multiple times before hitting the RuntimeError
+                assert len(stabilization_logs) > 0, "ELASTICITY FAIL: Stabilization retries never triggered."
+                assert len(stabilization_logs) <= 10, "ELASTICITY FAIL: Exceeded maximum allowed retries."
 
         finally:
             # # 7. PURGE: Universal Cleanup (Rule 2: Zero Debt)
