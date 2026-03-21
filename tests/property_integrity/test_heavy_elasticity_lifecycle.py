@@ -18,29 +18,29 @@ class TestHeavyElasticityLifecycle:
     """
 
     def test_numerical_panic_and_recovery_flow(self, caplog):
-        # Rule 5: Explicit Initialization. 
+        # Rule 5: Explicit Initialization.
         panic_logs = []
         zip_path = None
-        
+
         # 1. Setup Production-filenames
         input_filename = "integration_input.json"
         config_filename = "config.json"
-        
+
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
 
-        production_output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
-        Path(BASE_DIR) / "output"
-        
+        # Output directories used by solver
+        output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+        temporary_output_dir = Path(BASE_DIR) / "output"
+
         # 2. Config: Numerical Solver settings (Rule 5 compliance)
-        # Note: dt is NOT here. It is injected from the simulation input.
         config_data = {
-            "dt_min_limit": 0.001,    # Explicit floor for ElasticManager
+            "dt_min_limit": 0.001,
             "ppe_tolerance": 1e-4,
             "ppe_atol": 1e-6,
             "ppe_max_iter": 50,
-            "ppe_omega": 1.7,         # Aggressive over-relaxation to trigger instability
-            "divergence_threshold": 1e6
+            "ppe_omega": 1.7,
+            "divergence_threshold": 1e6,
         }
 
         # 3. Input: High-velocity 3D grid to trigger divergence
@@ -48,22 +48,29 @@ class TestHeavyElasticityLifecycle:
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
             "grid": {
-                "x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0,
-                "nx": nx, "ny": ny, "nz": nz
+                "x_min": 0.0,
+                "x_max": 1.0,
+                "y_min": 0.0,
+                "y_max": 1.0,
+                "z_min": 0.0,
+                "z_max": 1.0,
+                "nx": nx,
+                "ny": ny,
+                "nz": nz,
             },
             "fluid_properties": {"density": 1.0, "viscosity": 0.001},
             "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
             "simulation_parameters": {
-                "time_step": 0.5,      # INITIAL DT: Injected into ElasticManager
-                "total_time": 10.0, 
-                "output_interval": 1
+                "time_step": 0.5,
+                "total_time": 10.0,
+                "output_interval": 1,
             },
             "boundary_conditions": [
                 {"location": "x_min", "type": "inflow", "values": {"u": 50.0, "v": 0.0, "w": 0.0}},
-                {"location": "x_max", "type": "outflow", "values": {"p": 0.0}}
+                {"location": "x_max", "type": "outflow", "values": {"p": 0.0}},
             ],
             "mask": [0] * (nx * ny * nz),
-            "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
+            "external_forces": {"force_vector": [0.0, -9.81, 0.0]},
         }
 
         try:
@@ -73,32 +80,30 @@ class TestHeavyElasticityLifecycle:
 
             # Set log level to capture ElasticManager warnings
             with caplog.at_level(logging.WARNING):
-                # 5. EXECUTION & LOG CAPTURE (Rule 7: Atomic Verification)
-                # We expect a RuntimeError when the solver eventually hits the dt_min_limit floor.
+                # 5. EXECUTION & LOG CAPTURE
                 with pytest.raises(RuntimeError) as excinfo:
                     zip_path = run_solver(input_filename)
-                
-                # Rule 6: Extracting logs immediately after failure context.
-                panic_logs = [rec for rec in caplog.records if 'PANIC' in rec.message]
-                
+
+                panic_logs = [rec for rec in caplog.records if "PANIC" in rec.message]
+
                 assert "Solver cannot recover" in str(excinfo.value)
                 assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered."
-                
+
                 print(f"Captured {len(panic_logs)} panic events before terminal failure.")
 
-            # 7. ARCHIVE AUDIT: Ensure partial state was saved correctly
+            # 7. ARCHIVE AUDIT
             if zip_path and Path(zip_path).exists():
                 audit_path = Path(zip_path)
-                with zipfile.ZipFile(audit_path, 'r') as archive:
+                with zipfile.ZipFile(audit_path, "r") as archive:
                     state_bytes = archive.read("simulation_state.json")
                     state_json = json.loads(state_bytes)
-                    
-                    # Rule 4: SSoT Check
+
                     data_array = state_json.get("fields", {}).get("data", [])
                     assert len(data_array) > 0, "ARCHIVE FAIL: State contains no field data."
 
-                finally:
+        finally:
             # 7. PURGE: Universal Cleanup (Rule 2: Zero Debt)
+
             if input_path.exists():
                 input_path.unlink()
 
@@ -106,11 +111,9 @@ class TestHeavyElasticityLifecycle:
                 config_path.unlink()
 
             if output_dir.exists():
-                output_path = Path(output_dir)
-                for item in output_path.iterdir():
+                for item in output_dir.iterdir():
                     if item.name == ".gitkeep":
                         continue
-
                     if item.is_dir():
                         shutil.rmtree(item)
                     else:
@@ -122,11 +125,13 @@ class TestHeavyElasticityLifecycle:
                 shutil.rmtree(temporary_output_dir)
                 print(f"\n[Sanitization] Removed directory and all contents: {temporary_output_dir.name}")
 
-            # 8. FINAL AUDIT: Assert the folder is 100% clean
-            # (This block must be aligned with the previous statements)
+            # 8. FINAL AUDIT
 
-            remaining = [p for p in temporary_output_dir.iterdir() if p.name != ".gitkeep"] \
-                if temporary_output_dir.exists() else []
+            if temporary_output_dir.exists():
+                remaining = [p for p in temporary_output_dir.iterdir() if p.name != ".gitkeep"]
+            else:
+                remaining = []
+
             assert not remaining, (
                 f"CLEANUP FAILURE: unexpected items in {temporary_output_dir}: "
                 f"{[p.name for p in remaining]}"
