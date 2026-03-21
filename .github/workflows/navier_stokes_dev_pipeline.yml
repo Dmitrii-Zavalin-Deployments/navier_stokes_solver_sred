@@ -153,41 +153,35 @@ jobs:
           EOF
           )
 
-          # 4. Update Ledger (Prepend logic)
-          # We rename the existing file to 'old_audit.md' temporarily to handle the merge
-          [ -f performance_audit.md ] && mv performance_audit.md old_audit.md
-          
+          # 4. Prepend to file (Newest on top)
+          # We keep the Header, then inject the new entry, then append the old content
           echo "# 🌊 Navier–Stokes Performance Audit Ledger" > performance_audit.md
-          echo -e "$NEW_ENTRY\n" >> performance_audit.md
-          
-          # Append old content (skipping its header) if it existed
+          echo "$NEW_ENTRY" >> performance_audit.md
+          # Append everything after the first line of the old file (skipping the old header)
           [ -f old_audit.md ] && tail -n +2 old_audit.md >> performance_audit.md
-          rm -f old_audit.md
+          git add performance_audit.md
 
-          # 5. Handle Branch-Specific Logic with Anti-Deletion Shield
+          # 5. Handle Branch-Specific Logic
+          CURRENT_BRANCH=${GITHUB_REF##*/}
+          
           if [ "$CURRENT_BRANCH" == "$AUTO_COMMIT_BRANCH" ]; then
-            echo "⚡ PROTECTED AUTO-SYNC: Staging New/Modified files (Deletions Blocked)..."
+            echo "⚡ AUTO-SYNC ACTIVE: Staging all repository changes on '$CURRENT_BRANCH'..."
             
-            # Rule: Stage only New (Untracked) and Modified files. 
-            # This ensures 'git rm' is never accidentally triggered by the CI.
-            git ls-files --others --modified --exclude-standard -z | xargs -0 -r git add
-            # Explicitly add the ledger since it might be new or modified
-            git add performance_audit.md
-            
-            # Identify what was actually staged for the commit message
-            UPDATED_FILES=$(git diff --name-only --cached | tr '\n' ' ')
+            # Identify all changed files for the commit message
+            UPDATED_FILES=$(git status --porcelain | awk '{print $2}' | tr '\n' ' ')
             
             if [ -n "$UPDATED_FILES" ]; then
-              git commit -m "📊 audit & sync [$CURRENT_BRANCH]: updated $UPDATED_FILES"
+              git add --ignore-removal .
+              git commit -m "📊 audit & sync: [${{ job.status }}] updated files: $UPDATED_FILES"
               git push origin HEAD || echo "Push skipped: Concurrent push detected."
             else
-              echo "✅ No changes to sync (or only deletions detected, which were ignored)."
+              echo "✅ No changes to sync."
             fi
           else
             echo "🛡️ SAFE MODE: Only committing Performance Ledger on '$CURRENT_BRANCH'."
-            git add performance_audit.md
+            
             if [ -n "$(git status --porcelain performance_audit.md)" ]; then
-              git commit -m "📊 audit [$CURRENT_BRANCH]: update performance ledger"
+              git commit -m "📊 audit: update performance ledger"
               git push origin HEAD || echo "Push skipped: Concurrent push detected."
             fi
           fi
