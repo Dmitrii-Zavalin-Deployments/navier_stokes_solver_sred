@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 1. Confirm the illegal assignment in Config
 cat -n src/common/solver_config.py | sed -n '20,30p'
 
@@ -76,3 +77,10 @@ sed -i 's/config = SolverConfig(dt=base_dt, \*\*config_dict)/config = SolverConf
 
 # 3. Final Lint & Format Check
 ruff check src/common/solver_config.py src/common/simulation_context.py --fix
+=======
+# 1. Verify the Constructor: Confirm 'dt' is NOT in __slots__
+grep -A 5 "__slots__ =" src/common/solver_config.py
+
+# 2. Verify the Caller: Confirm 'dt=base_dt' is still being passed
+cat -n src/common/simulation_context.py | sed -n '30,35p'
+>>>>>>> 142195b7 (adding quality gates)
