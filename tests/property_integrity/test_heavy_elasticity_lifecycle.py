@@ -3,10 +3,12 @@
 import json
 import logging
 import zipfile
-import shutil
 from pathlib import Path
+
 import pytest
+
 from src.main_solver import BASE_DIR, run_solver
+
 
 class TestHeavyElasticityLifecycle:
     def test_numerical_panic_and_recovery_flow(self, caplog):
@@ -16,7 +18,7 @@ class TestHeavyElasticityLifecycle:
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
         
-        output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+        Path(BASE_DIR) / "data" / "testing-input-output"
         production_output_dir = Path(BASE_DIR) / "output"
         
         config_data = {
