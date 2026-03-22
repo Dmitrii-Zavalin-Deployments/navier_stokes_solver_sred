@@ -1,6 +1,5 @@
 # src/step3/ppe_solver.py
 
-import math
 
 from src.common.field_schema import FI
 from src.common.stencil_block import StencilBlock

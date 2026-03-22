@@ -1,6 +1,5 @@
 # src/step3/orchestrate_step3.py
 
-import math
 
 from src.common.elasticity import ElasticManager
 from src.common.simulation_context import SimulationContext

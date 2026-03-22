@@ -1,6 +1,5 @@
 # src/step3/ops/forces.py
 
-import math
 
 from src.common.stencil_block import StencilBlock
 
