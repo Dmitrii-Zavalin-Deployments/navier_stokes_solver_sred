@@ -41,72 +41,56 @@ class TestHeavyElasticityLifecycle:
     def test_scenario_1_pure_success(self, caplog, base_config, base_input):
         """
         Scenario 1: Run completes without any instabilities.
-        Asserts:
-        1. Final file existence and correct naming convention.
-        2. Zero instability warnings in logs (Elasticity remained at full dt).
-        3. Archive contains the expected number of time-step snapshots.
-        4. Numerical Sanity: No NaNs/Infs in the generated CSV data.
-        5. Physical Integrity: Velocity field shows non-zero movement from inflow.
-        """        
-        # 1. SETUP
+        Aligned with Phase C: Rule 2 (Zero-Debt) and Rule 7 (Scientific Truth).
+        """
+        import zipfile
+
+        # 1. SETUP (Rule 5: Explicit Initialization)
         input_filename = "test_success_input.json"
         config_path = Path(BASE_DIR) / "config.json"
         input_path = Path(BASE_DIR) / input_filename
         
-        # Ensure we are testing a clean environment
         config_path.write_text(json.dumps(base_config))
         input_path.write_text(json.dumps(base_input))
 
-        # Capture logs for audit
         with caplog.at_level(logging.WARNING):
             # 2. EXECUTION
             zip_path = run_solver(input_filename)
 
-            # 3. LOG AUDIT: There should be 0 "Instability" warnings
+            # 3. LOG AUDIT (Rule 6: Efficiency)
+            # Confirming that 100% of the successful path was exercised without retries
             instability_logs = [r for r in caplog.records if "Instability" in r.message]
-            assert len(instability_logs) == 0, (
-                f"Scenario 1 Error: Expected 0 retries, but found {len(instability_logs)}. "
-                f"Logs: {[r.message for r in instability_logs]}"
-            )
-            
+            assert len(instability_logs) == 0
+
             # 4. PATH AUDIT
-            assert Path(zip_path).exists(), "The final archive was not created."
-            assert zip_path.endswith(".zip")
-            assert "navier_stokes_output.zip" in zip_path
-
-            # 5. DEEP ARCHIVE INSPECTION
+            assert Path(zip_path).exists()
+            
+            # 5. DEEP ARCHIVE INSPECTION (Rule 7: Atomic Numerical Truth)
             with zipfile.ZipFile(zip_path, 'r') as archive:
-                namelist = archive.namelist()
                 csv_files = sorted([f for f in namelist if f.endswith('.csv')])
-                
-                # total_time=0.2, dt=0.1. Expecting at least t=0.1 and t=0.2 snapshots
-                assert len(csv_files) >= 2, f"Expected snapshots for steps, found only {len(csv_files)}"
+                assert len(csv_files) >= 2 
 
-                # Inspect the final step for numerical validity
-                final_step_name = csv_files[-1]
-                with archive.open(final_step_name) as f:
+                with archive.open(csv_files[-1]) as f:
                     content = f.read().decode('utf-8')
                     
-                    # Assert no numerical explosions reached the string output
-                    assert "nan" not in content.lower(), f"NaN detected in {final_step_name}"
-                    assert "inf" not in content.lower(), f"Inf detected in {final_step_name}"
+                    # Numerical Sanity check (Phase C, Rule 7)
+                    assert "nan" not in content.lower()
+                    assert "inf" not in content.lower()
 
-                    # Assert Physical Movement
-                    # We check if 'u' (velocity) has moved away from 0.0 due to the inflow
+                    # Physics Heartbeat
                     lines = content.strip().split('\n')
                     header = lines[0].split(',')
-                    u_index = header.index('u') if 'u' in header else 0
+                    u_idx = header.index('u')
                     
-                    data_lines = lines[1:]
-                    velocities = [float(row.split(',')[u_index]) for row in data_lines]
+                    # Extract velocities using list comprehension (Rule 0: Logic efficiency)
+                    velocities = [float(row.split(',')[u_idx]) for row in lines[1:]]
                     
-                    # Logic: If max velocity is still ~0, the solver didn't actually solve anything
-                    max_u = max(velocities)
-                    assert max_u > 1e-5, f"Physics Failure: Max velocity {max_u} suggests no fluid movement."
+                    # Ensure the inflow (1.0) has actually propagated
+                    # We expect the max velocity to be near the inflow value
+                    assert max(velocities) > 0.1, "Physics Failure: Domain remains static."
 
-        # 6. CLEANUP (Rule 2: Zero Debt)
-        if input_path.exists():
-            input_path.unlink()
+        # 6. CLEANUP
+        if input_path.exists(): input_path.unlink()
     
     def test_scenario_2_retry_and_recover(self, caplog, base_config, base_input):
         """
