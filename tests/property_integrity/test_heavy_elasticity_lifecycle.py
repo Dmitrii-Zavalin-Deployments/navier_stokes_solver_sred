@@ -3,7 +3,7 @@
 import json
 import logging
 from pathlib import Path
-import zipfile
+
 import pytest
 
 from src.main_solver import BASE_DIR, run_solver
