@@ -85,7 +85,7 @@ def run_solver(input_path: str) -> str:
                 orchestrate_step4(block, context, state.grid, state.boundary_conditions)
 
             # B. PPE ITERATION
-            for _ in range(elasticity.max_iter):
+            for _ in range(context.config.max_iter):
                 max_delta = 0.0
                 for block in state.stencil_matrix:
                     _, delta = orchestrate_step3(block, context, elasticity, is_first_pass=False)
