@@ -3,7 +3,7 @@
 import json
 import logging
 from pathlib import Path
-
+import zipfile
 import pytest
 
 from src.main_solver import BASE_DIR, run_solver
@@ -41,11 +41,12 @@ class TestHeavyElasticityLifecycle:
         """
         Scenario 1: Run completes without any instabilities.
         Asserts:
-        1. Final file existence.
-        2. Correct total simulation time reached.
-        3. Zero instability warnings in logs.
-        4. State iteration count matches mathematical expectation.
-        """
+        1. Final file existence and correct naming convention.
+        2. Zero instability warnings in logs (Elasticity remained at full dt).
+        3. Archive contains the expected number of time-step snapshots.
+        4. Numerical Sanity: No NaNs/Infs in the generated CSV data.
+        5. Physical Integrity: Velocity field shows non-zero movement from inflow.
+        """        
         # 1. SETUP
         input_filename = "test_success_input.json"
         config_path = Path(BASE_DIR) / "config.json"
@@ -70,16 +71,41 @@ class TestHeavyElasticityLifecycle:
             # 4. PATH AUDIT
             assert Path(zip_path).exists(), "The final archive was not created."
             assert zip_path.endswith(".zip")
-
-            # 5. STATE & LOGIC AUDIT
-            # total_time = 0.2, dt = 0.1 -> We expect exactly 2 iterations
-            # Check if total_time was respected (SimulationContext handles this, 
-            # but we verify the output existence as a proxy)
             assert "navier_stokes_output.zip" in zip_path
 
+            # 5. DEEP ARCHIVE INSPECTION
+            with zipfile.ZipFile(zip_path, 'r') as archive:
+                namelist = archive.namelist()
+                csv_files = sorted([f for f in namelist if f.endswith('.csv')])
+                
+                # total_time=0.2, dt=0.1. Expecting at least t=0.1 and t=0.2 snapshots
+                assert len(csv_files) >= 2, f"Expected snapshots for steps, found only {len(csv_files)}"
+
+                # Inspect the final step for numerical validity
+                final_step_name = csv_files[-1]
+                with archive.open(final_step_name) as f:
+                    content = f.read().decode('utf-8')
+                    
+                    # Assert no numerical explosions reached the string output
+                    assert "nan" not in content.lower(), f"NaN detected in {final_step_name}"
+                    assert "inf" not in content.lower(), f"Inf detected in {final_step_name}"
+
+                    # Assert Physical Movement
+                    # We check if 'u' (velocity) has moved away from 0.0 due to the inflow
+                    lines = content.strip().split('\n')
+                    header = lines[0].split(',')
+                    u_index = header.index('u') if 'u' in header else 0
+                    
+                    data_lines = lines[1:]
+                    velocities = [float(row.split(',')[u_index]) for row in data_lines]
+                    
+                    # Logic: If max velocity is still ~0, the solver didn't actually solve anything
+                    max_u = max(velocities)
+                    assert max_u > 1e-5, f"Physics Failure: Max velocity {max_u} suggests no fluid movement."
+
         # 6. CLEANUP (Rule 2: Zero Debt)
-        if input_path.exists(): input_path.unlink()
-        # We keep config.json if other tests need it, or delete if isolated
+        if input_path.exists():
+            input_path.unlink()
     
     def test_scenario_2_retry_and_recover(self, caplog, base_config, base_input):
         """
