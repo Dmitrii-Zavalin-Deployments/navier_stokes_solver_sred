@@ -3,6 +3,7 @@
 import json
 import logging
 import sys
+import traceback
 from pathlib import Path
 
 import jsonschema
@@ -17,7 +18,15 @@ from src.step3.orchestrate_step3 import orchestrate_step3
 from src.step4.orchestrate_step4 import orchestrate_step4
 from src.step5.orchestrate_step5 import orchestrate_step5
 
-np.seterr(all="raise")
+# --- [RULE 5: DETERMINISTIC INITIALIZATION] ---
+def configure_numerical_runtime():
+    """
+    Forces NumPy to raise exceptions on all mathematical anomalies.
+    This prevents 'Silent Success' on physically divergent simulations.
+    """
+    np.seterr(all="raise", under="ignore")
+
+configure_numerical_runtime()
 
 DEBUG = False
 logger = logging.getLogger("Solver.Main")
@@ -25,7 +34,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 def _load_simulation_context(input_path: str) -> SimulationContext:
     """Assembles physical input and numerical config into a unified context."""
-    full_input_path = BASE_DIR / input_path
+    full_input_path = Path(input_path)
+    if not full_input_path.is_absolute():
+        full_input_path = BASE_DIR / input_path
+        
     config_path = BASE_DIR / "config.json"
 
     if not full_input_path.exists():
@@ -44,33 +56,29 @@ def run_solver(input_path: str) -> str:
     """Main Orchestrator with Unified Elastic Stability."""
     context = _load_simulation_context(input_path)
 
-    # 1. VALIDATE INPUT
+    # 1. VALIDATE INPUT (Contract Guard)
     SCHEMA_PATH = BASE_DIR / "schema/solver_input_schema.json"
     try:
         with open(SCHEMA_PATH) as f:
             schema = json.load(f)
         jsonschema.validate(instance=context.input_data.to_dict(), schema=schema)
-        if DEBUG:
-            print("DEBUG [Main]: Input schema validation passed.")
     except jsonschema.exceptions.ValidationError as e:
-        print(f"!!! CONTRACT VIOLATION: {e.message}")
+        logger.error(f"!!! CONTRACT VIOLATION: {e.message}")
         raise
 
-    # 2. ASSEMBLY
+    # 2. ASSEMBLY (Phase B Implementation)
     state = orchestrate_step1(context)
     state = orchestrate_step2(state)
 
     # 3. STATE CONTRACT VALIDATION
     try:
         state.validate_against_schema(str(SCHEMA_PATH))
-        if DEBUG:
-            print("DEBUG [Main]: State validation passed.")
     except jsonschema.exceptions.ValidationError as e:
         path_str = ".".join([str(p) for p in e.path])
-        print(f"!!! CONTRACT VIOLATION at {path_str}: {e.message}")
+        logger.error(f"!!! STATE CONTRACT VIOLATION at {path_str}: {e.message}")
         raise
 
-    # 4. ELASTICITY ENGINE
+    # 4. ELASTICITY ENGINE (Stability Controller)
     elasticity = ElasticManager(
         context.config,
         context.input_data.simulation_parameters.time_step,
@@ -84,7 +92,7 @@ def run_solver(input_path: str) -> str:
                 orchestrate_step3(block, context, elasticity, is_first_pass=True)
                 orchestrate_step4(block, context, state.grid, state.boundary_conditions)
 
-            # B. PPE ITERATION
+            # B. PPE ITERATION (Pressure-Poisson Equation)
             for _ in range(context.config.ppe_max_iter):
                 max_delta = 0.0
                 for block in state.stencil_matrix:
@@ -95,11 +103,11 @@ def run_solver(input_path: str) -> str:
                 if max_delta < context.config.ppe_tolerance:
                     break
             
-            # C. ADVANCE
+            # C. ADVANCE (Rule 9: Unified Foundation Commit)
             state.iteration += 1
             state.time += elasticity.dt
             
-            # SUCCESS PATH - Rule 9: Commit STAR/NEXT fields to Foundation before Archiving
+            # Signal Success to Elasticity to potentially increase dt in future steps
             elasticity.stabilization(is_needed=False, state=state)
 
             state = orchestrate_step5(state, context)
@@ -110,8 +118,9 @@ def run_solver(input_path: str) -> str:
             if state.time >= context.input_data.simulation_parameters.total_time:
                 state.ready_for_time_loop = False
 
-        except ArithmeticError:
-            # FAILURE PATH: Update dt and retry the SAME time step
+        except (ArithmeticError, FloatingPointError, ValueError):
+            # FAILURE PATH: Instability detected. Trigger dt reduction and retry step.
+            # This block is only reachable if np.seterr(all='raise') is active.
             elasticity.stabilization(is_needed=True, state=state)
 
     return archive_simulation_artifacts(state)
@@ -126,6 +135,5 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         print(f"FATAL PIPELINE ERROR: {str(e)}", file=sys.stderr)
-        import traceback
         traceback.print_exc()
         sys.exit(1)
