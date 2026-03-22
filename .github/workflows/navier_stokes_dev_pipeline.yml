@@ -77,6 +77,11 @@ jobs:
           echo "🚀 Initiating: $TEST_COMMAND"
           bash src/debug/forensic_audit.sh
           $TEST_COMMAND
+          # bash src/debug/forensic_audit.sh
+      
+      - name: 🔍 Forensic Audit
+        if: always()
+        run: |
           bash src/debug/forensic_audit.sh
       
       # - name: 🔍 Forensic Audit
