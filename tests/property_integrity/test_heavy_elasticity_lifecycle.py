@@ -71,6 +71,7 @@ class TestHeavyElasticityLifecycle:
 
             # 5. DEEP ARCHIVE INSPECTION
             with zipfile.ZipFile(zip_path, 'r') as archive:
+                namelist = archive.namelist()
                 csv_files = sorted([f for f in namelist if f.endswith('.csv')])
                 assert len(csv_files) >= 2 
 
