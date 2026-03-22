@@ -80,53 +80,57 @@ jobs:
       - name: 🔍 Forensic Audit
         if: always()
         run: |
-          if [[ "${{ job.status }}" == "success" ]]; then
-            echo "✅ All systems nominal. No anomalies detected in solver lifecycle."
-            # Reset the audit script to a clean, dormant state on success
-            cat <<EOF > src/debug/forensic_audit.sh
-          #!/bin/bash
-          # Description: Automated forensic audit for Navier-Stokes solver failures.
-          # Status: Dormant (All systems nominal)
-          exit 0
-          EOF
-            chmod +x src/debug/forensic_audit.sh
-            echo "🧹 Diagnostic script has been reset to Dormant mode."
-          else
-            echo "⚠️ CI Failure Detected. Initiating Deep Forensic Audit..."
+          # if [[ "${{ job.status }}" == "success" ]]; then
+          #   echo "✅ All systems nominal. No anomalies detected in solver lifecycle."
+          #   # Reset the audit script to a clean, dormant state on success
+          #   cat <<EOF > src/debug/forensic_audit.sh
+          # #!/bin/bash
+          # # Description: Automated forensic audit for Navier-Stokes solver failures.
+          # # Status: Dormant (All systems nominal)
+          # exit 0
+          # EOF
+          #   chmod +x src/debug/forensic_audit.sh
+          #   echo "🧹 Diagnostic script has been reset to Dormant mode."
+          # else
+          #   echo "⚠️ CI Failure Detected. Initiating Deep Forensic Audit..."
             
-            echo "------------------------------------------------------------"
-            echo "ls -R output: "
-            ls -R
-            echo "------------------------------------------------------------"
+          #   echo "------------------------------------------------------------"
+          #   echo "ls -R output: "
+          #   ls -R
+          #   echo "------------------------------------------------------------"
             
-            # Run the Forensic Script (if it exists)
-            if [ -f "src/debug/forensic_audit.sh" ]; then
-              bash src/debug/forensic_audit.sh
-            else
-              echo "❌ Critical: Diagnostic script 'src/debug/forensic_audit.sh' not found."
-            fi
+          #   # Run the Forensic Script (if it exists)
+          #   if [ -f "src/debug/forensic_audit.sh" ]; then
+          #     bash src/debug/forensic_audit.sh
+          #   else
+          #     echo "❌ Critical: Diagnostic script 'src/debug/forensic_audit.sh' not found."
+          #   fi
 
-            echo "------------------------------------------------------------"
-            echo "📉 RE-RUNNING FAILED TEST FOR FINAL SIGNAL"
-            echo "------------------------------------------------------------"
+          #   echo "------------------------------------------------------------"
+          #   echo "📉 RE-RUNNING FAILED TEST FOR FINAL SIGNAL"
+          #   echo "------------------------------------------------------------"
             
-            # This calls the variable defined at the top
-            $TEST_COMMAND || true
+          #   # This calls the variable defined at the top
+          #   $TEST_COMMAND || true
 
-            # Cleanup the diagnostic file
-            # Note: EOF is shifted to the left margin to ensure shell compatibility
-            cat <<EOF > src/debug/forensic_audit.sh
+          #   # Cleanup the diagnostic file
+          #   # Note: EOF is shifted to the left margin to ensure shell compatibility
+          #   cat <<EOF > src/debug/forensic_audit.sh
 
-            bash src/debug/forensic_audit.sh
-            
-          #!/bin/bash
-          # Description: Automated forensic audit for Navier-Stokes solver failures.
-          # Status: Waiting for the next payload
-          exit 0
-          EOF
-            echo "🧹 Diagnostic script has been reset to Waiting mode."
-            exit 1
-          fi
+          #   bash src/debug/forensic_audit.sh
+
+          # #!/bin/bash
+          # # Description: Automated forensic audit for Navier-Stokes solver failures.
+          # # Status: Waiting for the next payload
+          # exit 0
+          # EOF
+          #   echo "🧹 Diagnostic script has been reset to Waiting mode."
+          #   exit 1
+          # fi
+
+          bash src/debug/forensic_audit.sh
+          $TEST_COMMAND || true
+          bash src/debug/forensic_audit.sh
 
       - name: 📊 Audit Performance & Sync State
         if: always()
