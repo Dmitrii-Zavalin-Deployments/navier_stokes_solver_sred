@@ -20,6 +20,7 @@ from src.step5.orchestrate_step5 import orchestrate_step5
 
 DEBUG = False
 logger = logging.getLogger("Solver.Main")
+logger.propagate = True
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 def _configure_numerical_runtime(context: SimulationContext):
