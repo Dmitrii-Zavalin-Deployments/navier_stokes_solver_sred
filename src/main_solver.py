@@ -90,27 +90,31 @@ def run_solver(input_path: str) -> str:
     # 5. MAIN EXECUTION LOOP
     while state.ready_for_time_loop:
         try:
+            # SYNC FIRST
+            for b in state.stencil_matrix:
+                b.dt = elasticity.dt
+
             # A. ADVANCE (Rule 9: Unified Foundation Commit)
             state.iteration += 1
             state.time += elasticity.dt
             
             # B. PREDICTOR PASS
             for block in state.stencil_matrix:
-                orchestrate_step3(block, context, elasticity, is_first_pass=True)
+                orchestrate_step3(block, context, is_first_pass=True)
                 orchestrate_step4(block, context, state.grid, state.boundary_conditions)
 
             # C. PPE ITERATION (Pressure-Poisson Equation)
             for _ in range(context.config.ppe_max_iter):
                 max_delta = 0.0
                 for block in state.stencil_matrix:
-                    _, delta = orchestrate_step3(block, context, elasticity, is_first_pass=False)
+                    _, delta = orchestrate_step3(block, context, is_first_pass=False)
                     orchestrate_step4(block, context, state.grid, state.boundary_conditions)
                     max_delta = max(max_delta, delta)
 
                 if max_delta < context.config.ppe_tolerance:
                     break
             
-            # Signal Success to Elasticity to potentially increase dt in future steps
+            # Signal Success to Elasticity to potentially increase dt for the NEXT step
             elasticity.stabilization(is_needed=False, state=state)
 
             state = orchestrate_step5(state, context)
