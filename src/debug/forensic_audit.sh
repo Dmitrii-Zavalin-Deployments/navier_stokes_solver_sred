@@ -8,6 +8,8 @@ echo "===================================================="
 echo "🛡️  ELASTICITY INTEGRITY AUDIT"
 echo "===================================================="
 
+touch $LOG_FILE
+
 # --- 1. LOG AUDIT: Did it retry 10 times? ---
 echo "Step 1: Auditing Log Sequence..."
 if [ ! -f "$LOG_FILE" ]; then
@@ -43,6 +45,8 @@ if grep -q "initial_conditions_override" "$TEST_FILE"; then
 else
     echo "✅ PASS: Test input follows the official JSON schema."
 fi
+
+cat $LOG_FILE
 
 echo "===================================================="
 
