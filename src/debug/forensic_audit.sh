@@ -15,7 +15,7 @@ touch $LOG_FILE
 # --- 1. LOG AUDIT: Did it retry the configured amount? ---
 echo "Step 1: Auditing Log Sequence..."
 # We now pull the expected count from the config file itself to remain deterministic
-EXPECTED_RETRIES=$(grep "ppe_max_retries" "$CONFIG_FILE" | tr -dc '0-9')
+EXPECTED_RETRIES=$(grep "ppe_max_retries" "$CONFIG_FILE" | head -n 1 | grep -oE "[0-9]+")
 
 if [ -z "$EXPECTED_RETRIES" ]; then
     echo "❌ ERROR: ppe_max_retries not found in $CONFIG_FILE"
