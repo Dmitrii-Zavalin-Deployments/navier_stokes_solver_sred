@@ -72,3 +72,46 @@ grep -nC 5 "config.json" src/common/solver_config.py 2>/dev/null || echo "Not fo
 # ==============================================================================
 echo -e "\n--- [VERIFYING REPAIR] ---"
 cat -n src/common/solver_config.py | grep -C 2 "ppe_max_retries"
+
+# ==============================================================================
+# 1. FIND THE SERIALIZATION KILLER (Where is the Write logic?)
+# ==============================================================================
+echo "--- [TRACE: Locating Save/Dict Logic] ---"
+# Check the base class for the hardcoded keys that are likely excluding 'ppe_max_retries'
+grep -rE "def to_dict|def save|def to_json" src/common/
+
+# Check if the test itself performs an 'update' or 'save'
+grep -nE "config.*save|json\.dump" tests/property_integrity/test_heavy_elasticity_lifecycle.py
+
+# ==============================================================================
+# 2. AUDIT THE SMOKING GUNS (Viewing the logic)
+# ==============================================================================
+echo -e "\n--- [GUN 2: The Base Container Logic] ---"
+# Viewing the parent class to see how it serializes
+cat -n src/common/base_container.py | head -n 50
+
+# # ==============================================================================
+# # 3. THE REPAIR (Sed Injections)
+# # ==============================================================================
+# echo -e "\n--- [APPLYING PERMANENT FIXES] ---"
+
+# # FIX A: Ensure SolverConfig doesn't have duplicate properties (Cleanup from previous runs)
+# # Removing the redundant ppe_max_retries property blocks discovered in Gun 1 (Lines 63-66)
+# sed -i '63,66d' src/common/solver_config.py
+
+# # FIX B: Inject into BaseContainer (If it uses a static key list for to_dict)
+# # This forces the serialization logic to recognize the new key
+# if grep -q "to_dict" src/common/base_container.py; then
+#     sed -i '/"ppe_omega":/a \            "ppe_max_retries": self.ppe_max_retries,' src/common/base_container.py
+# fi
+
+# # FIX C: Stop the "Self-Overwrite" during Tests
+# # If the test has a teardown that saves the config, we comment it out
+# sed -i 's/self.config.save()/# self.config.save() # Prevent CI overwrite/g' tests/property_integrity/test_heavy_elasticity_lifecycle.py
+
+# ==============================================================================
+# 4. FINAL VERIFICATION
+# ==============================================================================
+echo -e "\n--- [FINAL VERIFICATION OF SOURCE] ---"
+grep -A 1 "ppe_max_retries" src/common/solver_config.py
+grep -A 1 "ppe_max_retries" src/common/base_container.py 2>/dev/null || echo "Not in base_container"
