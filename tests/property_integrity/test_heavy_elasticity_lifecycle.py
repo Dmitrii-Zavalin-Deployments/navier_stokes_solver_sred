@@ -1,37 +1,33 @@
-# tests/property_integrity/test_heavy_elasticity_lifecycle.py
-
 import json
 import logging
 from pathlib import Path
-
 import pytest
 
 from src.main_solver import BASE_DIR, run_solver
 
-
 class TestHeavyElasticityLifecycle:
     def test_numerical_stabilization_and_terminal_failure(self, caplog):
         """
-        Validates the new Elasticity Range-Sweep logic:
-        1. Triggers ArithmeticError via extreme initial velocity.
-        2. Verifies the solver attempts to stabilize by reducing dt.
-        3. Verifies terminal failure when the dt_floor is reached.
+        Validates the simplified Elasticity Range-Sweep logic:
+        1. Triggers ArithmeticError via extreme initial velocity (1e10).
+        2. Verifies the solver attempts to stabilize by reducing dt linearly.
+        3. Verifies terminal failure when dt_floor is reached with simplified error msg.
         """
-        input_filename = "integration_input.json"
+        input_filename = "integration_test_input.json"
         config_filename = "config.json"
         
         input_path = Path(BASE_DIR) / input_filename
         config_path = Path(BASE_DIR) / config_filename
         
-        # Define 10 steps in config to match ElasticManager._runs
+        # Define 10 steps in config
         config_data = {
             "dt_min_limit": 0.0001,
             "ppe_tolerance": 1e-4, 
-            "ppe_max_iter": 50, 
+            "ppe_max_iter": 20, # Low iter to ensure failure is easy to trigger
             "ppe_omega": 1.7
         }
 
-        # Force immediate explosion with 1e10 velocity
+        # Force immediate explosion with extreme velocity
         nx, ny, nz = 4, 4, 4
         input_data = {
             "domain_configuration": {"type": "INTERNAL"},
@@ -53,31 +49,30 @@ class TestHeavyElasticityLifecycle:
         }
 
         try:
-            # Setup environment
+            # 1. SETUP: Atomic file creation
             input_path.write_text(json.dumps(input_data))
             config_path.write_text(json.dumps(config_data))
 
+            # 2. EXECUTION: Capture logs at WARNING level for stabilization attempts
             with caplog.at_level(logging.WARNING):
-                # We expect the solver to eventually give up after 10 attempts
+                # We expect the solver to eventually raise RuntimeError after 10 attempts
                 with pytest.raises(RuntimeError) as excinfo:
                     run_solver(input_filename)
 
                 # --- FORENSIC AUDIT ---
                 error_msg = str(excinfo.value)
-                print(f"\n[Forensics] Error caught: {error_msg}")
-
-                # Verify the error comes from our ElasticManager stabilization logic
-                assert "stable" in error_msg.lower()
+                
+                # Updated check: matches the simplified RuntimeError in elasticity.py
+                assert "unstable" in error_msg.lower()
                 assert "dt_floor" in error_msg
 
-                # Verify that stabilization attempts were logged
-                stabilization_logs = [rec for rec in caplog.records if "Instability detected" in rec.message]
-                print(f"[Forensics] Captured {len(stabilization_logs)} stabilization retry events.")
+                # Verify that stabilization attempts were logged using the new simplified string
+                # Old string: "Instability detected" | New string: "Instability."
+                stabilization_logs = [rec for rec in caplog.records if "Instability" in rec.message]
                 
-                # It should have tried multiple times before hitting the RuntimeError
-                assert len(stabilization_logs) > 0, "ELASTICITY FAIL: Stabilization retries never triggered."
-                assert len(stabilization_logs) <= 10, "ELASTICITY FAIL: Exceeded maximum allowed retries."
-
+                # Check that we actually iterated through the 10-step range
+                assert len(stabilization_logs) == 10, f"Expected 10 retries, found {len(stabilization_logs)}"
+                
         finally:
             # # 7. PURGE: Universal Cleanup (Rule 2: Zero Debt)
 
