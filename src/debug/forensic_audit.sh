@@ -1,31 +1,29 @@
 #!/bin/bash
+# src/debug/forensic_audit.sh
+
+echo "============================================================"
 echo "🔍 STARTING DEEP FORENSIC AUDIT: THE LOGGING & OVERFLOW GHOST"
+echo "============================================================"
 
-# 1. Audit NumPy's Error State in the Solver
-echo "--- [1] Checking for Rule 5 Compliance: NumPy Runtime Configuration ---"
-grep -r "np.seterr" src/main_solver.py || echo "⚠️ VIOLATION: NumPy error behavior is undefined."
+# --- [1] Verify Logger Level in ElasticManager ---
+echo "--- [Audit 1] Checking ElasticManager Logging Level ---"
+grep -C 2 "Instability" src/common/elasticity.py | grep "self.logger"
 
-# 2. Smoking-Gun Audit: Trace the Exception Path
-# We need to see if the (ArithmeticError, FloatingPointError, ValueError) block is correctly implemented.
-echo "--- [2] Source Audit: Exception Handling in main_solver.py ---"
-cat -n src/main_solver.py | sed -n '110,130p'
+# --- [2] Source Audit: main_solver.py loop integrity ---
+echo "--- [Audit 2] Verification of Exception Catch Block ---"
+cat -n src/main_solver.py | sed -n '120,130p'
 
-# 3. Logger Identity Check
-# Testing if the logger name matches what the Test Suite expects.
-echo "--- [3] Logger Name Audit: elasticity.py ---"
-grep "logging.getLogger" src/common/elasticity.py
+# --- [3] Repair: Ensure ElasticManager uses WARNING for instabilities ---
+# Rule 7 requires high-resolution trace for recovery. 
+# If it's currently .info(), the test won't see it via caplog.at_level(logging.WARNING).
+# sed -i 's/self.logger.info(f"Instability/self.logger.warning(f"Instability/g' src/common/elasticity.py
 
-# 4. REPAIR: Force NumPy to 'raise' (Ensures the 'except' block is reachable)
-# # sed -i 's/np.seterr(all="raise", under="ignore")/np.seterr(all="raise")/g' src/main_solver.py
+# --- [4] Repair: Fix main_solver.py Logger Propagation ---
+# Ensure the main_solver's catch block actually triggers a log entry that pytest can see.
+# sed -i '123i \                logger.warning("Instability detected: triggering recovery path")' src/main_solver.py
 
-# 5. REPAIR: Harmonize Logger name for pytest visibility
-# Ensures the test's caplog can catch the 'Instability' message.
-# # sed -i 's/logging.getLogger("Elasticity")/logging.getLogger("src.common.elasticity")/g' src/common/elasticity.py
+# --- [5] Rule 5 Compliance: Double-check the 'raise' trigger ---
+echo "--- [Audit 3] Checking for potential silent NaN suppressors ---"
+grep -r "np.seterr" src/
 
-# 6. REPAIR: Ensure the retry block catches specific Linear Algebra failures
-# # sed -i 's/except ArithmeticError:/except (ArithmeticError, FloatingPointError, ValueError):/g' src/main_solver.py
-
-echo "--- [4] Verification: Checking for 'Instability' string in source ---"
-grep -r "Instability" src/common/elasticity.py
-
-echo "✅ Audit Complete. Review the 'Source Audit' above to confirm the catch block logic."
+echo "✅ Audit Commands Ready."
