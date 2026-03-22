@@ -60,3 +60,7 @@ class SolverConfig(ValidatedContainer):
     def ppe_max_retries(self) -> int: return self._get_safe("ppe_max_retries")
     @ppe_max_retries.setter
     def ppe_max_retries(self, v: int): self._set_safe("ppe_max_retries", v, int)
+    @property
+    def ppe_max_retries(self) -> int: return self._get_safe("ppe_max_retries")
+    @ppe_max_retries.setter
+    def ppe_max_retries(self, v: int): self._set_safe("ppe_max_retries", v, int)
