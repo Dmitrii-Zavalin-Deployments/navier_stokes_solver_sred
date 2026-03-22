@@ -115,3 +115,5 @@ cat -n src/common/base_container.py | head -n 50
 echo -e "\n--- [FINAL VERIFICATION OF SOURCE] ---"
 grep -A 1 "ppe_max_retries" src/common/solver_config.py
 grep -A 1 "ppe_max_retries" src/common/base_container.py 2>/dev/null || echo "Not in base_container"
+
+cat config.json | grep "ppe_max_retries"

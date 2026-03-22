@@ -26,10 +26,12 @@ class TestSolverLifecycle:
         # 2. Payload A: Numerical Configuration (Required for Elasticity)
         # These parameters prevent the AttributeError: 'SolverConfig' object has no attribute 'dt'
         config_data = {
+            "dt_min_limit": 0.0001,
             "ppe_tolerance": 1e-5,
             "ppe_atol": 1e-7,
             "ppe_max_iter": 50,
-            "ppe_omega": 1.2
+            "ppe_omega": 1.2,
+            "ppe_max_retries": 10
         }
 
         # 3. Payload B: Physical Input (Schema-compliant)
