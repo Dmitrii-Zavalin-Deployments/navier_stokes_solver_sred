@@ -176,7 +176,7 @@ jobs:
             UPDATED_FILES=$(git status --porcelain | awk '{print $2}' | tr '\n' ' ')
             
             if [ -n "$UPDATED_FILES" ]; then
-              git add --ignore-removal .
+              git add .
               git commit -m "📊 audit & sync: [${{ job.status }}] updated files: $UPDATED_FILES"
               git push origin HEAD || echo "Push skipped: Concurrent push detected."
             else
