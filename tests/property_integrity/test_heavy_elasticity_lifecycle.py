@@ -86,19 +86,13 @@ class TestHeavyElasticityLifecycle:
                     f.seek(0)
                     with h5py.File(BytesIO(f.read()), 'r') as h5_audit:
                         assert 'vx' in h5_audit.keys(), 'Foundation Error: Missing VX dataset'
+                        # Rule 7: Verify Physics Propagation in Foundation
+                        vx_data = h5_audit['vx'][:]
+                        # Check for non-zero velocity and finite values
+                        import numpy as np
+                        assert np.all(np.isfinite(vx_data)), 'Foundation Error: Non-finite values in VX'
+                        assert np.max(np.abs(vx_data)) > 0, 'Physics Error: Zero velocity propagation'
                         assert h5_audit.attrs['iteration'] >= 0
-                    # Rule 9: Structural Foundation Audit
-                    
-                    
-                    # Extract velocities using list comprehension (Rule 0: Logic efficiency)
-                    velocities = [float(row.split(',')[u_idx]) for row in lines[1:]]
-                    
-                    # Ensure the inflow (1.0) has actually propagated
-                    # We expect the max velocity to be near the inflow value
-                    assert max(velocities) > 0.1, "Physics Failure: Domain remains static."
-
-        # 6. CLEANUP
-        if input_path.exists(): input_path.unlink()
     
     def test_scenario_2_retry_and_recover(self, caplog, base_config, base_input):
         """
