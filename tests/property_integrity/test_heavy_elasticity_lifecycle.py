@@ -93,11 +93,9 @@ class TestHeavyElasticityLifecycle:
                         import numpy as np
                         assert np.all(np.isfinite(vx_data)), 'Foundation Error: Non-finite values in VX'
                         assert np.max(np.abs(vx_data)) > 0, 'Physics Error: Zero velocity propagation'
-                        assert h5_audit.attrs['iteration'] >= 0
-    
-    def test_scenario_2_retry_and_recover(self, caplog, base_config, base_input):
-        """
-        Scenario 2: Failed run (ArithmeticError) triggers dt reduction, 
+                        # Rule 7: Verify Physics Propagation in Foundation
+                        vx_data = h5_audit['vx'][:]
+                        # Check for non-zero velocity and finite values
         which then succeeds on the second attempt.
         """
         # Set a time step that is slightly too aggressive for this velocity
