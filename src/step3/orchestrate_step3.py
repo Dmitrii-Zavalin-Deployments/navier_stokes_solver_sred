@@ -6,9 +6,9 @@ from src.common.elasticity import ElasticManager
 from src.common.simulation_context import SimulationContext
 from src.common.stencil_block import StencilBlock
 from src.step3.corrector import apply_local_velocity_correction
+from src.step3.ops.ghost_handler import sync_ghost_trial_buffers
 from src.step3.ppe_solver import solve_pressure_poisson_step
 from src.step3.predictor import compute_local_predictor_step
-from src.step3.ops.ghost_handler import sync_ghost_trial_buffers
 
 # Rule 7: Granular Traceability for GitHub Actions
 DEBUG = False

@@ -1,7 +1,7 @@
 # src/step3/ops/ghost_handler.py
 
-from src.common.field_schema import FI
 from src.common.stencil_block import StencilBlock
+
 
 def sync_ghost_trial_buffers(block: StencilBlock) -> None:
     """

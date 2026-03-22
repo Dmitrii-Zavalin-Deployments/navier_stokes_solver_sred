@@ -1,11 +1,13 @@
 # tests/step3/test_ghost_integrity.py
 
-import pytest
-import numpy as np
 import math
+
+import numpy as np
+import pytest
+
 from src.common.field_schema import FI
-from src.common.stencil_block import StencilBlock
 from src.step3.ops.ghost_handler import sync_ghost_trial_buffers
+
 
 class MockCell:
     """A Rule 9 compliant mock for Foundation-Object mapping."""
