@@ -8,6 +8,7 @@ from src.common.stencil_block import StencilBlock
 from src.step3.corrector import apply_local_velocity_correction
 from src.step3.ppe_solver import solve_pressure_poisson_step
 from src.step3.predictor import compute_local_predictor_step
+from src.step3.ops.ghost_handler import sync_ghost_trial_buffers
 
 # Rule 7: Granular Traceability for GitHub Actions
 DEBUG = False
@@ -27,6 +28,11 @@ def orchestrate_step3(
     - Rule 7 (Traceability): Dumps failure telemetry directly to GitHub Actions logs.
     """
     if block.center.is_ghost:
+        if DEBUG:
+            # Rule 7: High-resolution trace for Ghost recovery
+            print(f"[DEBUG] Ghost Sync at Index {block.center.index}")
+            
+        sync_ghost_trial_buffers(block)
         return block, 0.0
 
     # Rule 4: Sync the Block's DT with the Elastic Manager
