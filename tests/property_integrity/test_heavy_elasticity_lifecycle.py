@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 import pytest
-import numpy as np
+
 from src.main_solver import BASE_DIR, run_solver
 
 
