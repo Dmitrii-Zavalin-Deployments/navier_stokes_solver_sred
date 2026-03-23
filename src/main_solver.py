@@ -15,7 +15,7 @@ from src.common.simulation_context import SimulationContext
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
-from src.step4.orchestrate_step4 import orchestrate_step4
+# Step 4 removed: Integrated into Step 3 for physical causality
 from src.step5.orchestrate_step5 import orchestrate_step5
 
 DEBUG = False
@@ -28,7 +28,6 @@ def _configure_numerical_runtime(context: SimulationContext):
     Rule 5: Deterministic Initialization.
     Forces NumPy to raise exceptions based on explicit config rather than global defaults.
     """
-    # under="ignore" is usually preferred in CFD to prevent subnormal floor-to-zero crashes
     np.seterr(all="raise", under="ignore")
     logger.info("Numerical runtime configured: Trapping arithmetic anomalies.")
 
@@ -98,23 +97,34 @@ def run_solver(input_path: str) -> str:
             state.iteration += 1
             state.time += elasticity.dt
             
-            # B. PREDICTOR PASS
+            # B. PREDICTOR PASS (Atomic Predictor + Boundary Injection)
             for block in state.stencil_matrix:
-                orchestrate_step3(block, context, is_first_pass=True)
-                orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+                orchestrate_step3(
+                    block, 
+                    context, 
+                    state.grid, 
+                    state.boundary_conditions, 
+                    is_first_pass=True
+                )
 
             # C. PPE ITERATION (Pressure-Poisson Equation)
             for _ in range(context.config.ppe_max_iter):
                 max_delta = 0.0
                 for block in state.stencil_matrix:
-                    _, delta = orchestrate_step3(block, context, is_first_pass=False)
-                    orchestrate_step4(block, context, state.grid, state.boundary_conditions)
+                    # Pass state objects for internal boundary-consistent solving
+                    _, delta = orchestrate_step3(
+                        block, 
+                        context, 
+                        state.grid, 
+                        state.boundary_conditions, 
+                        is_first_pass=False
+                    )
                     max_delta = max(max_delta, delta)
 
                 if max_delta < context.config.ppe_tolerance:
                     break
             
-            # Signal Success to Elasticity to potentially increase dt for the NEXT step
+            # Signal Success to Elasticity
             elasticity.stabilization(is_needed=False, state=state)
 
             state = orchestrate_step5(state, context)
@@ -130,8 +140,7 @@ def run_solver(input_path: str) -> str:
             print("DEBUG: [Main] ArithmeticError caught!")
             logger.warning("Instability: Arithmetic anomaly triggered recovery path.")
             
-            # Rule 9: Encapsulated Rollback (Logic Wiring)
-            # Reverting the failed time-step attempt
+            # Rule 9: Encapsulated Rollback
             state.iteration -= 1
             state.time -= elasticity.dt 
             
