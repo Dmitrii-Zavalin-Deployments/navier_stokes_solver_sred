@@ -34,24 +34,18 @@ def verify_foundation_integrity(state):
     original_data = state.fields.data.copy()
     
     # Prime the buffer: Value = Index + (Field_ID / 10.0)
-    # We prime the entire buffer to ensure all potential mappings are testable.
     for f in FI:
         state.fields.data[:, f] = np.arange(num_cells, dtype=float) + (float(f) / 10.0)
 
     # 2. The Inquisition: Verify pointer-to-buffer alignment
     try:
-        # We sample representative blocks from the stencil_matrix.
-        # Since the matrix only covers the active domain, we only test those present.
         for idx, block in enumerate(state.stencil_matrix):
             c = block.center
             
-            # RULE 9: Sentinel Integrity - Ignore ghost cells for pointer-mapping validation
-            # as they may map to the padding foundation outside the standard simulation.
+            # RULE 9: Sentinel Integrity - Ignore ghost cells for pointer-validation
             if c.is_ghost:
                 continue
             
-            # Verify Pressure (FI.P) and Velocity (FI.VX)
-            # The indices must map accurately back to the primed buffer data.
             expected_p = float(c.index) + (float(FI.P) / 10.0)
             expected_vx = float(c.index) + (float(FI.VX) / 10.0)
             
@@ -62,8 +56,6 @@ def verify_foundation_integrity(state):
                     f"Expected P: {expected_p}, Got: {c.p}"
                 )
 
-        # print("✅ POST SUCCESS: Foundation wiring verified and 'Frozen'.")
-
     finally:
         # 3. Restore actual simulation data
         state.fields.data[:] = original_data
@@ -71,6 +63,41 @@ def verify_foundation_integrity(state):
 # =========================================================
 # THE DEPARTMENT SAFES (Memory-Hardened Managers)
 # =========================================================
+
+class PhysicalConstraintsManager(ValidatedContainer):
+    __slots__ = ['_min_velocity', '_max_velocity', '_min_pressure', '_max_pressure']
+    
+    def __init__(self):
+        self._min_velocity = self._max_velocity = None
+        self._min_pressure = self._max_pressure = None
+
+    def to_dict(self):
+        return {
+            "min_velocity": self.min_velocity,
+            "max_velocity": self.max_velocity,
+            "min_pressure": self.min_pressure,
+            "max_pressure": self.max_pressure
+        }
+
+    @property
+    def min_velocity(self) -> float: return self._get_safe("min_velocity")
+    @min_velocity.setter
+    def min_velocity(self, v: float): self._set_safe("min_velocity", v, (float, int))
+
+    @property
+    def max_velocity(self) -> float: return self._get_safe("max_velocity")
+    @max_velocity.setter
+    def max_velocity(self, v: float): self._set_safe("max_velocity", v, (float, int))
+
+    @property
+    def min_pressure(self) -> float: return self._get_safe("min_pressure")
+    @min_pressure.setter
+    def min_pressure(self, v: float): self._set_safe("min_pressure", v, (float, int))
+
+    @property
+    def max_pressure(self) -> float: return self._get_safe("max_pressure")
+    @max_pressure.setter
+    def max_pressure(self, v: float): self._set_safe("max_pressure", v, (float, int))
 
 class DomainManager(ValidatedContainer):
     __slots__ = ['_type', '_reference_velocity']
@@ -96,11 +123,8 @@ class DomainManager(ValidatedContainer):
         self._set_safe("reference_velocity", value, np.ndarray)
 
 class GridManager(ValidatedContainer):
-    __slots__ = [
-        '_x_min', '_x_max', '_y_min', '_y_max', '_z_min', '_z_max', 
-        '_nx', '_ny', '_nz'
-    ]
-
+    __slots__ = ['_x_min', '_x_max', '_y_min', '_y_max', '_z_min', '_z_max', '_nx', '_ny', '_nz']
+    
     def __init__(self):
         self._x_min = self._x_max = self._y_min = self._y_max = self._z_min = self._z_max = None
         self._nx = self._ny = self._nz = None
@@ -362,12 +386,14 @@ class SolverState(ValidatedContainer):
     __slots__ = [
         '_domain_configuration', '_grid', '_fluid_properties', '_initial_conditions', 
         '_boundary_conditions', '_external_forces', '_simulation_parameters', 
+        '_physical_constraints',
         '_mask', '_fields', '_stencil_matrix', 
         '_iteration', '_time', '_ready_for_time_loop', '_manifest'
     ]
 
     def __init__(self):
         super().__init__()
+        self._physical_constraints = None
         self._domain_configuration = self._grid = self._fluid_properties = self._initial_conditions = None
         self._boundary_conditions = self._external_forces = self._simulation_parameters = None
         self._mask = self._fields = self._stencil_matrix = None
@@ -375,6 +401,14 @@ class SolverState(ValidatedContainer):
         self._time = 0.0
         self._ready_for_time_loop = False
         self.manifest = ManifestManager() 
+
+    @property
+    def physical_constraints(self) -> PhysicalConstraintsManager: 
+        return self._get_safe("physical_constraints")
+    
+    @physical_constraints.setter
+    def physical_constraints(self, value: PhysicalConstraintsManager): 
+        self._set_safe("physical_constraints", value, PhysicalConstraintsManager)
 
     @property
     def manifest(self) -> ManifestManager: return self._get_safe("manifest")
@@ -441,9 +475,44 @@ class SolverState(ValidatedContainer):
     @time.setter
     def time(self, value: float): self._time = value
 
+    # =========================================================
+    # RULE 7: VECTORIZED PHYSICAL AUDIT
+    # =========================================================
+    def audit_physical_bounds(self):
+        """
+        Rule 7: Vectorized Physical Audit.
+        Checks entire NumPy buffers against PhysicalConstraintsManager.
+        Uses NumPy vectorization (100x faster than cell-by-cell loops).
+        """
+        pc = self.physical_constraints
+        fields = self.fields.data # The raw NumPy buffer
+
+        # 1. Check Velocities (VX, VY, VZ indices)
+        # We calculate the max magnitude of the entire velocity field in one sweep.
+        v_max_current = np.max(np.abs(fields[:, [FI.VX, FI.VY, FI.VZ]]))
+        if v_max_current > pc.max_velocity:
+            raise ArithmeticError(
+                f"PHYSICAL EXPLOSION: Velocity {v_max_current:.4f} "
+                f"exceeds limit {pc.max_velocity}"
+            )
+
+        # 2. Check Pressure (P index)
+        p_min = np.min(fields[:, FI.P])
+        p_max = np.max(fields[:, FI.P])
+        if p_min < pc.min_pressure or p_max > pc.max_pressure:
+            raise ArithmeticError(
+                f"PHYSICAL EXPLOSION: Pressure [{p_min:.4f}, {p_max:.4f}] "
+                f"out of bounds [{pc.min_pressure}, {pc.max_pressure}]."
+            )
+
     def validate_physical_readiness(self):
         if self.fields is None or self.fields.data is None:
             raise RuntimeError("CRITICAL: Foundation buffer is missing.")
+        
+        # Enforce that constraints are actually set before starting
+        if self.physical_constraints is None:
+             raise RuntimeError("CRITICAL: Physical Constraints are not defined.")
+
         if np.any(np.isnan(self.fields.data)) or np.any(np.isinf(self.fields.data)):
             raise RuntimeError("CRITICAL: NaNs/Infs detected in Foundation buffer!")
         if self.grid.nx is None or self.grid.nx < 1:
@@ -459,7 +528,7 @@ class SolverState(ValidatedContainer):
             verify_foundation_integrity(self)
             self.validate_physical_readiness()
         self._ready_for_time_loop = value
-    
+
     def to_dict(self):
         """
         Serializes the solver state by delegating to sub-container methods.
@@ -471,6 +540,7 @@ class SolverState(ValidatedContainer):
             "fluid_properties": self.fluid_properties.to_dict(),
             "initial_conditions": self.initial_conditions.to_dict(),
             "simulation_parameters": self.simulation_parameters.to_dict(),
+            "physical_constraints": self.physical_constraints.to_dict(),
             "boundary_conditions": self.boundary_conditions.to_dict(),
             "mask": self.mask.to_dict(),
             "external_forces": self.external_forces.to_dict(),

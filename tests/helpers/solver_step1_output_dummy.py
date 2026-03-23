@@ -20,10 +20,10 @@ from src.common.solver_state import (
     GridManager,
     InitialConditionManager,
     MaskManager,
+    PhysicalConstraintsManager,  # NEW IMPORT
     SimulationParameterManager,
     SolverState,
 )
-
 
 def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverState:
     """
@@ -59,7 +59,15 @@ def make_step1_output_dummy(nx: int = 4, ny: int = 4, nz: int = 4) -> SolverStat
     
     state._external_forces = ExternalForceManager()
     state._external_forces._force_vector = np.array([0.0, 0.0, -9.81])
-    
+
+    # --- NEW: PHYSICAL CONSTRAINTS INJECTION ---
+    state._physical_constraints = PhysicalConstraintsManager()
+    state._physical_constraints._min_velocity = -100.0
+    state._physical_constraints._max_velocity = 100.0
+    state._physical_constraints._min_pressure = -1e6
+    state._physical_constraints._max_pressure = 1e6
+    # -------------------------------------------
+
     # 3. Foundation Allocation: Explicit call per Rule 9
     state._fields = FieldManager()
     ghosted_nx, ghosted_ny, ghosted_nz = nx + 2, ny + 2, nz + 2
