@@ -1,8 +1,7 @@
-# tests/integration/test_heavy_elasticity_lifecycle.py
+# tests/property_integrity/test_heavy_elasticity_lifecycle.py
 
 import json
 import logging
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -11,94 +10,161 @@ from src.main_solver import BASE_DIR, run_solver
 
 
 class TestHeavyElasticityLifecycle:
-    """
-    SYSTEM AUDITOR: High-Fidelity Integration Gatekeeper.
-    Verifies: Elasticity Panic Mode, Recovery, and Atomic Archiving.
-    """
 
-    def test_numerical_panic_and_recovery_flow(self, caplog):
-        # Rule 5: Explicit Initialization. 
-        panic_logs = []
-        zip_path = None
-        
-        # 1. Setup Production-filenames
-        input_filename = "integration_input.json"
-        config_filename = "config.json"
-        
-        input_path = Path(BASE_DIR) / input_filename
-        config_path = Path(BASE_DIR) / config_filename
-        
-        # 2. Config: Numerical Solver settings (Rule 5 compliance)
-        # Note: dt is NOT here. It is injected from the simulation input.
-        config_data = {
-            "dt_min_limit": 0.001,    # Explicit floor for ElasticManager
-            "ppe_tolerance": 1e-4,
-            "ppe_atol": 1e-6,
-            "ppe_max_iter": 50,
-            "ppe_omega": 1.7,         # Aggressive over-relaxation to trigger instability
-            "divergence_threshold": 1e6
+    @pytest.fixture
+    def base_config(self):
+        return {
+            "dt_min_limit": 0.0001,
+            "ppe_tolerance": 1e-4, 
+            "ppe_atol": 1e-10,
+            "ppe_max_iter": 20,
+            "ppe_omega": 1.7,
+            "ppe_max_retries": 10
         }
 
-        # 3. Input: High-velocity 3D grid to trigger divergence
-        nx, ny, nz = 4, 4, 4
-        input_data = {
+    @pytest.fixture
+    def base_input(self):
+        return {
             "domain_configuration": {"type": "INTERNAL"},
-            "grid": {
-                "x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0,
-                "nx": nx, "ny": ny, "nz": nz
-            },
+            "grid": {"x_min": 0.0, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0, "z_min": 0.0, "z_max": 1.0, "nx": 4, "ny": 4, "nz": 4},
             "fluid_properties": {"density": 1.0, "viscosity": 0.001},
-            "initial_conditions": {"velocity": [1e10, 1e10, 1e10], "pressure": 1.0},
-            "simulation_parameters": {
-                "time_step": 0.5,      # INITIAL DT: Injected into ElasticManager
-                "total_time": 10.0, 
-                "output_interval": 1
-            },
+            "initial_conditions": {"velocity": [0.0, 0.0, 0.0], "pressure": 1.0},
+            "simulation_parameters": {"time_step": 0.1, "total_time": 2.0, "output_interval": 1},
             "boundary_conditions": [
-                {"location": "x_min", "type": "inflow", "values": {"u": 50.0, "v": 0.0, "w": 0.0}},
+                {"location": "x_min", "type": "inflow", "values": {"u": 1.0, "v": 0.0, "w": 0.0}}, 
                 {"location": "x_max", "type": "outflow", "values": {"p": 0.0}}
             ],
-            "mask": [0] * (nx * ny * nz),
+            "mask": [0] * 64,
             "external_forces": {"force_vector": [0.0, -9.81, 0.0]}
         }
 
-        output_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+    def test_scenario_1_pure_success(self, caplog, base_config, base_input):
+        """
+        Scenario 1: Run completes without any instabilities.
+        Aligned with Phase C: Rule 2 (Zero-Debt) and Rule 7 (Scientific Truth).
+        """
+        import zipfile
 
-        try:
-            # 4. Inject
-            input_path.write_text(json.dumps(input_data))
-            config_path.write_text(json.dumps(config_data))
+        # 1. SETUP (Rule 5: Explicit Initialization)
+        input_filename = "test_success_input.json"
+        config_path = Path(BASE_DIR) / "config.json"
+        input_path = Path(BASE_DIR) / input_filename
+        
+        config_path.write_text(json.dumps(base_config))
+        input_path.write_text(json.dumps(base_input))
 
-            # Set log level to capture ElasticManager warnings
-            with caplog.at_level(logging.WARNING):
-                # 5. EXECUTION & LOG CAPTURE (Rule 7: Atomic Verification)
-                # We expect a RuntimeError when the solver eventually hits the dt_min_limit floor.
-                with pytest.raises(RuntimeError) as excinfo:
-                    zip_path = run_solver(input_filename)
-                
-                # Rule 6: Extracting logs immediately after failure context.
-                panic_logs = [rec for rec in caplog.records if 'PANIC' in rec.message]
-                
-                assert "Solver cannot recover" in str(excinfo.value)
-                assert len(panic_logs) > 0, "ELASTICITY FAIL: Panic Mode was never triggered."
-                
-                print(f"Captured {len(panic_logs)} panic events before terminal failure.")
+        with caplog.at_level(logging.WARNING, logger="Solver.Main"):
+            # 2. EXECUTION
+            zip_path = run_solver(input_filename)
 
-            # 7. ARCHIVE AUDIT: Ensure partial state was saved correctly
-            if zip_path and Path(zip_path).exists():
-                audit_path = Path(zip_path)
-                with zipfile.ZipFile(audit_path, 'r') as archive:
-                    state_bytes = archive.read("simulation_state.json")
-                    state_json = json.loads(state_bytes)
+            # 3. LOG AUDIT (Rule 6: Efficiency)
+            instability_logs = [r for r in caplog.records if "instability" in r.message.lower()]
+            assert len(instability_logs) == 0, (
+                f"Scenario 1 Error: Expected 0 retries, but found {len(instability_logs)}. "
+                f"Logs: {[r.message for r in instability_logs]}"
+            )
+            
+            # 4. PATH AUDIT
+            assert Path(zip_path).exists(), "The final archive was not created."
+            assert zip_path.endswith(".zip")
+            assert "navier_stokes_output.zip" in zip_path
+
+            # 5. DEEP ARCHIVE INSPECTION
+            with zipfile.ZipFile(zip_path, 'r') as archive:
+                namelist = archive.namelist()
+                csv_files = sorted([f for f in namelist if f.endswith('.h5')])
+                assert len(csv_files) >= 2 
+
+                with archive.open(csv_files[-1]) as f:
+                    header = f.read(8)
+                    assert header.startswith(b'\x89HDF'), 'Foundation Error: Snapshot is not a valid HDF5 binary'
                     
-                    # Rule 4: SSoT Check
-                    data_array = state_json.get("fields", {}).get("data", [])
-                    assert len(data_array) > 0, "ARCHIVE FAIL: State contains no field data."
+                    from io import BytesIO
 
-        finally:
-            # 8. SANITIZATION
-            if input_path.exists(): input_path.unlink()
-            if config_path.exists(): config_path.unlink()
-            if output_dir.exists():
-                for artifact in output_dir.glob("*.zip"):
-                    artifact.unlink()
+                    import h5py
+                    import numpy as np
+                    
+                    f.seek(0)
+                    with h5py.File(BytesIO(f.read()), 'r') as h5_audit:
+                        assert 'vx' in h5_audit.keys(), 'Foundation Error: Missing VX dataset'
+                        vx_data = h5_audit['vx'][:]
+                        assert np.all(np.isfinite(vx_data)), 'Foundation Error: Non-finite values in VX'
+                        assert np.max(np.abs(vx_data)) > 0, 'Physics Error: Zero velocity propagation'
+        
+    def test_scenario_2_retry_and_recover(self, caplog, base_config, base_input):
+        """
+        Scenario 2: Recovery Audit.
+        Verifies that ArithmeticError triggers dt reduction AND results in valid HDF5 data.
+        """
+        import zipfile
+        from io import BytesIO
+
+        import h5py
+        import numpy as np
+
+        # 1. SETUP: Force an unstable condition (Rule 7: Scientific Truth)
+        # High velocity + High dt = Guaranteed Courant Number violation/Instability
+        base_input["simulation_parameters"]["time_step"] = 0.8
+        base_input["simulation_parameters"]["total_time"] = 5.0
+        base_input["boundary_conditions"][0]["values"]["u"] = 1e15 
+        
+        config_path = Path(BASE_DIR) / "config.json"
+        input_path = Path(BASE_DIR) / "test_recovery_input.json"
+        
+        config_path.write_text(json.dumps(base_config))
+        input_path.write_text(json.dumps(base_input))
+
+        with caplog.at_level(logging.WARNING, logger="Solver.Main"):
+            # 2. EXECUTION
+            zip_path = run_solver("test_recovery_input.json")
+            
+            # --- PHASE A: LOGICAL RECOVERY AUDIT ---
+            warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+            stabilization_logs = [r for r in warnings if "instability" in r.message.lower()]
+            
+            assert len(stabilization_logs) > 0, (
+                "TEST SLIPPAGE: Scenario 2 expected an instability/retry, but none occurred."
+            )
+            assert len(stabilization_logs) < base_config["ppe_max_retries"], "Solver hit max retries."
+
+            # --- PHASE B: SCIENTIFIC INTEGRITY AUDIT (Rule 9) ---
+            assert Path(zip_path).exists(), "Recovery succeeded but archive was not generated."
+            
+            with zipfile.ZipFile(zip_path, 'r') as archive:
+                h5_files = sorted([f for f in archive.namelist() if f.endswith('.h5')])
+                assert len(h5_files) >= 2, f"Expected at least 2 snapshots, got {len(h5_files)}"
+
+                with archive.open(h5_files[-1]) as f:
+                    content = f.read()
+                    assert content.startswith(b'\x89HDF'), "Final snapshot is corrupted HDF5"
+                    
+                    with h5py.File(BytesIO(content), 'r') as h5_audit:
+                        for field in ['vx', 'vy', 'vz', 'p']:
+                            assert field in h5_audit.keys(), f"Physics Error: Missing {field}"
+                        
+                        vx_data = h5_audit['vx'][:]
+                        assert np.all(np.isfinite(vx_data)), (
+                            "ROOT CAUSE: Recovery executed, but resulted in Non-Finite values."
+                        )
+                        assert np.max(np.abs(vx_data)) > 0, "Physics Error: Zero velocity field."
+
+        print(f"DEBUG: Successfully recovered from {len(stabilization_logs)} instabilities.")
+
+    def test_scenario_3_terminal_failure(self, caplog, base_config, base_input):
+        """Scenario 3: 10 failed attempts lead to terminal RuntimeError."""
+        base_input["boundary_conditions"][0]["values"]["u"] = 1e15 
+        
+        config_path = Path(BASE_DIR) / "config.json"
+        input_path = Path(BASE_DIR) / "test_fail_input.json"
+        
+        config_path.write_text(json.dumps(base_config))
+        input_path.write_text(json.dumps(base_input))
+
+        with caplog.at_level(logging.WARNING, logger="Solver.Main"):
+            with pytest.raises(RuntimeError) as excinfo:
+                run_solver("test_fail_input.json")
+            
+            error_msg = str(excinfo.value)
+            assert "unstable" in error_msg.lower()
+            logs = [r for r in caplog.records if "instability" in r.message.lower()]
+            assert len(logs) == base_config["ppe_max_retries"]

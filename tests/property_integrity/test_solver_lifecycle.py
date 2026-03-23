@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 from src.main_solver import BASE_DIR, run_solver
@@ -18,14 +19,19 @@ class TestSolverLifecycle:
         
         input_path = Path(BASE_DIR) / test_filename
         config_path = Path(BASE_DIR) / config_filename
+
+        test_data_dir = Path(BASE_DIR) / "data" / "testing-input-output"
+        production_output_dir = Path(BASE_DIR) / "output"
         
         # 2. Payload A: Numerical Configuration (Required for Elasticity)
         # These parameters prevent the AttributeError: 'SolverConfig' object has no attribute 'dt'
         config_data = {
+            "dt_min_limit": 0.0001,
             "ppe_tolerance": 1e-5,
             "ppe_atol": 1e-7,
             "ppe_max_iter": 50,
-            "ppe_omega": 1.2
+            "ppe_omega": 1.2,
+            "ppe_max_retries": 10
         }
 
         # 3. Payload B: Physical Input (Schema-compliant)
@@ -88,6 +94,13 @@ class TestSolverLifecycle:
                     artifact.unlink()
                     print(f"\n[Sanitization] Purged artifact: {artifact.name}")
             
+            if production_output_dir.exists():
+                shutil.rmtree(production_output_dir)
+                print(f"\n[Sanitization] Purged rogue directory: {production_output_dir.name}")
+            
             # 8. FINAL AUDIT: Assert the folder is 100% clean
             leftover_zips = list(output_dir.glob("*.zip"))
             assert len(leftover_zips) == 0, f"CLEANUP FAILURE: Found {len(leftover_zips)} leftover artifacts."
+
+            assert not production_output_dir.exists(), f"CLEANUP FAILURE: {production_output_dir} still exists."
+            assert not test_data_dir.exists(), f"CLEANUP FAILURE: {test_data_dir} still exists."

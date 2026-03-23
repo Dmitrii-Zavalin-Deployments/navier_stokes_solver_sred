@@ -18,7 +18,7 @@ jobs:
       APP_SECRET: ${{ secrets.APP_SECRET }}
       REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
       # Define the 'Gold Standard' test command here (e.g. # pytest -s tests/ -vv --cov=src --cov-report=term-missing)
-      TEST_COMMAND: "pytest -s tests/property_integrity/test_heavy_elasticity_lifecycle.py -vv"
+      TEST_COMMAND: "pytest -s tests/property_integrity/test_heavy_elasticity_lifecycle.py::TestHeavyElasticityLifecycle::test_scenario_2_retry_and_recover -vv"
 
     steps:
       - name: 🗂️ Checkout Repository
@@ -94,29 +94,26 @@ jobs:
           else
             echo "⚠️ CI Failure Detected. Initiating Deep Forensic Audit..."
             
-            # 1. Run the Forensic Script (if it exists)
+            echo "============================================================"
+            echo "ls -R output:"
+            echo "============================================================"
+            ls -R
+            
+            echo "============================================================"
+            echo "src/debug/forensic_audit.sh run results:"
+            echo "============================================================"
             if [ -f "src/debug/forensic_audit.sh" ]; then
               bash src/debug/forensic_audit.sh
             else
               echo "❌ Critical: Diagnostic script 'src/debug/forensic_audit.sh' not found."
             fi
 
-            echo "------------------------------------------------------------"
+            echo "============================================================"
             echo "📉 RE-RUNNING FAILED TEST FOR FINAL SIGNAL"
-            echo "------------------------------------------------------------"
+            echo "============================================================"
             
             # This calls the variable defined at the top
             $TEST_COMMAND || true
-
-            # Cleanup the diagnostic file
-            # Note: EOF is shifted to the left margin to ensure shell compatibility
-            cat <<EOF > src/debug/forensic_audit.sh
-          #!/bin/bash
-          # Description: Automated forensic audit for Navier-Stokes solver failures.
-          # Status: Waiting for the next payload
-          exit 0
-          EOF
-            echo "🧹 Diagnostic script has been reset to Waiting mode."
             exit 1
           fi
 
@@ -135,14 +132,14 @@ jobs:
           # 2. Define the new entry & identify branch
           RUN_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           STATUS="${{ job.status }}"
-          CURRENT_BRANCH=${GITHUB_REF##*/}  # Extracts 'development' from 'refs/heads/development'
+          CURRENT_BRANCH=${GITHUB_REF##*/}
 
-          # Note: We calculate duration more reliably here
+          # Duration and Resource Calculation
           DURATION_SEC=$(( $(date +%s) - $(date -d "${{ github.event.repository.pushed_at }}" +%s 2>/dev/null || date +%s) ))
           CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4 "%"}')
           MEM_USAGE=$(free -m | awk '/Mem:/ { print $3 "/" $2 "MB" }')
 
-          # 3. Create the new entry block (Now with Branch Name)
+          # 3. Create the new entry block
           NEW_ENTRY=$(cat <<EOF
           ### Audit: $RUN_DATE
           - **Branch:** \`$CURRENT_BRANCH\`

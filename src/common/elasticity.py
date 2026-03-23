@@ -2,88 +2,79 @@
 
 import logging
 
-import numpy as np
-
 from src.common.field_schema import FI
+from src.common.solver_state import SolverState
 
 
 class ElasticManager:
-    """
-    SSoT for Numerical Stability. 
-    Acts as the dynamic authority for dt, omega, and max_iter.
-    """
-    __slots__ = [
-        'config', 'logger', '_dt', '_omega', '_max_iter', 
-        'is_in_panic', 'stable_streak', 'cooldown_limit', 'dt_floor'
-    ]
+    __slots__ = ['config', 'logger', '_dt', 'dt_floor', '_iteration', '_runs', '_dt_range']
 
     def __init__(self, config, initial_dt: float):
         self.config = config
-        self.logger = logging.getLogger("Elasticity")
+        self.logger = logging.getLogger("Solver.Main")
         
-        # SSoT: _dt comes from the simulation input, NOT the solver config
         self._dt = initial_dt 
+        self.dt_floor = self.config.dt_min_limit
+        self._iteration = 0
         
-        # RULE 5: dt_floor comes from the solver config JSON
-        self.dt_floor = self.config.dt_min_limit 
+        # Rule 5: No hardcoded defaults. Pulled from SSoT (Config).
+        self._runs = self.config.ppe_max_retries
         
-        self._omega = self.config.ppe_omega
-        self._max_iter = self.config.ppe_max_iter
-        
-        self.is_in_panic = False
-        self.stable_streak = 0
-        self.cooldown_limit = 5
+        # Linear range from initial_dt down to dt_floor
+        self._dt_range = [
+            initial_dt + i * (self.dt_floor - initial_dt) / self._runs 
+            for i in range(self._runs + 1)
+        ]
 
     @property
-    def dt(self) -> float:
+    def dt(self) -> float: 
         return self._dt
 
-    @property
-    def omega(self) -> float:
-        return self._omega
-
-    @property
-    def max_iter(self) -> int:
-        return self._max_iter
-
-    def validate_and_commit(self, state) -> bool:
-        """Audits trial fields. Returns True if math is sane and committed."""
-        audit_fields = [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR, FI.P_NEXT]
-        data_slice = state.fields.data[:, audit_fields]
+    def validate_and_commit(self, state: SolverState) -> None:
+        """
+        Rule 9: Unified Data Commitment.
+        Optimized via Foundation-level bulk transfer to maintain O(N) scaling.
+        """
+        # Access the raw NumPy buffer from the state's FieldManager/Foundation
+        data = state.fields.data 
         
-        # Access threshold via SSoT (Rule 4 & 5)
-        # If the config doesn't have it, Rule 5 mandates we crash with an AttributeError
-        limit = self.config.divergence_threshold 
+        # Bulk commit using the FI Enum-locked mapping
+        # This is significantly faster than an object-based loop
+        data[:, FI.VX] = data[:, FI.VX_STAR]
+        data[:, FI.VY] = data[:, FI.VY_STAR]
+        data[:, FI.VZ] = data[:, FI.VZ_STAR]
+        data[:, FI.P] = data[:, FI.P_NEXT]
 
-        # Use a more direct check if memory is a concern at scale:
-        if not np.isfinite(data_slice).all():
-            return False
+    def stabilization(self, is_needed: bool, state: SolverState) -> None:
+        """
+        Orchestrates time-step recovery and data commitment.
+        
+        Rule 5 & 9: Explicit State commitment. 
+        We do not allow a 'None' state; the solver must fail if the 
+        Foundation-to-Logic bridge is missing.
+        """
+        if not is_needed:
+            # Rule 9: Unified Data Commitment via Foundation bulk transfer
+            # This must happen before resetting the iteration/dt logic
+            self.validate_and_commit(state)
 
-        # Use the absolute maximum to avoid creating a full boolean mask array
-        # Slightly better: find max and min separately to avoid the abs() allocation
-        if data_slice.max() > limit or data_slice.min() < -limit:
-            return False
+            # Success: Reset to full speed
+            self._iteration = 0
+            self._dt = self._dt_range[self._iteration]
+            return
 
-        # COMMIT: Star -> Foundation
-        state.fields.data[:, [FI.VX, FI.VY, FI.VZ]] = state.fields.data[:, [FI.VX_STAR, FI.VY_STAR, FI.VZ_STAR]]
-        state.fields.data[:, FI.P] = state.fields.data[:, FI.P_NEXT]
-        return True
-
-    def apply_panic_mode(self):
-        self.is_in_panic = True
-        self.stable_streak = 0
-        self._dt *= 0.5
-        self._omega = max(0.5, self._omega - 0.2)
-        self._max_iter = 5000
-        self.logger.warning(f"PANIC: dt reduced to {self._dt:.2e}")
-        print("!!! ACTUAL LOG TRIGGERED !!!")
-
-    def gradual_recovery(self):
-        if not self.is_in_panic: return
-        self.stable_streak += 1
-        if self.stable_streak >= self.cooldown_limit:
-            self._dt = min(self.config.dt, self._dt * 1.1)
-            self._omega = min(self.config.ppe_omega, self._omega + 0.05)
-            if self._dt == self.config.dt and self._omega == self.config.ppe_omega:
-                self.is_in_panic = False
-                self._max_iter = self.config.ppe_max_iter
+        if self._iteration >= self._runs:
+            raise RuntimeError(
+                f"Unstable: reached dt_floor = {self.dt_floor:.2e}. "
+                f"Exhausted {self._runs} retries. Update the run configs and restart."
+            )
+        
+        # Advance to the next (smaller) time step
+        self._iteration += 1
+        self._dt = self._dt_range[self._iteration]
+        
+        # Rule 8: Singular logging call for audit trail visibility
+        self.logger.warning(
+            f"Instability. Reducing dt to {self._dt:.2e} "
+            f"({self._iteration}/{self._runs})"
+        )
