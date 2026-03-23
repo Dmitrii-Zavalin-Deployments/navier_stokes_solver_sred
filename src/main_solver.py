@@ -15,6 +15,7 @@ from src.common.simulation_context import SimulationContext
 from src.step1.orchestrate_step1 import orchestrate_step1
 from src.step2.orchestrate_step2 import orchestrate_step2
 from src.step3.orchestrate_step3 import orchestrate_step3
+
 # Step 4 removed: Integrated into Step 3 for physical causality
 from src.step5.orchestrate_step5 import orchestrate_step5
 
